@@ -2,13 +2,13 @@ dnl
 dnl $Id$
 dnl
 
-PHP_ARG_WITH(ingres, for Ingres II support,
-[  --with-ingres[=DIR]     Include Ingres II support. DIR is the Ingres
+PHP_ARG_WITH(ingres, for Ingres support,
+[  --with-ingres[=DIR]     Include Ingres support. DIR is the Ingres
                           base directory (default $II_SYSTEM/ingres)])
 
 if test "$PHP_INGRES" != "no"; then
-  AC_DEFINE(HAVE_II, 1, [Whether you have Ingres II])
-  PHP_NEW_EXTENSION(ingres_ii, ii.c, $ext_shared)
+  AC_DEFINE(HAVE_II, 1, [Whether you have Ingres])
+  PHP_NEW_EXTENSION(ingres, ii.c, $ext_shared)
   PHP_SUBST(II_SHARED_LIBADD)
 
   if test "$PHP_INGRES" = "yes"; then

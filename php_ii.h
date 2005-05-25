@@ -33,12 +33,6 @@
 
 extern zend_module_entry ingres_module_entry;
 #define phpext_ingres_ptr &ingres_module_entry
-/* 
-   Since the buildconf/configure process difers in behaviour between 
-   Linux/UNIX and Windows, the following line allows us to build on 
-   both setups. It's not a perfect solution. 
-*/
-#define phpext_ingres_ii_ptr &ingres_module_entry
 
 
 #ifdef PHP_WIN32
