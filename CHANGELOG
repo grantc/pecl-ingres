@@ -1,0 +1,14 @@
+CVS
+- Adding CHANGELOG to keep better track of changes [grantc 30-05-05]
+- Added support for reporting/testing Ingres error messages [grantc 30-05-05]
+
+version 1.0
+- Corrected config files to allow building under UNIX [grantc 25-05-05]
+- Corrected username [grantc 25-05-05]
+- Added the ability to do PECL package builds [grantc 25-05-05]
+- Code moved from /php-src/ext/ingres_ii to /pecl/ingres [derick 23-05-05]
+
+pre-pecl
+
+- Fixed bug #30593 - pthread linking problems . [grantc 23-05-05]
+
