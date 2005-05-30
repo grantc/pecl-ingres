@@ -15,7 +15,9 @@
    | Contributed by ECL IP'S Software & Services                          |
    |                http://www.eclips-software.com                        |
    |                mailto://idev@eclips-software.com                     |
-   | Author: David Hénot <henot@php.net>                                  |
+   |                Computer Associates, http://ingres.ca.com             |
+   | Authors: David Hénot <henot@php.net>                                 |
+   |          Grant Croker <grantc@php.net>                               |
    +----------------------------------------------------------------------+
  */
 
@@ -35,14 +37,18 @@ typedef struct _II_LINK {
 	II_PTR stmtHandle;
 	II_LONG fieldCount;
 	IIAPI_DESCRIPTOR *descriptor;
+	II_CHAR *errorText;
+	II_CHAR sqlstate[6];
+	II_LONG errorCode;
+
 } II_LINK;
 
 static int ii_sync(IIAPI_GENPARM *genParm);
-static int ii_success(IIAPI_GENPARM *genParm);
+static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC);
 #define II_FAIL 0
 #define II_OK 1
 #define II_NO_DATA 2
-static int _close_statement(II_LINK *link);
+static int _close_statement(II_LINK *link TSRMLS_DC);
 static int _rollback_transaction(II_LINK *link TSRMLS_DC);
 static void _close_ii_link(II_LINK *link TSRMLS_DC);
 static void _close_ii_plink(zend_rsrc_list_entry *link TSRMLS_DC);
@@ -52,6 +58,11 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent);
 static char *php_ii_field_name(II_LINK *ii_link, int index TSRMLS_DC);
 static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type);
 static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int result_type);
+static void php_ingres_error(INTERNAL_FUNCTION_PARAMETERS, int mode);
+static void php_ingres_do_query(INTERNAL_FUNCTION_PARAMETERS, IIAPI_QUERYTYPE query_mode);
+
+#define II_QUERY_SELECT IIAPI_QT_QUERY
+#define II_QUERY_OPEN IIAPI_QT_OPEN
 
 #endif  /* HAVE_II */
 #endif	/* II_H */
