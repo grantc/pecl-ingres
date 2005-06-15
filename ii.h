@@ -40,16 +40,29 @@ typedef struct _II_LINK {
 	II_CHAR *errorText;
 	II_CHAR sqlstate[6];
 	II_LONG errorCode;
-
+	int paramCount;
+	char *cursor_id;
 } II_LINK;
+
+typedef struct _II_RESULT {
+	II_PTR 			stmtHandle;
+	II_PTR 			connHandle;
+	II_PTR 			tranHandle;
+	II_LONG 		fieldCount;
+	IIAPI_DESCRIPTOR 	*descriptor;
+	int 			paramCount;
+	char			*cursor_id;
+} II_RESULT;
+
+
 
 static int ii_sync(IIAPI_GENPARM *genParm);
 static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC);
 #define II_FAIL 0
 #define II_OK 1
 #define II_NO_DATA 2
-static int _close_statement(II_LINK *link TSRMLS_DC);
-static int _rollback_transaction(II_LINK *link TSRMLS_DC);
+static int _close_statement(II_LINK *ii_link TSRMLS_DC);
+static int _rollback_transaction(II_LINK *ii_link TSRMLS_DC);
 static void _close_ii_link(II_LINK *link TSRMLS_DC);
 static void _close_ii_plink(zend_rsrc_list_entry *link TSRMLS_DC);
 static int php_ii_get_default_link(INTERNAL_FUNCTION_PARAMETERS);
@@ -58,8 +71,9 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent);
 static char *php_ii_field_name(II_LINK *ii_link, int index TSRMLS_DC);
 static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type);
 static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int result_type);
-static void php_ingres_error(INTERNAL_FUNCTION_PARAMETERS, int mode);
-static void php_ingres_do_query(INTERNAL_FUNCTION_PARAMETERS, IIAPI_QUERYTYPE query_mode);
+static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode);
+static long php_ii_queryparse(char *statement TSRMLS_DC);
+static void php_ii_gen_cursor_id(II_LINK *ii_link TSRMLS_DC);
 
 #define II_QUERY_SELECT IIAPI_QT_QUERY
 #define II_QUERY_OPEN IIAPI_QT_OPEN
@@ -71,6 +85,7 @@ static void php_ingres_do_query(INTERNAL_FUNCTION_PARAMETERS, IIAPI_QUERYTYPE qu
 /*
  * Local variables:
  * tab-width: 4
+ * shift-width: 4
  * c-basic-offset: 4
  * End:
  */

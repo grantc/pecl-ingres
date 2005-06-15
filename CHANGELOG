@@ -1,5 +1,7 @@
 CVS
-- Adding CHANGELOG to keep better track of changes [grantc 30-05-05]
+- Added functions ingres_prepare(), ingres_execute(), ingres_cursor() [grantc 16-06-05]
+- Added some simple tests [grantc 15-06-05]
+- Added CHANGELOG to keep better track of changes [grantc 30-05-05]
 - Added support for reporting/testing Ingres error messages [grantc 30-05-05]
 
 version 1.0
