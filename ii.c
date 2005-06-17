@@ -1268,10 +1268,10 @@ static void  php_ii_gen_cursor_id(II_LINK *ii_link TSRMLS_DC)
    gets a cursor name for a given result resource */
 PHP_FUNCTION(ingres_cursor)
 {
-	zval **result; 
+	zval **link; 
 	int argc;
 	II_LINK *ii_link;
-	int link_id = -1
+	int link_id = -1;
 
 	argc = ZEND_NUM_ARGS();
 	if (argc > 1  || zend_get_parameters_ex(argc, &link) == FAILURE) {
@@ -1287,7 +1287,7 @@ PHP_FUNCTION(ingres_cursor)
 		}
 	}
 
-	ZEND_FETCH_RESOURCE2(ii_link, II_LINK *, link, link_id, "Ingres Link", le_ii_link);
+	ZEND_FETCH_RESOURCE2(ii_link, II_LINK *, link, link_id, "Ingres Link", le_ii_link, le_ii_plink);
 
 	RETURN_STRING(ii_link->cursor_id,1);
 }
