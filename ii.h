@@ -42,6 +42,7 @@ typedef struct _II_LINK {
 	II_LONG errorCode;
 	int paramCount;
 	char *cursor_id;
+	char *procname;
 } II_LINK;
 
 typedef struct _II_RESULT {
@@ -74,9 +75,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode);
 static long php_ii_queryparse(char *statement TSRMLS_DC);
 static void php_ii_gen_cursor_id(II_LINK *ii_link TSRMLS_DC);
-
-#define II_QUERY_SELECT IIAPI_QT_QUERY
-#define II_QUERY_OPEN IIAPI_QT_OPEN
+static void php_ii_check_procedure(char *statement, II_LINK *ii_link TSRMLS_DC);
 
 #endif  /* HAVE_II */
 #endif	/* II_H */

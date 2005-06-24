@@ -1,4 +1,6 @@
 CVS
+- Added support for procedures without parameters. Handles row producing
+procedures [grantc 23-06-05]
 - No longer EXPERIMENTAL [grantc 15-06-05]
 - Added functions ingres_prepare(), ingres_execute(), ingres_cursor() [grantc 15-06-05]
 - Added some simple tests [grantc 15-06-05]
@@ -12,6 +14,4 @@ version 1.0
 - Code moved from /php-src/ext/ingres_ii to /pecl/ingres [derick 23-05-05]
 
 pre-pecl
-
 - Fixed bug #30593 - pthread linking problems . [grantc 23-05-05]
-

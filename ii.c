@@ -126,6 +126,21 @@ static int _close_statement(II_LINK *ii_link TSRMLS_DC)
 	ii_link->stmtHandle = NULL;
 	ii_link->fieldCount = 0;
 	ii_link->descriptor = NULL;
+	if ( ii_link->procname != NULL )
+	{
+		free(ii_link->procname);
+	}
+	if ( ii_link->descriptor != NULL )
+	{
+		free(ii_link->descriptor);
+	}
+	if ( ii_link->cursor_id != NULL )
+	{
+		free(ii_link->cursor_id);
+	}
+
+	ii_link->paramCount = 0;
+
 	return 0;
 }
 /* }}} */
@@ -253,6 +268,10 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
 		
 		IIapi_disconnect(&disconnParm);
 		ii_link->connHandle = NULL;
+	}
+	if (ii_link->errorText != NULL )
+	{
+		free(ii_link->errorText);
 	}
 }
 /*  }}} */
@@ -576,6 +595,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			ii_link->errorText = NULL;
 			ii_link->cursor_id = NULL;
 			ii_link->paramCount = 0;
+			ii_link->procname = NULL;
 
 			IIapi_connect(&connParm);
 
@@ -705,7 +725,10 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		ii_link->autocommit = 0;
 		ii_link->errorCode = 0;
 		ii_link->errorText = NULL;
-		
+		ii_link->cursor_id = NULL;
+		ii_link->paramCount = 0;
+		ii_link->procname = NULL;
+
 
 		IIG(errorCode)=0;
 
@@ -822,15 +845,22 @@ PHP_FUNCTION(ingres_close)
    (look for dedicated functions instead) */
 PHP_FUNCTION(ingres_query)
 {
-	zval **query, **link;
+	zval **query, **link, **procParams;
 	int argc;
 	int link_id = -1;
 	II_LINK *ii_link;
 	IIAPI_QUERYPARM     queryParm;
 	IIAPI_GETDESCRPARM  getDescrParm;
+    IIAPI_SETDESCRPARM  setDescrParm;
+    IIAPI_PUTPARMPARM   putParmParm;
+    IIAPI_DESCRIPTOR	*DescrBuffer; /* 1 entry since this does not support hardcoded paramters */
+    IIAPI_DATAVALUE		*DataBuffer;  /* yet... */
+	IIAPI_GETQINFOPARM getQInfoParm;
+
+	char *procname=NULL;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc < 1 || argc > 3 || zend_get_parameters_ex(argc, &query, &link) == FAILURE) {
+	if (argc < 1 || argc > 3 || zend_get_parameters_ex(argc, &query, &link, &procParams) == FAILURE) {
 		WRONG_PARAM_COUNT;
 	}
 	
@@ -845,22 +875,50 @@ PHP_FUNCTION(ingres_query)
 
 	ZEND_FETCH_RESOURCE2(ii_link, II_LINK *, link, link_id, "Ingres Link", le_ii_link, le_ii_plink);
 
-	convert_to_string_ex(query);
-
 	/* if there's already an active statement, close it */
 	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC)) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to close statement !!");
 		RETURN_FALSE;
 	}
+	
+	convert_to_string_ex(query);
+
+	if ( ii_link->procname != NULL )
+	{
+		free(ii_link->procname);
+		ii_link->procname = NULL;
+	}
+	/* check to see if this is a procedure or not
+	   load the procedure name into ii_link->procname.
+	   If ii_link->procname is NULL then there is no procedure */
+
+    php_ii_check_procedure(Z_STRVAL_PP(query), ii_link TSRMLS_CC);
+
 
 	queryParm.qy_genParm.gp_callback = NULL;
 	queryParm.qy_genParm.gp_closure = NULL;
 	queryParm.qy_connHandle = ii_link->connHandle;
 	queryParm.qy_tranHandle = ii_link->tranHandle;
 	queryParm.qy_stmtHandle = NULL;
-	queryParm.qy_queryType  = IIAPI_QT_QUERY;
-	queryParm.qy_parameters = FALSE;
-	queryParm.qy_queryText  = Z_STRVAL_PP(query);
+	if ( ii_link->procname == NULL )
+	{
+		queryParm.qy_queryType  = IIAPI_QT_QUERY;
+		queryParm.qy_parameters = FALSE;
+	}
+	else
+	{
+		queryParm.qy_queryType  = IIAPI_QT_EXEC_PROCEDURE;
+		queryParm.qy_parameters = TRUE;
+	}
+
+	if ( ii_link->procname == NULL )
+	{
+		queryParm.qy_queryText  = Z_STRVAL_PP(query);
+	}
+	else /* qt_queryText is null for procedures */
+	{
+		queryParm.qy_queryText  = NULL;
+	}
 
 	IIapi_query(&queryParm);
 	ii_sync(&(queryParm.qy_genParm));
@@ -873,7 +931,62 @@ PHP_FUNCTION(ingres_query)
 	ii_link->tranHandle = queryParm.qy_tranHandle;
 	ii_link->stmtHandle = queryParm.qy_stmtHandle;
 
-	
+	/* if we are executing a procedure supply the procedure name and execute */
+
+	if ( ii_link->procname != NULL )
+	{
+		DescrBuffer = (IIAPI_DESCRIPTOR *)ecalloc(sizeof(IIAPI_DESCRIPTOR),1);
+		setDescrParm.sd_genParm.gp_callback = NULL;
+		setDescrParm.sd_genParm.gp_closure = NULL;
+		setDescrParm.sd_stmtHandle = ii_link->stmtHandle;
+		setDescrParm.sd_descriptorCount = 1; /* no params just the name of the procedure */
+		setDescrParm.sd_descriptor = DescrBuffer;
+
+		setDescrParm.sd_descriptor[0].ds_dataType = IIAPI_CHA_TYPE;
+	    setDescrParm.sd_descriptor[0].ds_length = strlen(ii_link->procname);
+		setDescrParm.sd_descriptor[0].ds_nullable = FALSE;
+		setDescrParm.sd_descriptor[0].ds_precision = 0;
+		setDescrParm.sd_descriptor[0].ds_scale = 0;
+		setDescrParm.sd_descriptor[0].ds_columnType = IIAPI_COL_SVCPARM;
+		setDescrParm.sd_descriptor[0].ds_columnName = NULL;
+
+		IIapi_setDescriptor( &setDescrParm );
+
+		ii_sync(&(setDescrParm.sd_genParm));
+
+		if (ii_success(&(setDescrParm.sd_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+			efree(DescrBuffer);
+			RETURN_FALSE;
+		} 
+
+		/*  Send procedure parameters. */ 
+		DataBuffer = (IIAPI_DATAVALUE *)ecalloc(sizeof(IIAPI_DATAVALUE),1);
+		putParmParm.pp_genParm.gp_callback = NULL;
+		putParmParm.pp_genParm.gp_closure = NULL;
+		putParmParm.pp_stmtHandle = ii_link->stmtHandle;
+		putParmParm.pp_parmCount = setDescrParm.sd_descriptorCount;
+		putParmParm.pp_parmData =  DataBuffer;
+		putParmParm.pp_moreSegments = 0;
+
+		putParmParm.pp_parmData[0].dv_null = FALSE;
+		putParmParm.pp_parmData[0].dv_length = strlen( ii_link->procname );
+	    putParmParm.pp_parmData[0].dv_value = ii_link->procname;
+
+		IIapi_putParms( &putParmParm );
+
+		ii_sync(&(putParmParm.pp_genParm));
+
+		if (ii_success(&(putParmParm.pp_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+			efree(DescrBuffer);
+			efree(DataBuffer);
+			RETURN_FALSE;
+		} 
+
+		efree(DescrBuffer);
+		efree(DataBuffer);
+
+	}
+
 	/* get description of results */
 	getDescrParm.gd_genParm.gp_callback = NULL;
 	getDescrParm.gd_genParm.gp_closure  = NULL;
@@ -890,8 +1003,6 @@ PHP_FUNCTION(ingres_query)
 	ii_link->fieldCount = getDescrParm.gd_descriptorCount;
 	ii_link->descriptor = getDescrParm.gd_descriptor;
 
-	ZEND_REGISTER_RESOURCE(return_value,ii_link,le_ii_link);
-
 	RETURN_TRUE;
 }
 /* }}} */
@@ -906,17 +1017,12 @@ PHP_FUNCTION(ingres_prepare)
 	II_LINK *ii_link;
 
 	IIAPI_QUERYPARM     	queryParm;
-	IIAPI_GETDESCRPARM  	getDescrParm;
-	IIAPI_GETQINFOPARM  	getQInfoParm;
 	IIAPI_CLOSEPARM	    	closeParm;
 
-	int paramCount, param;
 	int queryLen;
 	char *statement;
 	char *preparedStatement;
 
-	char *hashed_details;
-	int hashed_details_length;
 	int cursor_id_len;
 
 
@@ -1002,22 +1108,20 @@ PHP_FUNCTION(ingres_prepare)
    execute a query prepared by ingres_prepare() */
 PHP_FUNCTION (ingres_execute) {
 
-	zval **link, **queryParams, **dummy,	**val;
+	zval **link, **queryParams, **val;
 	int argc;
 	int link_id = -1;
 	II_LINK *ii_link;
 	IIAPI_QUERYPARM     queryParm;
 	IIAPI_GETDESCRPARM  getDescrParm;
-    IIAPI_GETQINFOPARM	getQInfoParm;
 	IIAPI_SETDESCRPARM	setDescrParm;
     IIAPI_PUTPARMPARM	putParmParm;
-    IIAPI_DESCRIPTOR	DescrBuffer[256];
-    IIAPI_DATAVALUE		DataBuffer[256];
+    IIAPI_DESCRIPTOR	*descriptorInfo;
+    IIAPI_DATAVALUE		*columnData;
 
 	int paramCount, param;
 	int elementCount;
 	char *statement;
-	char *preparedStatement;
 
 	argc = ZEND_NUM_ARGS();
 	if (argc > 2 || zend_get_parameters_ex(argc, &queryParams, &link) == FAILURE) {
@@ -1085,17 +1189,20 @@ PHP_FUNCTION (ingres_execute) {
 		setDescrParm.sd_genParm.gp_closure = NULL;
 		setDescrParm.sd_stmtHandle = ii_link->stmtHandle;
 		setDescrParm.sd_descriptorCount = paramCount;
-		setDescrParm.sd_descriptor = DescrBuffer;
+
+		descriptorInfo = (IIAPI_DESCRIPTOR *) safe_emalloc(paramCount, sizeof(IIAPI_DESCRIPTOR), 0);
+		setDescrParm.sd_descriptor = descriptorInfo;
 			
 
 		for ( param=0; param < paramCount; param++ ) {
 
 			if (zend_hash_get_current_data(Z_ARRVAL_PP(queryParams), (void **) &val) == FAILURE) {
 				php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error getting parameter");
+				efree(descriptorInfo);
 				RETURN_FALSE;
 			}
 
-			/* Process each parameter into our DescrBuffer */
+			/* Process each parameter into our descriptor buffer */
 			switch (Z_TYPE_PP(val)) {
 				case IS_LONG:
 					/* does not handle int8 yet */
@@ -1151,6 +1258,7 @@ PHP_FUNCTION (ingres_execute) {
 		IIapi_setDescriptor( &setDescrParm );
 
 		if (ii_success(&(setDescrParm.sd_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+			efree(descriptorInfo);
 			RETURN_FALSE;
 		}
 
@@ -1160,12 +1268,15 @@ PHP_FUNCTION (ingres_execute) {
 		putParmParm.pp_stmtHandle = ii_link->stmtHandle;
 		putParmParm.pp_parmCount = setDescrParm.sd_descriptorCount;
 
-		putParmParm.pp_parmData = DataBuffer;
+		columnData = (IIAPI_DATAVALUE *) safe_emalloc(paramCount, sizeof(IIAPI_DATAVALUE), 0);
+		putParmParm.pp_parmData = columnData;
 
 		for ( param = 0 ; param < paramCount ; param++) {
 
 			if (zend_hash_get_current_data(Z_ARRVAL_PP(queryParams), (void **) &val) == FAILURE) {
 				php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error getting parameter");
+				efree(columnData);
+				efree(descriptorInfo);
 				RETURN_FALSE;
 			}
 
@@ -1203,7 +1314,10 @@ PHP_FUNCTION (ingres_execute) {
 		IIapi_putParms( &putParmParm );
 		ii_sync(&(putParmParm.pp_genParm));
 
-		if (ii_success(&(putParmParm.pp_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+		if (ii_success(&(putParmParm.pp_genParm), ii_link TSRMLS_CC) == II_FAIL)
+		{
+			efree(descriptorInfo);
+			efree(columnData);
 			RETURN_FALSE;
 		}
 	} else {
@@ -1241,12 +1355,19 @@ PHP_FUNCTION (ingres_execute) {
 	ii_sync(&(getDescrParm.gd_genParm));
 
 	if (ii_success(&(getDescrParm.gd_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+		if (paramCount > 0)
+		{
+			efree(columnData);
+			efree(descriptorInfo);
+		}
 		RETURN_FALSE;
 	}
 
 	/* store the results */
 	ii_link->fieldCount = getDescrParm.gd_descriptorCount;
 	ii_link->descriptor = getDescrParm.gd_descriptor;
+	efree(columnData);
+	efree(descriptorInfo);
 
 }
 /* }}} */
@@ -1545,8 +1666,7 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type)
 /* }}} */
 
 /* {{{ static char *php_ii_field_name(II_LINK *ii_link, int index TSRMLS_DC)
- * Return the name of a field in a query result
-*/
+  Return the name of a field in a query result */
 static char *php_ii_field_name(II_LINK *ii_link, int index TSRMLS_DC)
 {
 	if (index < 1 || index > ii_link->fieldCount) {
@@ -1648,6 +1768,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 {
 	IIAPI_GETCOLPARM getColParm;
 	IIAPI_DATAVALUE *columnData;
+	IIAPI_GETQINFOPARM getQInfoParm;
 	IIAPI_CONVERTPARM convertParm;
 
 	int i, j, k;
@@ -1659,6 +1780,41 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 	/* array initialization */
 	array_init(return_value);
+
+	if ( ii_link->procname != NULL ) /* look to see if there is a return value*/
+	{
+		if ( ii_link->fieldCount == 0 ) 
+		/* if > 0 then we are looking at a row producing procedure and don't want to call IIapi_getQueryInfo
+		 * to nullify any results */
+		{
+			getQInfoParm.gq_genParm.gp_callback = NULL;
+			getQInfoParm.gq_genParm.gp_closure = NULL;
+			getQInfoParm.gq_stmtHandle = ii_link->stmtHandle;
+
+			IIapi_getQueryInfo( &getQInfoParm );
+			ii_sync(&(getQInfoParm.gq_genParm));
+
+			if (ii_success(&(getQInfoParm.gq_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+				RETURN_FALSE;
+			} 
+
+			/* Check that the last query was for a procedure and there is a return value */
+			if ((getQInfoParm.gq_mask & IIAPI_GQ_PROCEDURE_ID) && 
+					(getQInfoParm.gq_mask & IIAPI_GQ_PROCEDURE_RET)) 
+			{
+				if (result_type & II_NUM) {
+					add_index_long(return_value, 0, getQInfoParm.gq_procedureReturn);
+				}
+				if (result_type & II_ASSOC) {
+					add_assoc_long(return_value, "returnvalue", getQInfoParm.gq_procedureReturn);
+				}
+			}
+			else
+			{
+				RETURN_FALSE;
+			}
+		}
+	}
 
 	/* going through all fields */
 	for (i = 1; i <= ii_link->fieldCount;) {
@@ -2129,7 +2285,7 @@ PHP_FUNCTION(ingres_errsqlstate)
 }
 /* }}} */
 
-/* {{{ php_ii_error */
+/* {{{ php_ii_error (INTERNAL_FUNCTION_PARAMETERS, int mode) */
 
 static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode) {
 
@@ -2260,6 +2416,103 @@ static long php_ii_queryparse(char *statement TSRMLS_DC)
 
 	*dst = '\0';
 	return(idx);
+}
+/* }}} */
+
+/* {{{ static void php_ii_check_procedure(char *statement, char *procname) TSRMLS_DC) */
+/* check to see if the query is for a procedure or not, if it is return the procedure name 
+ * 
+ * Procedure calls come in two forms either:
+ * execute procedure procname
+ * call procedure 
+ *
+ */
+static void php_ii_check_procedure(char *statement, II_LINK *ii_link TSRMLS_DC)
+{
+	char *src;
+	char *end_space;
+	char *end_term;
+	char *end_bracket;
+	char *end_addr;
+	char exec_proc[19];
+	char call_proc[6];
+	int  style = 0;
+	int  start;
+	int  proc_len;
+	int  pos;
+
+	sprintf(exec_proc,"execute procedure ");
+	sprintf(call_proc,"call ");
+
+	if (strncmp(statement,exec_proc,18) == 0 ) 
+	{
+		style = 1;
+	} 
+	else if (strncmp(statement,call_proc,5) == 0 )
+	{
+		style = 2;
+	}
+	
+    if ( style != 0 )
+	{
+		switch (style)
+		{
+			case 1:
+				start = 18;
+				break;
+			case 2:
+				start = 5;
+				break;
+			default:
+				/* should not be here */
+				break;
+		}
+		src = statement;
+		src = src + start;
+
+		/* look for a space, bracket or null terminator to determine end of */ 
+		/* the procedure name, end_term should never be NULL */
+		end_term = strchr(src,'\0');
+		end_space = strchr(src,' ');
+		end_bracket = strchr(src,'(');
+
+		if ( end_space == NULL && end_bracket == NULL ) 
+		{
+			proc_len = end_term - src;
+			end_addr = end_term;
+		} 
+		else if ( end_space != NULL && end_bracket == NULL )	
+		{
+			proc_len = end_space - src;
+			end_addr = end_space;
+		}
+		else if ( end_space == NULL && end_bracket != NULL )	
+		{
+			proc_len = end_bracket - src;
+			end_addr = end_bracket;
+		}
+		else if ( end_space != NULL && end_bracket != NULL )	
+		{
+			if ( end_space > end_bracket) 
+			{
+				proc_len = end_bracket - src;
+				end_addr = end_bracket;
+			}
+			else
+			{
+				proc_len = end_space - src;
+				end_addr = end_space;
+			}
+		}
+
+		ii_link->procname = malloc(proc_len + 1);
+		for ( pos = 0; pos <= proc_len; pos++)
+		{
+			ii_link->procname[pos] = src[pos];
+		}
+		//sprintf(ii_link->procname,"%s", src);
+		ii_link->procname[proc_len]='\0';
+	}
 }
 /* }}} */
 
