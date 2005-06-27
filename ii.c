@@ -1025,7 +1025,6 @@ PHP_FUNCTION(ingres_prepare)
 
 	int cursor_id_len;
 
-
 	argc = ZEND_NUM_ARGS();
 	if (argc < 1 || argc > 2 || zend_get_parameters_ex(argc, &query, &link) == FAILURE) {
 		WRONG_PARAM_COUNT;
@@ -1046,7 +1045,6 @@ PHP_FUNCTION(ingres_prepare)
 	convert_to_string_ex(query);
 	statement = Z_STRVAL_PP(query);
 
-
 	/* figure how many parameters are expected */
 	ii_link->paramCount = php_ii_queryparse(statement TSRMLS_CC);
 
@@ -1056,51 +1054,64 @@ PHP_FUNCTION(ingres_prepare)
 		RETURN_FALSE;
 	}
 
-	/* Adapt the query into a prepared statement */
-	queryLen = strlen(statement);
+	ii_link->procname = NULL;
 
-	ii_link->cursor_id = malloc(32);
-	php_ii_gen_cursor_id(ii_link TSRMLS_CC);
-	cursor_id_len = strlen(ii_link->cursor_id);
-	preparedStatement=ecalloc(queryLen + 15 + cursor_id_len, 1);
-	sprintf (preparedStatement,"prepare %s from %s\0", ii_link->cursor_id, statement);
-	statement = preparedStatement;
+	/* check to see if this is a procedure or not
+	   load the procedure name into ii_link->procname.
+	   If ii_link->procname is NULL then there is no procedure */
 
-	queryParm.qy_genParm.gp_callback = NULL;
-	queryParm.qy_genParm.gp_closure = NULL;
-	queryParm.qy_connHandle = ii_link->connHandle;
-	queryParm.qy_tranHandle = ii_link->tranHandle;
-	queryParm.qy_stmtHandle = NULL;
-	queryParm.qy_queryType  = IIAPI_QT_QUERY; 
-	queryParm.qy_parameters = FALSE;
-	queryParm.qy_queryText  = statement;
+    php_ii_check_procedure(Z_STRVAL_PP(query), ii_link TSRMLS_CC);
 
-	IIapi_query(&queryParm);
-	ii_sync(&(queryParm.qy_genParm));
 
-	if (ii_success(&(queryParm.qy_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+	if ( ii_link->procname == NULL )
+	{
+		/* Adapt the query into a prepared statement */
+		queryLen = strlen(statement);
+
+		ii_link->cursor_id = malloc(33);
+		php_ii_gen_cursor_id(ii_link TSRMLS_CC);
+		cursor_id_len = strlen(ii_link->cursor_id);
+		preparedStatement=ecalloc(queryLen + 15 + cursor_id_len, 1);
+		sprintf (preparedStatement,"prepare %s from %s\0", ii_link->cursor_id, statement);
+		statement = preparedStatement;
+
+		queryParm.qy_genParm.gp_callback = NULL;
+		queryParm.qy_genParm.gp_closure = NULL;
+		queryParm.qy_connHandle = ii_link->connHandle;
+		queryParm.qy_tranHandle = ii_link->tranHandle;
+		queryParm.qy_stmtHandle = NULL;
+		queryParm.qy_queryType  = IIAPI_QT_QUERY; 
+		queryParm.qy_parameters = FALSE;
+		queryParm.qy_queryText  = statement;
+
+		IIapi_query(&queryParm);
+		ii_sync(&(queryParm.qy_genParm));
+
+		if (ii_success(&(queryParm.qy_genParm), ii_link TSRMLS_CC) == II_FAIL) 
+		{
+			efree(preparedStatement);
+			RETURN_FALSE;
+		}
+
+		ii_link->tranHandle = queryParm.qy_tranHandle;
+		ii_link->stmtHandle = queryParm.qy_stmtHandle;
+
+		/*
+		** Call IIapi_close() to release resources.
+		*/
+		closeParm.cl_genParm.gp_callback = NULL;
+		closeParm.cl_genParm.gp_closure = NULL;
+		closeParm.cl_stmtHandle = queryParm.qy_stmtHandle;
+
+		IIapi_close( &closeParm );
+		ii_sync(&(closeParm.cl_genParm));
+		if (ii_success(&(closeParm.cl_genParm), ii_link TSRMLS_CC) == II_FAIL) 
+		{
+			efree(preparedStatement);
+			RETURN_FALSE;
+		}
 		efree(preparedStatement);
-		RETURN_FALSE;
 	}
-	ii_link->tranHandle = queryParm.qy_tranHandle;
-	ii_link->stmtHandle = queryParm.qy_stmtHandle;
-
-	/*
-	** Call IIapi_close() to release resources.
-	*/
-	closeParm.cl_genParm.gp_callback = NULL;
-	closeParm.cl_genParm.gp_closure = NULL;
-	closeParm.cl_stmtHandle = queryParm.qy_stmtHandle;
-
-	IIapi_close( &closeParm );
-	ii_sync(&(closeParm.cl_genParm));
-
-	if (ii_success(&(closeParm.cl_genParm), ii_link TSRMLS_CC) == II_FAIL) {
-		efree(preparedStatement);
-		RETURN_FALSE;
-	}
-
-	efree(preparedStatement);
 }
 /* }}} */
 
@@ -1109,6 +1120,9 @@ PHP_FUNCTION(ingres_prepare)
 PHP_FUNCTION (ingres_execute) {
 
 	zval **link, **queryParams, **val;
+	char *key;
+	int keylen;
+	long index;
 	int argc;
 	int link_id = -1;
 	II_LINK *ii_link;
@@ -1118,6 +1132,7 @@ PHP_FUNCTION (ingres_execute) {
     IIAPI_PUTPARMPARM	putParmParm;
     IIAPI_DESCRIPTOR	*descriptorInfo;
     IIAPI_DATAVALUE		*columnData;
+	II_INT2				columnType;
 
 	int paramCount, param;
 	int elementCount;
@@ -1157,37 +1172,75 @@ PHP_FUNCTION (ingres_execute) {
 	}
 
 
-	statement = ecalloc(sizeof(ii_link->cursor_id) + 17, 1);
+	if ( ii_link->procname == NULL ) {
+		statement = ecalloc(sizeof(ii_link->cursor_id) + 17, 1);
+        /* TODO : Add select cursor mode support */
+		sprintf (statement,"%s for readonly\0", ii_link->cursor_id );
 
-	sprintf (statement,"%s for readonly\0", ii_link->cursor_id );
-	queryParm.qy_genParm.gp_callback = NULL;
-	queryParm.qy_genParm.gp_closure = NULL;
-	queryParm.qy_connHandle = ii_link->connHandle;
-	queryParm.qy_tranHandle = ii_link->tranHandle;
-	queryParm.qy_stmtHandle = NULL;
-	queryParm.qy_queryType  = IIAPI_QT_OPEN; 
-	if (paramCount >0 ) {
-		queryParm.qy_parameters = TRUE;
-	} else {
-		queryParm.qy_parameters = FALSE;
+		queryParm.qy_genParm.gp_callback = NULL;
+		queryParm.qy_genParm.gp_closure = NULL;
+		queryParm.qy_connHandle = ii_link->connHandle;
+		queryParm.qy_tranHandle = ii_link->tranHandle;
+		queryParm.qy_stmtHandle = NULL;
+		queryParm.qy_queryType  = IIAPI_QT_OPEN; 
+
+		if (paramCount >0 ) 
+		{
+			queryParm.qy_parameters = TRUE;
+		} 
+		else 
+		{
+			queryParm.qy_parameters = FALSE;
+		}
+
+		queryParm.qy_queryText  = statement;
+
+		columnType = IIAPI_COL_QPARM;
+
 	}
-	queryParm.qy_queryText  = statement;
+	else
+	{
+		queryParm.qy_genParm.gp_callback = NULL;
+		queryParm.qy_genParm.gp_closure = NULL;
+		queryParm.qy_connHandle = ii_link->connHandle;
+		queryParm.qy_tranHandle = ii_link->tranHandle;
+		queryParm.qy_stmtHandle = NULL;
+		queryParm.qy_queryType  = IIAPI_QT_EXEC_PROCEDURE; 
+		queryParm.qy_parameters = TRUE;
+		queryParm.qy_queryText  = NULL;
+
+		columnType = IIAPI_COL_PROCPARM;
+
+		/* allow for the procedure name as a param */
+		paramCount++;
+
+	}
 
 	IIapi_query(&queryParm);
 	ii_sync(&(queryParm.qy_genParm));
 
 	if (ii_success(&(queryParm.qy_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+		if ( ii_link->procname == NULL )
+		{
+			efree (statement);
+		}
 		RETURN_FALSE;
 	}
 
 	ii_link->tranHandle = queryParm.qy_tranHandle;
 	ii_link->stmtHandle = queryParm.qy_stmtHandle;
 
+
 	if ( paramCount > 0 ) {
+	
 		/* if we are sending params then we need to describe them into to Ingres */
+		/* if no parameters have been provided to a procedure call there is always 1 */
+		/* parameter, the procedure name */
+
 		setDescrParm.sd_genParm.gp_callback = NULL;
 		setDescrParm.sd_genParm.gp_closure = NULL;
 		setDescrParm.sd_stmtHandle = ii_link->stmtHandle;
+	
 		setDescrParm.sd_descriptorCount = paramCount;
 
 		descriptorInfo = (IIAPI_DESCRIPTOR *) safe_emalloc(paramCount, sizeof(IIAPI_DESCRIPTOR), 0);
@@ -1196,64 +1249,122 @@ PHP_FUNCTION (ingres_execute) {
 
 		for ( param=0; param < paramCount; param++ ) {
 
-			if (zend_hash_get_current_data(Z_ARRVAL_PP(queryParams), (void **) &val) == FAILURE) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error getting parameter");
-				efree(descriptorInfo);
-				RETURN_FALSE;
-			}
+			if (( ii_link->procname != NULL)  && (param == 0) ) 
+			{ 
+				/* setup the first parameter as the procedure name */
+				setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
+				setDescrParm.sd_descriptor[param].ds_length = strlen(ii_link->procname);
+				setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+				setDescrParm.sd_descriptor[param].ds_precision = 0;
+				setDescrParm.sd_descriptor[param].ds_scale = 0;
+				setDescrParm.sd_descriptor[param].ds_columnType = IIAPI_COL_SVCPARM;
+				setDescrParm.sd_descriptor[param].ds_columnName = NULL;
 
-			/* Process each parameter into our descriptor buffer */
-			switch (Z_TYPE_PP(val)) {
-				case IS_LONG:
-					/* does not handle int8 yet */
-					convert_to_long_ex(val);
-					setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_INT_TYPE;
-					setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
-					setDescrParm.sd_descriptor[param].ds_length = sizeof(val);
-					setDescrParm.sd_descriptor[param].ds_precision = 0;
-					setDescrParm.sd_descriptor[param].ds_scale = 0;
-					setDescrParm.sd_descriptor[param].ds_columnType = IIAPI_COL_QPARM;
-					setDescrParm.sd_descriptor[param].ds_columnName = NULL;
-					break;
-				case IS_DOUBLE:
-					convert_to_double_ex(val);			
-					setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_FLT_TYPE;
-					setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
-					setDescrParm.sd_descriptor[param].ds_length = sizeof(val);
-					setDescrParm.sd_descriptor[param].ds_precision = 0;
-					setDescrParm.sd_descriptor[param].ds_scale = 0;
-					setDescrParm.sd_descriptor[param].ds_columnType = IIAPI_COL_QPARM;
-					setDescrParm.sd_descriptor[param].ds_columnName = NULL;
-					break;
-				case IS_STRING:
-					convert_to_string_ex(val);
-					setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
-					setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
-					setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
-					setDescrParm.sd_descriptor[param].ds_precision = 0;
-					setDescrParm.sd_descriptor[param].ds_scale = 0;
-					setDescrParm.sd_descriptor[param].ds_columnType = IIAPI_COL_QPARM;
-					setDescrParm.sd_descriptor[param].ds_columnName = NULL;
-					break;
-				case IS_NULL:
-					convert_to_string_ex(val);
-					setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
-					setDescrParm.sd_descriptor[param].ds_nullable = TRUE;
-					setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
-					setDescrParm.sd_descriptor[param].ds_precision = 0;
-					setDescrParm.sd_descriptor[param].ds_scale = 0;
-					setDescrParm.sd_descriptor[param].ds_columnType = IIAPI_COL_QPARM;
-					setDescrParm.sd_descriptor[param].ds_columnName = NULL;
-					break;
-				default:
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: a parameter has been passed of unknown type" );
+			} 
+			else 
+			{
+
+				if (zend_hash_get_current_data(Z_ARRVAL_PP(queryParams), (void **) &val) == FAILURE) {
+					php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error getting parameter value");
+					efree(descriptorInfo);
 					RETURN_FALSE;
+				}
+
+				if ((ii_link->procname != NULL) && (zend_hash_get_current_key(Z_ARRVAL_PP(queryParams), &key, &index, 0) == FAILURE))
+				{
+					php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error getting parameter key");
+					efree(descriptorInfo);
+					RETURN_FALSE;
+				}
+
+				/* Process each parameter into our descriptor buffer */
+				switch (Z_TYPE_PP(val)) {
+					case IS_LONG:
+						/* does not handle int8 yet */
+						convert_to_long_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_INT_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = sizeof(val);
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					case IS_DOUBLE:
+						convert_to_double_ex(val);			
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_FLT_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = sizeof(val);
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					case IS_STRING:
+						convert_to_string_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					case IS_NULL:
+						convert_to_string_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = TRUE;
+						setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					default:
+						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: a parameter has been passed of unknown type" );
+						RETURN_FALSE;
+				}
+
+				if (((ii_link->procname != NULL) && (param > 0)) || (ii_link->procname == NULL))
+				{
+					zend_hash_move_forward(Z_ARRVAL_PP(queryParams));
+				}
 			}
-			zend_hash_move_forward(Z_ARRVAL_PP(queryParams));
 					
+
 		} /* param=0; param < paramCount; param++ */
 
-		zend_hash_internal_pointer_reset(Z_ARRVAL_PP(queryParams));
+		if (((ii_link->procname == NULL) && (paramCount > 0)) || ((ii_link->procname != NULL) && (paramCount > 1))) {
+			zend_hash_internal_pointer_reset(Z_ARRVAL_PP(queryParams));
+		}
 
 		IIapi_setDescriptor( &setDescrParm );
 
@@ -1268,45 +1379,59 @@ PHP_FUNCTION (ingres_execute) {
 		putParmParm.pp_stmtHandle = ii_link->stmtHandle;
 		putParmParm.pp_parmCount = setDescrParm.sd_descriptorCount;
 
-		columnData = (IIAPI_DATAVALUE *) safe_emalloc(paramCount, sizeof(IIAPI_DATAVALUE), 0);
+		columnData = (IIAPI_DATAVALUE *) safe_emalloc(setDescrParm.sd_descriptorCount, sizeof(IIAPI_DATAVALUE), 0);
 		putParmParm.pp_parmData = columnData;
 
-		for ( param = 0 ; param < paramCount ; param++) {
+		for ( param = 0 ; param < setDescrParm.sd_descriptorCount ; param++) {
 
-			if (zend_hash_get_current_data(Z_ARRVAL_PP(queryParams), (void **) &val) == FAILURE) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error getting parameter");
-				efree(columnData);
-				efree(descriptorInfo);
-				RETURN_FALSE;
+			if ((ii_link->procname != NULL) && (param == 0))
+			{
+				putParmParm.pp_parmData[param].dv_null = FALSE;
+				putParmParm.pp_parmData[param].dv_length = strlen(ii_link->procname);
+				putParmParm.pp_parmData[param].dv_value = ii_link->procname;
 			}
+			else
+			{
 
-			switch (Z_TYPE_PP(val)) {
-				case IS_LONG:
-					convert_to_long_ex(val);
-					putParmParm.pp_parmData[param].dv_null = FALSE;
-					putParmParm.pp_parmData[param].dv_length = sizeof(Z_LVAL_PP(val));
-					putParmParm.pp_parmData[param].dv_value = val;
-				case IS_DOUBLE:
-					convert_to_double_ex(val);
-					putParmParm.pp_parmData[param].dv_null = FALSE;
-					putParmParm.pp_parmData[param].dv_length = sizeof(Z_DVAL_PP(val)); 
-					putParmParm.pp_parmData[param].dv_value = val;
-				case IS_STRING:
-					convert_to_string_ex(val);
-					putParmParm.pp_parmData[param].dv_null = FALSE;
-					putParmParm.pp_parmData[param].dv_length = Z_STRLEN_PP(val); 
-					putParmParm.pp_parmData[param].dv_value = Z_STRVAL_PP(val);
-					break;
-				case IS_NULL: /* need to check this */
-					putParmParm.pp_parmData[param].dv_null = TRUE;
-					putParmParm.pp_parmData[param].dv_length = Z_STRLEN_PP(val); 
-					putParmParm.pp_parmData[param].dv_value = Z_STRVAL_PP(val);
-				default:
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: error putting a parameter of unknown type" );
+				if (zend_hash_get_current_data(Z_ARRVAL_PP(queryParams), (void **) &val) == FAILURE) {
+					php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error getting parameter");
+					efree(columnData);
+					efree(descriptorInfo);
 					RETURN_FALSE;
+				}
+
+				switch (Z_TYPE_PP(val)) {
+					case IS_LONG:
+						convert_to_long_ex(val);
+						putParmParm.pp_parmData[param].dv_null = FALSE;
+						putParmParm.pp_parmData[param].dv_length = sizeof(Z_LVAL_PP(val));
+						putParmParm.pp_parmData[param].dv_value = val;
+					case IS_DOUBLE:
+						convert_to_double_ex(val);
+						putParmParm.pp_parmData[param].dv_null = FALSE;
+						putParmParm.pp_parmData[param].dv_length = sizeof(Z_DVAL_PP(val)); 
+						putParmParm.pp_parmData[param].dv_value = val;
+					case IS_STRING:
+						convert_to_string_ex(val);
+						putParmParm.pp_parmData[param].dv_null = FALSE;
+						putParmParm.pp_parmData[param].dv_length = Z_STRLEN_PP(val); 
+						putParmParm.pp_parmData[param].dv_value = Z_STRVAL_PP(val);
+						break;
+					case IS_NULL: /* need to check this */
+						putParmParm.pp_parmData[param].dv_null = TRUE;
+						putParmParm.pp_parmData[param].dv_length = Z_STRLEN_PP(val); 
+						putParmParm.pp_parmData[param].dv_value = Z_STRVAL_PP(val);
+					default:
+						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: error putting a parameter of unknown type" );
+						RETURN_FALSE;
+				}
 			}
 
-			zend_hash_move_forward(Z_ARRVAL_PP(queryParams));
+			if (((ii_link->procname != NULL) && (param > 0)) || (ii_link->procname == NULL))
+			{
+				zend_hash_move_forward(Z_ARRVAL_PP(queryParams));
+			}
+
 		} /* param = 0 ; param < paramCount ; param++ */
 
 		putParmParm.pp_moreSegments = 0;
@@ -1320,6 +1445,7 @@ PHP_FUNCTION (ingres_execute) {
 			efree(columnData);
 			RETURN_FALSE;
 		}
+
 	} else {
 		/* not handling parameters */
 
@@ -1366,8 +1492,11 @@ PHP_FUNCTION (ingres_execute) {
 	/* store the results */
 	ii_link->fieldCount = getDescrParm.gd_descriptorCount;
 	ii_link->descriptor = getDescrParm.gd_descriptor;
-	efree(columnData);
-	efree(descriptorInfo);
+	if (paramCount > 0)
+	{
+		efree(columnData);
+		efree(descriptorInfo);
+	}
 
 }
 /* }}} */
@@ -1377,10 +1506,16 @@ PHP_FUNCTION (ingres_execute) {
 static void  php_ii_gen_cursor_id(II_LINK *ii_link TSRMLS_DC)
 {
 	char *tmp_id = '\0';
-	tmp_id = ecalloc (32,1);
+
+	if (ii_link->cursor_id != NULL)
+	{
+		free(ii_link->cursor_id);
+	}	
+
+	tmp_id = ecalloc (33,1);
 	IIG(cursor_no)++;
 	sprintf (tmp_id,"php_%d_%d", II_THREAD_ID, IIG(cursor_no));
-	ii_link->cursor_id = ecalloc(sizeof(tmp_id),1);
+	ii_link->cursor_id = malloc(sizeof(tmp_id));
 	strcpy(ii_link->cursor_id,tmp_id);
 	efree(tmp_id);
 }

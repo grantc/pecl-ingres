@@ -1,4 +1,5 @@
 CVS
+- Added named parameter support to database procedures [grantc 27-06-05] 
 - Added support for procedures without parameters. Handles row producing
 procedures [grantc 23-06-05]
 - No longer EXPERIMENTAL [grantc 15-06-05]
