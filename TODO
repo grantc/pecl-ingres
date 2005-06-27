@@ -1,0 +1,8 @@
+Still to do
+- documentation
+- cursor updates
+- cursor mode for select
+- procedure return value with a row producing procedure
+- procedure byref parameters
+- Unicode
+- BLOBS
