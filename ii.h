@@ -42,6 +42,7 @@ typedef struct _II_LINK {
 	II_LONG errorCode;
 	int paramCount;
 	char *cursor_id;
+	short int cursor_mode;
 	char *procname;
 } II_LINK;
 
@@ -55,13 +56,20 @@ typedef struct _II_RESULT {
 	char			*cursor_id;
 } II_RESULT;
 
-
-
-static int ii_sync(IIAPI_GENPARM *genParm);
-static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC);
 #define II_FAIL 0
 #define II_OK 1
 #define II_NO_DATA 2
+
+#define II_FIELD_INFO_NAME 1
+#define II_FIELD_INFO_TYPE 2
+#define II_FIELD_INFO_NULLABLE 3
+#define II_FIELD_INFO_LENGTH 4
+#define II_FIELD_INFO_PRECISION 5
+#define II_FIELD_INFO_SCALE 6
+
+static int ii_sync(IIAPI_GENPARM *genParm);
+static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC);
+
 static int _close_statement(II_LINK *ii_link TSRMLS_DC);
 static int _rollback_transaction(II_LINK *ii_link TSRMLS_DC);
 static void _close_ii_link(II_LINK *link TSRMLS_DC);

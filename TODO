@@ -1,8 +1,25 @@
 Still to do
 - documentation
 - cursor updates
-- cursor mode for select
 - procedure return value with a row producing procedure
 - procedure byref parameters
 - Unicode
-- BLOBS
+- BLOBS, in and out.
+- connection options
+  - roles, with/without passwords
+  - groups
+  - effective user
+  - date format
+  - decimal char character
+  - money sign
+  - money precision
+  - timezone
+  - date century boundary
+  - dbms password
+  - float precision, not sure how this will work with PHP DOUBLES.
+  - error type for numerical overflow
+  - support for IIAPI_CP_LOCAL_LOGIN
+- Add/Show/Delete Ingres Name server entries
+- IIAPI_VERSION checks for functionality support
+  - Unicode
+  - BIG int / int8 support

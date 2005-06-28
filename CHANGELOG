@@ -1,4 +1,5 @@
 CVS
+- Added Mode support to cursor selects [grantc 28-06-05]
 - Added named parameter support to database procedures [grantc 27-06-05] 
 - Added support for procedures without parameters. Handles row producing
 procedures [grantc 23-06-05]

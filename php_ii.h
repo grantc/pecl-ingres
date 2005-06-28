@@ -88,12 +88,16 @@ ZEND_BEGIN_MODULE_GLOBALS(ii)
 				     ii_success. Default is to have them on */
 
 	long cursor_no;
+	long cursor_mode;
 ZEND_END_MODULE_GLOBALS(ii)
 
 #define II_ASSOC (1<<0)
 #define II_NUM   (1<<1)
 #define II_BOTH  (II_ASSOC|II_NUM)
 #define II_VERSION "1.0.1-dev"
+
+#define II_CURSOR_UPDATE (0<<0)    /* default */
+#define II_CURSOR_READONLY (1<<0)
 
 #ifdef ZTS
 #define IIG(v) TSRMG(ii_globals_id, zend_ii_globals *, v)
@@ -110,7 +114,6 @@ ZEND_END_MODULE_GLOBALS(ii)
 #endif
 
 #endif	/* PHP_II_H */
-
 
 /*
  * Local variables:

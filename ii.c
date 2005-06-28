@@ -102,7 +102,8 @@ PHP_INI_BEGIN()
 	STD_PHP_INI_ENTRY("ingres.default_database", NULL, PHP_INI_ALL, OnUpdateString, default_database, zend_ii_globals, ii_globals)
 	STD_PHP_INI_ENTRY("ingres.default_user", NULL, PHP_INI_ALL, OnUpdateString, default_user, zend_ii_globals, ii_globals)
 	STD_PHP_INI_ENTRY("ingres.default_password", NULL, PHP_INI_ALL, OnUpdateString, default_password, zend_ii_globals, ii_globals)
-	STD_PHP_INI_BOOLEAN("ingres.report_db_warnings","0", PHP_INI_ALL, OnUpdateLong, report_db_warnings, zend_ii_globals, ii_globals)
+	STD_PHP_INI_BOOLEAN("ingres.report_db_warnings","0", PHP_INI_ALL, OnUpdateBool, report_db_warnings, zend_ii_globals, ii_globals)
+	STD_PHP_INI_ENTRY("ingres.cursor_mode", "0", PHP_INI_ALL, OnUpdateLong, cursor_mode, zend_ii_globals, ii_globals)
 PHP_INI_END()
 /* }}} */
 
@@ -119,7 +120,8 @@ static int _close_statement(II_LINK *ii_link TSRMLS_DC)
 	IIapi_close(&closeParm);
 	ii_sync(&(closeParm.cl_genParm));
 
-	if (ii_success(&(closeParm.cl_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+	if (ii_success(&(closeParm.cl_genParm), ii_link TSRMLS_CC) == II_FAIL)
+	{
 		return 1;
 	}
 
@@ -151,7 +153,8 @@ static int _rollback_transaction(II_LINK *ii_link  TSRMLS_DC)
 {
 	IIAPI_ROLLBACKPARM rollbackParm;
 
-	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC)) {
+	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
+	{
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to close statement !!");
 		return 1;
 	}
@@ -164,7 +167,8 @@ static int _rollback_transaction(II_LINK *ii_link  TSRMLS_DC)
 	IIapi_rollback(&rollbackParm);
 	ii_sync(&(rollbackParm.rb_genParm));
 
-	if (ii_success(&(rollbackParm.rb_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+	if (ii_success(&(rollbackParm.rb_genParm), ii_link TSRMLS_CC) == II_FAIL)
+	{
 		return 1;
 	}
 
@@ -178,7 +182,8 @@ static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
 {
 	IIAPI_DISCONNPARM disconnParm;
 
-	if (ii_link->tranHandle && _rollback_transaction(ii_link TSRMLS_CC)) {
+	if (ii_link->tranHandle && _rollback_transaction(ii_link TSRMLS_CC))
+	{
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to rollback transaction !!");
 	}
 
@@ -230,16 +235,19 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
 	/* if link as always been marked as broken do nothing */
 	/* This because we call this function directly from close function */
 	/* And it's called in the end of request */
-	if (ii_link->connHandle == NULL) {
+	if (ii_link->connHandle == NULL)
+	{
 		return;
 	}
 	
-	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC)) {
+	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
+	{
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to close statement !!");
 		ai_error = 1;
 	}
 	
-	if (ii_link->autocommit) {
+	if (ii_link->autocommit)
+	{
 		autoParm.ac_genParm.gp_callback = NULL;
 		autoParm.ac_genParm.gp_closure = NULL;
 		autoParm.ac_connHandle = ii_link->connHandle;
@@ -248,7 +256,8 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
 		IIapi_autocommit(&autoParm);
 		ii_sync(&(autoParm.ac_genParm));
 
-		if (ii_success(&(autoParm.ac_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+		if (ii_success(&(autoParm.ac_genParm), ii_link TSRMLS_CC) == II_FAIL)
+		{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to disable autocommit");
 		}
 
@@ -256,12 +265,14 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
 		ii_link->tranHandle = NULL;
 	}
 
-	if (ii_link->tranHandle && _rollback_transaction(ii_link TSRMLS_CC)) {
+	if (ii_link->tranHandle && _rollback_transaction(ii_link TSRMLS_CC))
+	{
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to rollback transaction !!");
 	}
 
 	/* Assume link is broken, close it, and mark it as broken with conn Handle NULL */
-	if (ai_error) {
+	if (ai_error)
+	{
 		disconnParm.dc_genParm.gp_callback = NULL;
 		disconnParm.dc_genParm.gp_closure = NULL;
 		disconnParm.dc_connHandle = ii_link->connHandle;
@@ -288,7 +299,8 @@ static void _clean_ii_plink(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 /* sets the default link */
 static void php_ii_set_default_link(int id TSRMLS_DC)
 {
-	if (IIG(default_link) != -1) {
+	if (IIG(default_link) != -1)
+	{
 		zend_list_delete(IIG(default_link));
 	}
 	IIG(default_link) = id;
@@ -301,7 +313,8 @@ static void php_ii_set_default_link(int id TSRMLS_DC)
 */
 static int php_ii_get_default_link(INTERNAL_FUNCTION_PARAMETERS)
 {
-	if (IIG(default_link) == -1) {	/* no link opened yet, implicitly open one */
+	if (IIG(default_link) == -1)
+	{	/* no link opened yet, implicitly open one */
 		ht = 0;
 		php_ii_do_connect(INTERNAL_FUNCTION_PARAM_PASSTHRU, 0);
 	}
@@ -334,13 +347,16 @@ PHP_MINIT_FUNCTION(ii)
 	REGISTER_LONG_CONSTANT("INGRES_NUM",	II_NUM,		CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("INGRES_BOTH",	II_BOTH,	CONST_CS | CONST_PERSISTENT);
 	REGISTER_STRING_CONSTANT("INGRES_VERSION",	II_VERSION,	CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("INGRES_CURSOR_READONLY",	II_CURSOR_READONLY,	CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("INGRES_CURSOR_UPDATE",	II_CURSOR_UPDATE,	CONST_CS | CONST_PERSISTENT);
 
 	/* Ingres api initialization */
 	initParm.in_timeout = -1;				/* timeout in ms, -1 = no timeout */
 	initParm.in_version = IIAPI_VERSION_1;	/* api version used */
 
 	IIapi_initialize(&initParm);
-	if (initParm.in_status == IIAPI_ST_SUCCESS) {
+	if (initParm.in_status == IIAPI_ST_SUCCESS)
+	{
 		return SUCCESS;
 	} else {
 		return FAILURE;
@@ -357,7 +373,8 @@ PHP_MSHUTDOWN_FUNCTION(ii)
 
 	/* Ingres api termination */
 	IIapi_terminate(&termParm);
-	if (termParm.tm_status == IIAPI_ST_SUCCESS) {
+	if (termParm.tm_status == IIAPI_ST_SUCCESS)
+	{
 		return SUCCESS;
 	} else {
 		return FAILURE;
@@ -378,7 +395,8 @@ PHP_RINIT_FUNCTION(ii)
 /* {{{ End of request */
 PHP_RSHUTDOWN_FUNCTION(ii)
 {
-	if (IIG(default_link) != -1) {
+	if (IIG(default_link) != -1)
+	{
 		zend_list_delete(IIG(default_link));
 		IIG(default_link) = -1;
 	}
@@ -415,11 +433,13 @@ static int ii_sync(IIAPI_GENPARM *genParm)
 		0		/* wt_status (output) */
 	};
 
-	while (genParm->gp_completed == FALSE) {
+	while (genParm->gp_completed == FALSE)
+	{
 		IIapi_wait(&waitParm);
 	}
 
-	if (waitParm.wt_status != IIAPI_ST_SUCCESS) {
+	if (waitParm.wt_status != IIAPI_ST_SUCCESS)
+	{
 		TSRMLS_FETCH();
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unexpected failure of IIapi_wait()");
 		return 0;
@@ -434,7 +454,8 @@ static int ii_sync(IIAPI_GENPARM *genParm)
 static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC)
 {
 	IIAPI_GETEINFOPARM *error_info;
-	switch (genParm->gp_status) {
+	switch (genParm->gp_status)
+	{
 	
 		case IIAPI_ST_SUCCESS:
 			return II_OK;
@@ -444,7 +465,8 @@ static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC)
 			return II_NO_DATA;
 
 		default:
-			if (genParm->gp_errorHandle == NULL) {	/* no error message available */
+			if (genParm->gp_errorHandle == NULL)
+			{	/* no error message available */
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Server or API error - no error message available");
 			} else {
                 error_info=(IIAPI_GETEINFOPARM *) emalloc(sizeof(IIAPI_GETEINFOPARM));
@@ -458,12 +480,14 @@ static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC)
 
 				/* load error information into the passed link
                 */
-				if (ii_link->connHandle != NULL) {
+				if (ii_link->connHandle != NULL)
+				{
 					ii_link->errorCode = error_info->ge_errorCode;
 					memcpy (ii_link->sqlstate ,error_info->ge_SQLSTATE,sizeof(error_info->ge_SQLSTATE));
 					ii_link->errorText=strdup(error_info->ge_message);
 				}
-				if (IIG(report_db_warnings)) {
+				if (IIG(report_db_warnings))
+				{
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres error : %ld : %s",IIG(errorCode), IIG(errorText));
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres SQLSTATE : %s", IIG(sqlstate));
 				}
@@ -490,9 +514,11 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 	/* Setting db, user and pass according to sql_safe_mode, parameters and/or default values */
 	argc = ZEND_NUM_ARGS();
 
-	if (PG(sql_safe_mode)) {	/* sql_safe_mode */
+	if (PG(sql_safe_mode))
+	{	/* sql_safe_mode */
 
-		if (argc > 0) {
+		if (argc > 0)
+		{
 			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "SQL safe mode in effect - ignoring host/user/password information");
 		}
 
@@ -508,11 +534,13 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		user = IIG(default_user);
 		pass = IIG(default_password);
 
-		if (argc > 3 || zend_get_parameters_ex(argc, &database, &username, &password) == FAILURE) {
+		if (argc > 3 || zend_get_parameters_ex(argc, &database, &username, &password) == FAILURE)
+		{
 			WRONG_PARAM_COUNT;
 		}
 
-		switch (argc) {
+		switch (argc)
+		{
 
 			case 3:
 				convert_to_string_ex(password);
@@ -535,7 +563,8 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		
 		/* Perform Sanity Check. If no database has been set then we have a problem */
         dblen = strlen(db);
-		if ( dblen == 0 ) {
+		if ( dblen == 0 )
+		{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: No default database available to connect to" );
 			RETURN_FALSE;
 		}
@@ -551,24 +580,29 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
 	/* if asked for unauthorized persistency, issue a warning
 	   and go for a non-persistent link */
-	if (persistent && !IIG(allow_persistent)) {
+	if (persistent && !IIG(allow_persistent))
+	{
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Persistent links disabled !");
 		persistent = 0;
 	}
 
-	if (persistent) {
+	if (persistent)
+	{
 		list_entry *le;
 
 		/* is this link already in the persistent list ? */
-		if (zend_hash_find(&EG(persistent_list), hashed_details, hashed_details_length + 1, (void **) &le) == FAILURE) { /* no, new persistent connection */
+		if (zend_hash_find(&EG(persistent_list), hashed_details, hashed_details_length + 1, (void **) &le) == FAILURE)
+		{ /* no, new persistent connection */
 			list_entry new_le;
 
-			if (IIG(max_links) != -1 && IIG(num_links) >= IIG(max_links)) {
+			if (IIG(max_links) != -1 && IIG(num_links) >= IIG(max_links))
+			{
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Too many open links (%d)", IIG(num_links));
 				efree(hashed_details);
 				RETURN_FALSE;
 			}
-			if (IIG(max_persistent) != -1 && IIG(num_persistent) >= IIG(max_persistent)) {
+			if (IIG(max_persistent) != -1 && IIG(num_persistent) >= IIG(max_persistent))
+			{
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Too many open persistent links (%d)", IIG(num_persistent));
 				efree(hashed_details);
 				RETURN_FALSE;
@@ -594,12 +628,14 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			ii_link->errorCode = 0;
 			ii_link->errorText = NULL;
 			ii_link->cursor_id = NULL;
+			ii_link->cursor_mode = -1;
 			ii_link->paramCount = 0;
 			ii_link->procname = NULL;
 
 			IIapi_connect(&connParm);
 
-			if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+			if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL)
+			{
 				efree(hashed_details);
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to connect to database (%s)", db);
 				RETURN_FALSE;
@@ -611,7 +647,8 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			/* hash it up */
 			Z_TYPE(new_le) = le_ii_plink;
 			new_le.ptr = ii_link;
-			if (zend_hash_update(&EG(persistent_list), hashed_details, hashed_details_length + 1, (void *) &new_le, sizeof(list_entry), NULL) == FAILURE) {
+			if (zend_hash_update(&EG(persistent_list), hashed_details, hashed_details_length + 1, (void *) &new_le, sizeof(list_entry), NULL) == FAILURE)
+			{
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to hash (%s)", hashed_details);
 				free(ii_link);
 				efree(hashed_details);
@@ -622,7 +659,8 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
 		} else { /* already open persistent connection */
 
-			if (Z_TYPE_P(le) != le_ii_plink) {
+			if (Z_TYPE_P(le) != le_ii_plink)
+			{
 				efree(hashed_details);
 				RETURN_FALSE;
 			}
@@ -634,7 +672,8 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			/* Unfortunetaly NO !!!*/
 			/* Ingres api doesn't reconnect */
 			/* Have to reconnect if cleaning function has flagged link as broken */
-			if (ii_link->connHandle == NULL) {
+			if (ii_link->connHandle == NULL)
+			{
 				php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres:  Broken link (%s),reconnect", db);
 				
 				/* Recreate the link */
@@ -654,12 +693,10 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 				ii_link->descriptor = NULL;
 				ii_link->autocommit = 0;
 				ii_link->errorCode = 0;
-				ii_link->errorText = NULL;
+				ii_link->errorText = NULL;  				IIapi_connect(&connParm);
 
-
-				IIapi_connect(&connParm);
-
-				if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+				if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL)
+				{
 					efree(hashed_details);
 					php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres:  Unable to connect to database (%s)", db);
 					RETURN_FALSE;
@@ -679,16 +716,19 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		 * if it doesn't, open a new link, add it to the resource list,
 		 * and add a pointer to it with hashed_details as the key.
 		 */
-		if (zend_hash_find(&EG(regular_list), hashed_details, hashed_details_length + 1, (void **) &index_ptr) == SUCCESS) {
+		if (zend_hash_find(&EG(regular_list), hashed_details, hashed_details_length + 1, (void **) &index_ptr) == SUCCESS)
+		{
 			int type;
 			void *ptr;
 
-			if (Z_TYPE_P(index_ptr) != le_index_ptr) {
+			if (Z_TYPE_P(index_ptr) != le_index_ptr)
+			{
 				RETURN_FALSE;
 			}
 			ii_link = (II_LINK *) index_ptr->ptr;
 			ptr = zend_list_find((int) ii_link, &type);	/* check if the link is still there */
-			if (ptr && (type == le_ii_link || type == le_ii_plink)) {
+			if (ptr && (type == le_ii_link || type == le_ii_plink))
+			{
 				zend_list_addref((int) ii_link);
 				Z_LVAL_P(return_value) = (int) ii_link;
 
@@ -701,7 +741,8 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 				zend_hash_del(&EG(regular_list), hashed_details, hashed_details_length + 1);
 			}
 		}
-		if (IIG(max_links) != -1 && IIG(num_links) >= IIG(max_links)) {
+		if (IIG(max_links) != -1 && IIG(num_links) >= IIG(max_links))
+		{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Too many open links (%d)", IIG(num_links));
 			efree(hashed_details);
 			RETURN_FALSE;
@@ -726,29 +767,28 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		ii_link->errorCode = 0;
 		ii_link->errorText = NULL;
 		ii_link->cursor_id = NULL;
+		ii_link->cursor_mode = -1;
 		ii_link->paramCount = 0;
-		ii_link->procname = NULL;
-
-
-		IIG(errorCode)=0;
+		ii_link->procname = NULL;  		IIG(errorCode)=0;
 
 		IIapi_connect(&connParm);
 
-		if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+		if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL)
+		{
 			efree(hashed_details);
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to connect to database (%s)", db);
 			RETURN_FALSE;
 		}
-		ii_link->connHandle = connParm.co_connHandle;
-
-
+		ii_link->connHandle = connParm.co_connHandle;		
+		
 		/* add it to the list */
 		ZEND_REGISTER_RESOURCE(return_value, ii_link, le_ii_link);
 
 		/* add it to the hash */
 		new_index_ptr.ptr = (void *) Z_LVAL_P(return_value);
 		Z_TYPE(new_index_ptr) = le_index_ptr;
-		if (zend_hash_update(&EG(regular_list), hashed_details, hashed_details_length + 1, (void *) &new_index_ptr, sizeof(list_entry), NULL) == FAILURE) {
+		if (zend_hash_update(&EG(regular_list), hashed_details, hashed_details_length + 1, (void *) &new_index_ptr, sizeof(list_entry), NULL) == FAILURE)
+		{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to hash (%s)", hashed_details);
 			free(ii_link);
 			efree(hashed_details);
@@ -786,10 +826,12 @@ PHP_FUNCTION(ingres_close)
 	int link_id = -1;
 	II_LINK *ii_link;
 
-	switch (ZEND_NUM_ARGS()) {
+	switch (ZEND_NUM_ARGS())
+	{
 		case 0: 
 			link_id = IIG(default_link);
-			if (link_id == -1) {
+			if (link_id == -1)
+			{
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
 				RETURN_FALSE;
 			}
@@ -797,7 +839,8 @@ PHP_FUNCTION(ingres_close)
 			break;
 
 		case 1: 
-			if (zend_get_parameters_ex(1, &link) == FAILURE) {
+			if (zend_get_parameters_ex(1, &link) == FAILURE)
+			{
 				RETURN_FALSE;
 			}
 			link_id = -1;
@@ -815,11 +858,13 @@ PHP_FUNCTION(ingres_close)
 	/* This way we can reuse the link in the same script */
 	_ai_clean_ii_plink(ii_link TSRMLS_CC);
   
-	if (link_id == -1) { /* explicit resource number */
+	if (link_id == -1)
+	{ /* explicit resource number */
 		zend_list_delete(Z_RESVAL_PP(link));
 	}
 	
-	if (link_id != -1 || (ii_link && Z_RESVAL_PP(link) == IIG(default_link))) {
+	if (link_id != -1 || (ii_link && Z_RESVAL_PP(link) == IIG(default_link)))
+	{
 		zend_list_delete(IIG(default_link));
 		IIG(default_link) = -1;
 	}
@@ -853,18 +898,20 @@ PHP_FUNCTION(ingres_query)
 	IIAPI_GETDESCRPARM  getDescrParm;
     IIAPI_SETDESCRPARM  setDescrParm;
     IIAPI_PUTPARMPARM   putParmParm;
-    IIAPI_DESCRIPTOR	*DescrBuffer; /* 1 entry since this does not support hardcoded paramters */
-    IIAPI_DATAVALUE		*DataBuffer;  /* yet... */
+    IIAPI_DESCRIPTOR	*DescrBuffer; /* 1 entry for the procedure name */
+    IIAPI_DATAVALUE		*DataBuffer;
 	IIAPI_GETQINFOPARM getQInfoParm;
 
 	char *procname=NULL;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc < 1 || argc > 3 || zend_get_parameters_ex(argc, &query, &link, &procParams) == FAILURE) {
+	if (argc < 1 || argc > 3 || zend_get_parameters_ex(argc, &query, &link, &procParams) == FAILURE)
+	{
 		WRONG_PARAM_COUNT;
 	}
 	
-	if ( argc == 1 ) {
+	if ( argc == 1 )
+	{
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
@@ -876,7 +923,8 @@ PHP_FUNCTION(ingres_query)
 	ZEND_FETCH_RESOURCE2(ii_link, II_LINK *, link, link_id, "Ingres Link", le_ii_link, le_ii_plink);
 
 	/* if there's already an active statement, close it */
-	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC)) {
+	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
+	{
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to close statement !!");
 		RETURN_FALSE;
 	}
@@ -893,8 +941,7 @@ PHP_FUNCTION(ingres_query)
 	   If ii_link->procname is NULL then there is no procedure */
 
     php_ii_check_procedure(Z_STRVAL_PP(query), ii_link TSRMLS_CC);
-
-
+	
 	queryParm.qy_genParm.gp_callback = NULL;
 	queryParm.qy_genParm.gp_closure = NULL;
 	queryParm.qy_connHandle = ii_link->connHandle;
@@ -923,7 +970,8 @@ PHP_FUNCTION(ingres_query)
 	IIapi_query(&queryParm);
 	ii_sync(&(queryParm.qy_genParm));
 
-	if (ii_success(&(queryParm.qy_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+	if (ii_success(&(queryParm.qy_genParm), ii_link TSRMLS_CC) == II_FAIL)
+	{
 		RETURN_FALSE;
 	} 
 
@@ -954,7 +1002,8 @@ PHP_FUNCTION(ingres_query)
 
 		ii_sync(&(setDescrParm.sd_genParm));
 
-		if (ii_success(&(setDescrParm.sd_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+		if (ii_success(&(setDescrParm.sd_genParm), ii_link TSRMLS_CC) == II_FAIL)
+		{
 			efree(DescrBuffer);
 			RETURN_FALSE;
 		} 
@@ -976,7 +1025,8 @@ PHP_FUNCTION(ingres_query)
 
 		ii_sync(&(putParmParm.pp_genParm));
 
-		if (ii_success(&(putParmParm.pp_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+		if (ii_success(&(putParmParm.pp_genParm), ii_link TSRMLS_CC) == II_FAIL)
+		{
 			efree(DescrBuffer);
 			efree(DataBuffer);
 			RETURN_FALSE;
@@ -995,7 +1045,8 @@ PHP_FUNCTION(ingres_query)
 	IIapi_getDescriptor(&getDescrParm);
 	ii_sync(&(getDescrParm.gd_genParm));
 
-	if (ii_success(&(getDescrParm.gd_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+	if (ii_success(&(getDescrParm.gd_genParm), ii_link TSRMLS_CC) == II_FAIL)
+	{
 		RETURN_FALSE;
 	}
 
@@ -1007,11 +1058,11 @@ PHP_FUNCTION(ingres_query)
 }
 /* }}} */
 
-/* {{{ proto bool ingres_prepare(string query [, resource link]) */
+/* {{{ proto bool ingres_prepare(string query [, long cursor_mode [, resource link]]) */
 /* Prepare SQL for later execution */
 PHP_FUNCTION(ingres_prepare)
 {
-	zval **query, **link;
+	zval **query, **link, **cursor_mode;
 	int argc;
 	int link_id = -1;
 	II_LINK *ii_link;
@@ -1026,11 +1077,13 @@ PHP_FUNCTION(ingres_prepare)
 	int cursor_id_len;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc < 1 || argc > 2 || zend_get_parameters_ex(argc, &query, &link) == FAILURE) {
+	if (argc < 1 || argc > 3 || zend_get_parameters_ex(argc, &query, &cursor_mode, &link) == FAILURE)
+	{
 		WRONG_PARAM_COUNT;
 	}
 
-	if  ( argc == 1 ) {
+	if  ( argc == 1 || argc == 2 )
+	{
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
@@ -1039,8 +1092,19 @@ PHP_FUNCTION(ingres_prepare)
 		}
 
 	}
-	
+
 	ZEND_FETCH_RESOURCE2(ii_link, II_LINK *, link, link_id, "Ingres Link", le_ii_link, le_ii_plink);
+
+	if ( argc == 2 || argc == 3 )
+	{
+		convert_to_long_ex(cursor_mode);
+		ii_link->cursor_mode = (Z_LVAL_PP(cursor_mode) < 0  || Z_LVAL_PP(cursor_mode) > 1 ? II_CURSOR_UPDATE : Z_LVAL_PP(cursor_mode));
+	}
+	else
+	{
+		/* set to the ini default */
+		ii_link->cursor_mode = IIG(cursor_mode);
+	}
 
 	convert_to_string_ex(query);
 	statement = Z_STRVAL_PP(query);
@@ -1049,7 +1113,8 @@ PHP_FUNCTION(ingres_prepare)
 	ii_link->paramCount = php_ii_queryparse(statement TSRMLS_CC);
 
 	/* if there's already an active statement, close it */
-	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC)) {
+	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
+	{
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to close statement !!");
 		RETURN_FALSE;
 	}
@@ -1061,7 +1126,6 @@ PHP_FUNCTION(ingres_prepare)
 	   If ii_link->procname is NULL then there is no procedure */
 
     php_ii_check_procedure(Z_STRVAL_PP(query), ii_link TSRMLS_CC);
-
 
 	if ( ii_link->procname == NULL )
 	{
@@ -1117,7 +1181,8 @@ PHP_FUNCTION(ingres_prepare)
 
 /* {{{ proto int ingres_execute([array params [, resource link ]]) 
    execute a query prepared by ingres_prepare() */
-PHP_FUNCTION (ingres_execute) {
+PHP_FUNCTION (ingres_execute)
+{
 
 	zval **link, **queryParams, **val;
 	char *key;
@@ -1139,7 +1204,8 @@ PHP_FUNCTION (ingres_execute) {
 	char *statement;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc > 2 || zend_get_parameters_ex(argc, &queryParams, &link) == FAILURE) {
+	if (argc > 2 || zend_get_parameters_ex(argc, &queryParams, &link) == FAILURE)
+	{
 		WRONG_PARAM_COUNT;
 	}
 
@@ -1158,24 +1224,40 @@ PHP_FUNCTION (ingres_execute) {
 	/* figure how many parameters are expected */
 	paramCount = ii_link->paramCount;
 
-    if ( paramCount > 0 ) {
-		if (Z_TYPE_PP(queryParams) != IS_ARRAY ) {
+    if ( paramCount > 0 )
+	{
+		if (Z_TYPE_PP(queryParams) != IS_ARRAY )
+		{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: Expecting a parameter array but did not get one" );
 			RETURN_FALSE;
 		}
 
-		if ((elementCount = zend_hash_num_elements(Z_ARRVAL_PP(queryParams))) != paramCount ) {
+		if ((elementCount = zend_hash_num_elements(Z_ARRVAL_PP(queryParams))) != paramCount )
+		{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: incorrect number of parameters passed, expected %d got %d",paramCount, elementCount );
 			RETURN_FALSE;
 		}
 		zend_hash_internal_pointer_reset(Z_ARRVAL_PP(queryParams));
 	}
 
-
-	if ( ii_link->procname == NULL ) {
+	if ( ii_link->procname == NULL )
+	{
 		statement = ecalloc(sizeof(ii_link->cursor_id) + 17, 1);
-        /* TODO : Add select cursor mode support */
-		sprintf (statement,"%s for readonly\0", ii_link->cursor_id );
+
+		/* Set the cursor mode according to ii_link->cursor_mode */
+		switch (ii_link->cursor_mode)
+		{
+			case II_CURSOR_UPDATE:
+				sprintf (statement,"%s", ii_link->cursor_id );
+				break;
+			case II_CURSOR_READONLY:
+				sprintf (statement,"%s for readonly", ii_link->cursor_id );
+				break;
+			default:
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: incorrect number of parameters passed, expected %d got %d",paramCount, elementCount );
+				efree(statement);
+				RETURN_FALSE;
+		}
 
 		queryParm.qy_genParm.gp_callback = NULL;
 		queryParm.qy_genParm.gp_closure = NULL;
@@ -1219,7 +1301,8 @@ PHP_FUNCTION (ingres_execute) {
 	IIapi_query(&queryParm);
 	ii_sync(&(queryParm.qy_genParm));
 
-	if (ii_success(&(queryParm.qy_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+	if (ii_success(&(queryParm.qy_genParm), ii_link TSRMLS_CC) == II_FAIL)
+	{
 		if ( ii_link->procname == NULL )
 		{
 			efree (statement);
@@ -1230,8 +1313,8 @@ PHP_FUNCTION (ingres_execute) {
 	ii_link->tranHandle = queryParm.qy_tranHandle;
 	ii_link->stmtHandle = queryParm.qy_stmtHandle;
 
-
-	if ( paramCount > 0 ) {
+	if ( paramCount > 0 )
+	{
 	
 		/* if we are sending params then we need to describe them into to Ingres */
 		/* if no parameters have been provided to a procedure call there is always 1 */
@@ -1243,11 +1326,12 @@ PHP_FUNCTION (ingres_execute) {
 	
 		setDescrParm.sd_descriptorCount = paramCount;
 
-		descriptorInfo = (IIAPI_DESCRIPTOR *) safe_emalloc(paramCount, sizeof(IIAPI_DESCRIPTOR), 0);
+		descriptorInfo = (IIAPI_DESCRIPTOR *) safe_emalloc(setDescrParm.sd_descriptorCount, sizeof(IIAPI_DESCRIPTOR), 0);
 		setDescrParm.sd_descriptor = descriptorInfo;
 			
 
-		for ( param=0; param < paramCount; param++ ) {
+		for ( param=0; param < paramCount; param++ )
+		{
 
 			if (( ii_link->procname != NULL)  && (param == 0) ) 
 			{ 
@@ -1264,8 +1348,13 @@ PHP_FUNCTION (ingres_execute) {
 			else 
 			{
 
-				if (zend_hash_get_current_data(Z_ARRVAL_PP(queryParams), (void **) &val) == FAILURE) {
+				if (zend_hash_get_current_data(Z_ARRVAL_PP(queryParams), (void **) &val) == FAILURE)
+				{
 					php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error getting parameter value");
+					if ( ii_link->procname == NULL )
+					{
+						efree (statement);
+					}
 					efree(descriptorInfo);
 					RETURN_FALSE;
 				}
@@ -1274,11 +1363,16 @@ PHP_FUNCTION (ingres_execute) {
 				{
 					php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error getting parameter key");
 					efree(descriptorInfo);
+					if ( ii_link->procname == NULL )
+					{
+						efree (statement);
+					}
 					RETURN_FALSE;
 				}
 
 				/* Process each parameter into our descriptor buffer */
-				switch (Z_TYPE_PP(val)) {
+				switch (Z_TYPE_PP(val))
+				{
 					case IS_LONG:
 						/* does not handle int8 yet */
 						convert_to_long_ex(val);
@@ -1350,6 +1444,11 @@ PHP_FUNCTION (ingres_execute) {
 						break;
 					default:
 						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: a parameter has been passed of unknown type" );
+						if ( ii_link->procname == NULL )
+						{
+							efree (statement);
+						}
+						efree(descriptorInfo);
 						RETURN_FALSE;
 				}
 
@@ -1362,13 +1461,15 @@ PHP_FUNCTION (ingres_execute) {
 
 		} /* param=0; param < paramCount; param++ */
 
-		if (((ii_link->procname == NULL) && (paramCount > 0)) || ((ii_link->procname != NULL) && (paramCount > 1))) {
+		if (((ii_link->procname == NULL) && (paramCount > 0)) || ((ii_link->procname != NULL) && (paramCount > 1)))
+		{
 			zend_hash_internal_pointer_reset(Z_ARRVAL_PP(queryParams));
 		}
 
 		IIapi_setDescriptor( &setDescrParm );
 
-		if (ii_success(&(setDescrParm.sd_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+		if (ii_success(&(setDescrParm.sd_genParm), ii_link TSRMLS_CC) == II_FAIL)
+		{
 			efree(descriptorInfo);
 			RETURN_FALSE;
 		}
@@ -1382,7 +1483,8 @@ PHP_FUNCTION (ingres_execute) {
 		columnData = (IIAPI_DATAVALUE *) safe_emalloc(setDescrParm.sd_descriptorCount, sizeof(IIAPI_DATAVALUE), 0);
 		putParmParm.pp_parmData = columnData;
 
-		for ( param = 0 ; param < setDescrParm.sd_descriptorCount ; param++) {
+		for ( param = 0 ; param < setDescrParm.sd_descriptorCount ; param++)
+		{
 
 			if ((ii_link->procname != NULL) && (param == 0))
 			{
@@ -1393,14 +1495,20 @@ PHP_FUNCTION (ingres_execute) {
 			else
 			{
 
-				if (zend_hash_get_current_data(Z_ARRVAL_PP(queryParams), (void **) &val) == FAILURE) {
+				if (zend_hash_get_current_data(Z_ARRVAL_PP(queryParams), (void **) &val) == FAILURE)
+				{
 					php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error getting parameter");
 					efree(columnData);
 					efree(descriptorInfo);
+					if ( ii_link->procname == NULL )
+					{
+						efree (statement);
+					}
 					RETURN_FALSE;
 				}
 
-				switch (Z_TYPE_PP(val)) {
+				switch (Z_TYPE_PP(val))
+				{
 					case IS_LONG:
 						convert_to_long_ex(val);
 						putParmParm.pp_parmData[param].dv_null = FALSE;
@@ -1443,6 +1551,10 @@ PHP_FUNCTION (ingres_execute) {
 		{
 			efree(descriptorInfo);
 			efree(columnData);
+			if ( ii_link->procname == NULL )
+			{
+				efree (statement);
+			}
 			RETURN_FALSE;
 		}
 
@@ -1461,7 +1573,12 @@ PHP_FUNCTION (ingres_execute) {
 		IIapi_query(&queryParm);
 		ii_sync(&(queryParm.qy_genParm));
 
-		if (ii_success(&(queryParm.qy_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+		if (ii_success(&(queryParm.qy_genParm), ii_link TSRMLS_CC) == II_FAIL)
+		{
+			if ( ii_link->procname == NULL )
+			{
+				efree (statement);
+			}
 			RETURN_FALSE;
 		}
 
@@ -1480,11 +1597,16 @@ PHP_FUNCTION (ingres_execute) {
 	IIapi_getDescriptor(&getDescrParm);
 	ii_sync(&(getDescrParm.gd_genParm));
 
-	if (ii_success(&(getDescrParm.gd_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+	if (ii_success(&(getDescrParm.gd_genParm), ii_link TSRMLS_CC) == II_FAIL)
+	{
 		if (paramCount > 0)
 		{
 			efree(columnData);
 			efree(descriptorInfo);
+		}
+		if ( ii_link->procname == NULL )
+		{
+			efree (statement);
 		}
 		RETURN_FALSE;
 	}
@@ -1496,6 +1618,10 @@ PHP_FUNCTION (ingres_execute) {
 	{
 		efree(columnData);
 		efree(descriptorInfo);
+	}
+	if ( ii_link->procname == NULL )
+	{
+		efree (statement);
 	}
 
 }
@@ -1531,11 +1657,13 @@ PHP_FUNCTION(ingres_cursor)
 	int link_id = -1;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc > 1  || zend_get_parameters_ex(argc, &link) == FAILURE) {
+	if (argc > 1  || zend_get_parameters_ex(argc, &link) == FAILURE)
+	{
 		WRONG_PARAM_COUNT;
 	}
 
-	if (argc < 1) {
+	if (argc < 1)
+	{
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
@@ -1553,8 +1681,8 @@ PHP_FUNCTION(ingres_cursor)
 /* {{{ proto int ingres_num_rows([resource link])
    Return the number of rows affected/returned by the last query */
 
-/* Warning : don't call ingres_num_rows() before ingres_fetch_xx(),
-   or ingres_fetch_xx() wouldn't find any data */
+/* Warning : don't call ingres_num_rows() before ingres_fetch_xx() since IIapi_getQueryInfo()
+ * nullifies the data set being returned and ingres_fetch_xx() will not find any data */
 PHP_FUNCTION(ingres_num_rows)
 {
 	zval **link;
@@ -1564,11 +1692,13 @@ PHP_FUNCTION(ingres_num_rows)
 	IIAPI_GETQINFOPARM getQInfoParm;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc > 1 || zend_get_parameters_ex(argc, &link) == FAILURE) {
+	if (argc > 1 || zend_get_parameters_ex(argc, &link) == FAILURE)
+	{
 		WRONG_PARAM_COUNT;
 	}
 
-	if (argc < 1) {
+	if (argc < 1)
+	{
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
@@ -1587,12 +1717,14 @@ PHP_FUNCTION(ingres_num_rows)
 	IIapi_getQueryInfo(&getQInfoParm);
 	ii_sync(&(getQInfoParm.gq_genParm));
 
-	if (ii_success(&(getQInfoParm.gq_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+	if (ii_success(&(getQInfoParm.gq_genParm), ii_link TSRMLS_CC) == II_FAIL)
+	{
 		RETURN_FALSE;
 	}
 
 	/* return the result */
-	if (getQInfoParm.gq_mask & IIAPI_GQ_ROW_COUNT) {
+	if (getQInfoParm.gq_mask & IIAPI_GQ_ROW_COUNT)
+	{
 		RETURN_LONG(getQInfoParm.gq_rowCount);
 	} else {
 		RETURN_LONG(0);
@@ -1610,11 +1742,13 @@ PHP_FUNCTION(ingres_num_fields)
 	II_LINK *ii_link;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc > 1 || zend_get_parameters_ex(argc, &link) == FAILURE) {
+	if (argc > 1 || zend_get_parameters_ex(argc, &link) == FAILURE)
+	{
 		WRONG_PARAM_COUNT;
 	}
 
-	if (argc < 1) {
+	if (argc < 1)
+	{
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
@@ -1629,12 +1763,6 @@ PHP_FUNCTION(ingres_num_fields)
 }
 /* }}} */
 
-#define II_FIELD_INFO_NAME 1
-#define II_FIELD_INFO_TYPE 2
-#define II_FIELD_INFO_NULLABLE 3
-#define II_FIELD_INFO_LENGTH 4
-#define II_FIELD_INFO_PRECISION 5
-#define II_FIELD_INFO_SCALE 6
 
 /* {{{ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type)
  *  Return information about a field in a query result
@@ -1649,11 +1777,13 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type)
 	II_LINK *ii_link;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc < 1 || argc > 2 || zend_get_parameters_ex(argc, &idx, &link) == FAILURE) {
+	if (argc < 1 || argc > 2 || zend_get_parameters_ex(argc, &idx, &link) == FAILURE)
+	{
 		WRONG_PARAM_COUNT;
 	}
 
-	if (argc < 2) {
+	if (argc < 2)
+	{
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
@@ -1667,8 +1797,10 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type)
 	convert_to_long_ex(idx);
 	index = Z_LVAL_PP(idx);
 
-	if (index < 1 || index > ii_link->fieldCount) {
-		switch (info_type) {
+	if (index < 1 || index > ii_link->fieldCount)
+	{
+		switch (info_type)
+		{
 
 			case II_FIELD_INFO_NAME:
 				fun_name = "ii_field_name";
@@ -1702,18 +1834,21 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type)
 		RETURN_FALSE;
 	}
 
-	switch (info_type) {
+	switch (info_type)
+	{
 
 		case II_FIELD_INFO_NAME:
 			name = php_ii_field_name(ii_link, index TSRMLS_CC);
-			if (name == NULL) {
+			if (name == NULL)
+	{
 				RETURN_FALSE;
 			}
 			RETURN_STRING(name, 1);
 			break;
 
 		case II_FIELD_INFO_TYPE:
-			switch ((ii_link->descriptor[index - 1]).ds_dataType) {
+			switch ((ii_link->descriptor[index - 1]).ds_dataType)
+	{
 	
 				case IIAPI_BYTE_TYPE:
 					RETURN_STRING("IIAPI_BYTE_TYPE", 1);
@@ -1774,7 +1909,8 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type)
 			break;
 
 		case II_FIELD_INFO_NULLABLE:
-			if ((ii_link->descriptor[index - 1]).ds_nullable) {
+			if ((ii_link->descriptor[index - 1]).ds_nullable)
+			{
 				RETURN_TRUE;
 			} else {
 				RETURN_FALSE;
@@ -1804,7 +1940,8 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type)
   Return the name of a field in a query result */
 static char *php_ii_field_name(II_LINK *ii_link, int index TSRMLS_DC)
 {
-	if (index < 1 || index > ii_link->fieldCount) {
+	if (index < 1 || index > ii_link->fieldCount)
+	{
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  php_ii_field_name() called with wrong index (%d)", index);
 		return NULL;
 	}
@@ -1929,7 +2066,8 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 			IIapi_getQueryInfo( &getQInfoParm );
 			ii_sync(&(getQInfoParm.gq_genParm));
 
-			if (ii_success(&(getQInfoParm.gq_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+			if (ii_success(&(getQInfoParm.gq_genParm), ii_link TSRMLS_CC) == II_FAIL)
+			{
 				RETURN_FALSE;
 			} 
 
@@ -1937,10 +2075,12 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 			if ((getQInfoParm.gq_mask & IIAPI_GQ_PROCEDURE_ID) && 
 					(getQInfoParm.gq_mask & IIAPI_GQ_PROCEDURE_RET)) 
 			{
-				if (result_type & II_NUM) {
+				if (result_type & II_NUM)
+			{
 					add_index_long(return_value, 0, getQInfoParm.gq_procedureReturn);
 				}
-				if (result_type & II_ASSOC) {
+				if (result_type & II_ASSOC)
+			{
 					add_assoc_long(return_value, "returnvalue", getQInfoParm.gq_procedureReturn);
 				}
 			}
@@ -1952,7 +2092,8 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 	}
 
 	/* going through all fields */
-	for (i = 1; i <= ii_link->fieldCount;) {
+	for (i = 1; i <= ii_link->fieldCount;)
+	{
 		j = 1;
 
 		/* as long as there are no long byte or long varchar fields,
@@ -1960,23 +2101,27 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 		   these types and stop if they're found.
 		   variable j will get number of fields to fetch */
 		if ((ii_link->descriptor[i]).ds_dataType != IIAPI_LBYTE_TYPE &&
-			(ii_link->descriptor[i]).ds_dataType != IIAPI_LVCH_TYPE) {
+			(ii_link->descriptor[i]).ds_dataType != IIAPI_LVCH_TYPE)
+		{
 			while (	(ii_link->descriptor[i + j - 1]).ds_dataType != IIAPI_LBYTE_TYPE &&
 					(ii_link->descriptor[i + j - 1]).ds_dataType != IIAPI_LVCH_TYPE && 
-					i + j <= ii_link->fieldCount) {
+					i + j <= ii_link->fieldCount)
+			{
 				j++;
 			}
 		}
 
 		/* allocate memory for j fields */
 		columnData = (IIAPI_DATAVALUE *) safe_emalloc(j, sizeof(IIAPI_DATAVALUE), 0);
-		for (k = 1; k <= j; k++) {
+		for (k = 1; k <= j; k++)
+		{
 			columnData[k - 1].dv_value = (II_PTR) emalloc((ii_link->descriptor[i + k - 2]).ds_length);
 		}
 
 		more = 1;				/* this is for multi segment LBYTE and LVCH elements */
 
-		while (more) {
+		while (more)
+		{
 			getColParm.gc_genParm.gp_callback = NULL;
 			getColParm.gc_genParm.gp_closure = NULL;
 			getColParm.gc_rowCount = 1;
@@ -1988,33 +2133,40 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 			IIapi_getColumns(&getColParm);
 			ii_sync(&(getColParm.gc_genParm));
 
-			if (ii_success(&(getColParm.gc_genParm), ii_link TSRMLS_CC) != II_OK) {
+			if (ii_success(&(getColParm.gc_genParm), ii_link TSRMLS_CC) != II_OK)
+			{
 				RETURN_FALSE;
 			}
 
 			more = getColParm.gc_moreSegments;
 
-			if (more) {			/* more segments of LBYTE or LVCH element to come */
+			if (more)
+			{			/* more segments of LBYTE or LVCH element to come */
 
 				/* Multi segment LBYTE and LVCH elements not supported yet */
 				php_error_docref(NULL TSRMLS_CC, E_ERROR, "Ingres:  Multi segment LBYTE and LVCH elements not supported yet");
 
 			} else {
 
-				for (k = 1; k <= j; k++) {
-					if (columnData[k - 1].dv_null) {	/* NULL value ? */
+				for (k = 1; k <= j; k++)
+				{
+					if (columnData[k - 1].dv_null)
+						{	/* NULL value ? */
 
-						if (result_type & II_NUM) {
+						if (result_type & II_NUM)
+						{
 							add_index_null(return_value, i + k - 1);
 						}
-						if (result_type & II_ASSOC) {
+						if (result_type & II_ASSOC)
+						{
 							add_assoc_null(return_value, php_ii_field_name(ii_link, i + k - 1 TSRMLS_CC));
 						}
 
 					} else {	/* non NULL value */
 						correct_length = 0;
 
-						switch ((ii_link->descriptor[i + k - 2]).ds_dataType) {
+						switch ((ii_link->descriptor[i + k - 2]).ds_dataType)
+						{
 	
 							case IIAPI_DEC_TYPE:	/* decimal (fixed point number) */
 							case IIAPI_MNY_TYPE:	/* money */
@@ -2023,7 +2175,8 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 								/* NO break */
 	
 							case IIAPI_FLT_TYPE:	/* floating point number */
-								switch (columnData[k - 1].dv_length) {
+								switch (columnData[k - 1].dv_length)
+								{
 
 									case 4:
 										value_double = (double) *((II_FLOAT4 *) columnData[k - 1].dv_value);
@@ -2038,17 +2191,20 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 										break;
 								}
 
-								if (result_type & II_NUM) {
+								if (result_type & II_NUM)
+								{
 									add_index_double(return_value, i + k - 1, value_double);
 								}
 
-								if (result_type & II_ASSOC) {
+								if (result_type & II_ASSOC)
+								{
 									add_assoc_double(return_value, php_ii_field_name(ii_link, i + k - 1 TSRMLS_CC), value_double);
 								}
 								break;
 
 							case IIAPI_INT_TYPE:	/* integer */
-								switch (columnData[k - 1].dv_length) {
+								switch (columnData[k - 1].dv_length)
+								{
 
 									case 1:
 										value_long = (long) *((II_INT1 *) columnData[k - 1].dv_value);
@@ -2067,11 +2223,13 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 										break;
 								}
 
-								if (result_type & II_NUM) {
+								if (result_type & II_NUM)
+								{
 									add_index_long(return_value, i + k - 1, value_long);
 								}
 	
-								if (result_type & II_ASSOC) {
+								if (result_type & II_ASSOC)
+								{
 									add_assoc_long(return_value, php_ii_field_name(ii_link, i + k - 1 TSRMLS_CC), value_long);
 								}
 								break;
@@ -2080,7 +2238,8 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 							case IIAPI_VBYTE_TYPE:	/* variable length binary string */
 							case IIAPI_NVCH_TYPE:	/* variable length unicode character string */
 								/* Convert it to IIAPI_VCH_TYPE */
-								if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_NVCH_TYPE) {
+								if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_NVCH_TYPE)
+								{
 									IIAPI_CONVERT(IIAPI_CHA_TYPE, (columnData[k - 1]).dv_length, 0);
 								}
 								/* let the next 'case' handle the conversion to a format usable by php */
@@ -2093,7 +2252,8 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 								/* NO break */
 
 							case IIAPI_NCHA_TYPE:	/* fixed length unicode character string */	
-								if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_NCHA_TYPE) {
+								if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_NCHA_TYPE)
+								{
 									IIAPI_CONVERT(IIAPI_CHA_TYPE, (columnData[k - 1]).dv_length, 0);
 								}
 							case IIAPI_BYTE_TYPE:	/* fixed length binary string */
@@ -2105,12 +2265,14 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 								/* eventualy convert date to string */
 								if ((ii_link->descriptor[i + k - 2]).
-									ds_dataType == IIAPI_DTE_TYPE) {
+									ds_dataType == IIAPI_DTE_TYPE)
+								{
 									IIAPI_CONVERT(IIAPI_CHA_TYPE, 32, 0);
 								}
 	
 								/* use php_addslashes if asked to */
-								if (PG(magic_quotes_runtime)) {
+								if (PG(magic_quotes_runtime))
+								{
 									value_char_p = php_addslashes((char *) columnData[k - 1].dv_value, columnData[k - 1].dv_length, &len, 0 TSRMLS_CC);
 									should_copy = 0;
 								} else {
@@ -2119,18 +2281,22 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 									should_copy = 1;
 								}
 
-								if (result_type & II_NUM) {
+								if (result_type & II_NUM)
+								{
 									add_index_stringl(return_value, i + k - 1, value_char_p, len, should_copy);
 								}
 
-								if (result_type & II_ASSOC) {
+								if (result_type & II_ASSOC)
+								{
 									add_assoc_stringl(return_value, php_ii_field_name(ii_link, i + k - 1 TSRMLS_CC), value_char_p, len, should_copy);
 								}
 
 								/* eventualy restore data pointer state for
 							 	   variable length data types */
-								if (correct_length) {
-									if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_NVCH_TYPE) {
+								if (correct_length)
+								{
+									if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_NVCH_TYPE)
+									{
 										((II_UINT2 *) columnData[k - 1].dv_value)--;
 									} else {
 										((II_INT2 *) columnData[k - 1].dv_value)--;
@@ -2148,7 +2314,8 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 		}
 
 		/* free the memory buffers */
-		for (k = 1; k <= j; k++) {
+		for (k = 1; k <= j; k++)
+		{
 			efree(columnData[k - 1].dv_value);
 		}
 		efree(columnData);
@@ -2172,15 +2339,18 @@ PHP_FUNCTION(ingres_fetch_array)
 	int link_id = -1; 
 
 	argc = ZEND_NUM_ARGS();
-	if (argc > 2 || zend_get_parameters_ex(argc, &result_type, &link) == FAILURE) {
+	if (argc > 2 || zend_get_parameters_ex(argc, &result_type, &link) == FAILURE)
+	{
 		WRONG_PARAM_COUNT;
 	}
 
-	if (argc != 0) {
+	if (argc != 0)
+	{
 		convert_to_long_ex(result_type);
 	}
 
-	if (argc <= 1 ) {
+	if (argc <= 1 )
+	{
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
@@ -2207,11 +2377,13 @@ PHP_FUNCTION(ingres_fetch_row)
 	int link_id = -1;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc > 1 || zend_get_parameters_ex(argc, &link) == FAILURE) {
+	if (argc > 1 || zend_get_parameters_ex(argc, &link) == FAILURE)
+	{
 		WRONG_PARAM_COUNT;
 	}
 
-	if (argc == 0 ) {
+	if (argc == 0 )
+	{
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
@@ -2221,8 +2393,8 @@ PHP_FUNCTION(ingres_fetch_row)
 
 	}
 
-
-	if (argc == 0 ) {
+	if (argc == 0 )
+	{
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
@@ -2258,7 +2430,8 @@ PHP_FUNCTION(ingres_fetch_object)
 		convert_to_long_ex(result_type);
 	}
 
-	if (argc != 2) {
+	if (argc != 2)
+	{
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
@@ -2271,7 +2444,8 @@ PHP_FUNCTION(ingres_fetch_object)
 
 	php_ii_fetch(INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_link, (argc == 0 ? II_BOTH : Z_LVAL_PP(result_type)));
 
-	if (Z_TYPE_P(return_value) == IS_ARRAY) {
+	if (Z_TYPE_P(return_value) == IS_ARRAY)
+	{
 		convert_to_object(return_value);
 	}
 }
@@ -2287,19 +2461,23 @@ PHP_FUNCTION(ingres_rollback)
 	II_LINK *ii_link;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc > 1 || (argc && zend_get_parameters_ex(argc, &link) == FAILURE)) {
+	if (argc > 1 || (argc && zend_get_parameters_ex(argc, &link) == FAILURE))
+	{
 		WRONG_PARAM_COUNT;
 	}
 
-	if (argc == 0) {
+	if (argc == 0)
+	{
 		link_id = IIG(default_link);
-		if ( link_id == -1 ) {
+		if ( link_id == -1 )
+		{
 			RETURN_FALSE;
 		}
 	}
 	ZEND_FETCH_RESOURCE2(ii_link, II_LINK *, link, link_id, "Ingres Link", le_ii_link, le_ii_plink);
 
-	if (_rollback_transaction(ii_link TSRMLS_CC)) {
+	if (_rollback_transaction(ii_link TSRMLS_CC))
+	{
 		RETURN_FALSE;
 	}
 	RETURN_TRUE;
@@ -2317,13 +2495,16 @@ PHP_FUNCTION(ingres_commit)
 	IIAPI_COMMITPARM commitParm;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc > 1 || (argc && zend_get_parameters_ex(argc, &link) == FAILURE)) {
+	if (argc > 1 || (argc && zend_get_parameters_ex(argc, &link) == FAILURE))
+	{
 		WRONG_PARAM_COUNT;
 	}
 
-	if (argc == 0) {
+	if (argc == 0)
+	{
 		link_id = IIG(default_link);
-		if (link_id == -1) {
+		if (link_id == -1)
+		{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
 			RETURN_FALSE;
 		}
@@ -2331,7 +2512,8 @@ PHP_FUNCTION(ingres_commit)
 
 	ZEND_FETCH_RESOURCE2(ii_link, II_LINK *, link, link_id, "Ingres Link", le_ii_link, le_ii_plink);
 
-	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC)) {
+	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
+	{
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to close statement !!");
 		RETURN_FALSE;
 	}
@@ -2343,7 +2525,8 @@ PHP_FUNCTION(ingres_commit)
 	IIapi_commit(&commitParm);
 	ii_sync(&(commitParm.cm_genParm));
 
-	if (ii_success(&(commitParm.cm_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+	if (ii_success(&(commitParm.cm_genParm), ii_link TSRMLS_CC) == II_FAIL)
+	{
 		RETURN_FALSE;
 	}
 
@@ -2363,13 +2546,16 @@ PHP_FUNCTION(ingres_autocommit)
 	IIAPI_AUTOPARM autoParm;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc > 1 || (argc && zend_get_parameters_ex(argc, &link) == FAILURE)) {
+	if (argc > 1 || (argc && zend_get_parameters_ex(argc, &link) == FAILURE))
+	{
 		WRONG_PARAM_COUNT;
 	}
 
-	if (argc == 0) {
+	if (argc == 0)
+	{
 		link_id = IIG(default_link);
-		if (link_id == -1) {
+		if (link_id == -1)
+	{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
 			RETURN_FALSE;
 		}
@@ -2386,7 +2572,8 @@ PHP_FUNCTION(ingres_autocommit)
 	IIapi_autocommit(&autoParm);
 	ii_sync(&(autoParm.ac_genParm));
 
-	if (ii_success(&(autoParm.ac_genParm), ii_link TSRMLS_CC) == II_FAIL) {
+	if (ii_success(&(autoParm.ac_genParm), ii_link TSRMLS_CC) == II_FAIL)
+	{
 		RETURN_FALSE;
 	}
 
@@ -2422,7 +2609,8 @@ PHP_FUNCTION(ingres_errsqlstate)
 
 /* {{{ php_ii_error (INTERNAL_FUNCTION_PARAMETERS, int mode) */
 
-static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode) {
+static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode)
+{
 
 	zval **link = NULL;
 	int link_id = -1;
@@ -2431,10 +2619,10 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode) {
 	char *ptr;
 	II_LINK *ii_link;
 
-
 	argc = ZEND_NUM_ARGS();
 
-	switch  (argc) {
+	switch  (argc)
+	{
 	    case 1:
 			zend_get_parameters_ex(argc, &link);
 			ZEND_FETCH_RESOURCE2(ii_link, II_LINK *, link, link_id, "Ingres Link", le_ii_link, le_ii_plink);
@@ -2447,8 +2635,10 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode) {
 	}
 	
 
-	if (argc == 1) {
-		switch (mode) {
+	if (argc == 1)
+	{
+		switch (mode)
+		{
 			case 0:
 				ptr = ecalloc (33,1); /* max number of chars for long including sign and null */
 				itoa(ii_link->errorCode,ptr,10);
@@ -2468,7 +2658,8 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode) {
 		}
 		RETVAL_STRING(ptr, 0);
 	} else {
-		switch (mode) {
+		switch (mode)
+		{
 			case 0:
 				ptr = ecalloc(33,1);   /* maximum num of chars in a long value including sign and null */
 				itoa( IIG(errorCode), ptr, 10);
@@ -2517,33 +2708,36 @@ static long php_ii_queryparse(char *statement TSRMLS_DC)
 	src = statement;
 	dst = statement;
 
-	while ((ch = *src++) != '\0') {
-		if (ch == end_quote) {
+	while ((ch = *src++) != '\0')
+	{
+		if (ch == end_quote)
+		{
 			end_quote = '\0';
-		} else if (end_quote != '\0') {
+		} else if (end_quote != '\0')
+		{
 			*dst++ = ch;
 			continue;
-		} else if (ch == '\'' || ch == '\"') {
+		} else if (ch == '\'' || ch == '\"')
+		{
 			end_quote = ch;
-		} else if (ch == '{') {
+		} else if (ch == '{')
+		{
 			end_quote = '}';
 		}
-		if (ch == '?') {
+		if (ch == '?')
+		{
 			/* X/Open standard       */
 			*dst++ = '?';
 			idx++;
 			style = 3;
 		} 
-/*	    if (( ch == 'V' ) && ( (*(dst-1) )== '~')) {
-			*dst++ = ch;
-			idx++;
-		} */
 		else {
 			*dst++ = ch;
 			continue;
 		}
 
-		if (laststyle && style != laststyle) {
+		if (laststyle && style != laststyle)
+		{
 			return -1;
 		}
 		laststyle = style;
@@ -2645,7 +2839,6 @@ static void php_ii_check_procedure(char *statement, II_LINK *ii_link TSRMLS_DC)
 		{
 			ii_link->procname[pos] = src[pos];
 		}
-		//sprintf(ii_link->procname,"%s", src);
 		ii_link->procname[proc_len]='\0';
 	}
 }
