@@ -23,10 +23,10 @@ if test "$PHP_INGRES" != "no"; then
     AC_MSG_ERROR(Cannot find iiapi.h under $II_DIR/files)
   fi
 
-  if test -r $II_DIR/lib/libiiapi.a; then
+  if test -r $II_DIR/lib/libiiapi.1.so; then
     II_LIB_DIR=$II_DIR/lib
   else
-    AC_MSG_ERROR(Cannot find libiiapi.a under $II_DIR/lib)
+    AC_MSG_ERROR(Cannot find libiiapi.1.so under $II_DIR/lib)
   fi
 
   PHP_ADD_LIBRARY_WITH_PATH(iiapi.1, $II_LIB_DIR, II_SHARED_LIBADD)
