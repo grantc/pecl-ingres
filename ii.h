@@ -35,6 +35,7 @@ typedef struct _II_LINK {
 	II_PTR connHandle;
 	II_PTR tranHandle;
 	II_PTR stmtHandle;
+	II_PTR envHandle;
 	II_LONG fieldCount;
 	IIAPI_DESCRIPTOR *descriptor;
 	II_CHAR *errorText;
@@ -56,6 +57,12 @@ typedef struct _II_RESULT {
 	char			*cursor_id;
 } II_RESULT;
 
+typedef struct _II_LOGIN {
+	char *user;
+	char *password;
+	char *database; /* includes vnode if used */
+} II_LOGIN;
+
 #define II_FAIL 0
 #define II_OK 1
 #define II_NO_DATA 2
@@ -66,6 +73,19 @@ typedef struct _II_RESULT {
 #define II_FIELD_INFO_LENGTH 4
 #define II_FIELD_INFO_PRECISION 5
 #define II_FIELD_INFO_SCALE 6
+
+#define II_DATE_US IIAPI_CPV_DFRMT_US
+#define II_DATE_MULTINATIONAL IIAPI_CPV_DFRMT_MULTI
+#define II_DATE_MULTINATIONAL4 IIAPI_CPV_DFRMT_MLT4
+#define II_DATE_FINNISH IIAPI_CPV_DFRMT_FINNISH
+#define II_DATE_ISO IIAPI_CPV_DFRMT_ISO
+#define II_DATE_GERMAN IIAPI_CPV_DFRMT_GERMAN
+#define II_DATE_MDY IIAPI_CPV_DFRMT_MDY
+#define II_DATE_DMY IIAPI_CPV_DFRMT_DMY
+#define II_DATE_YMD IIAPI_CPV_DFRMT_YMD
+
+#define II_MONEY_LEAD_SIGN IIAPI_CPV_MONEY_LEAD_SIGN
+#define II_MONEY_TRAIL_SIGN IIAPI_CPV_MONEY_TRAIL_SIGN
 
 static int ii_sync(IIAPI_GENPARM *genParm);
 static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC);
@@ -84,6 +104,16 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode);
 static long php_ii_queryparse(char *statement TSRMLS_DC);
 static void php_ii_gen_cursor_id(II_LINK *ii_link TSRMLS_DC);
 static void php_ii_check_procedure(char *statement, II_LINK *ii_link TSRMLS_DC);
+static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, II_LOGIN *user_details TSRMLS_DC);
+
+#if IIAPI_VERSION >= 3
+#define INGRES_UNICODE
+#define INGRES_CP_LOCAL
+#endif
+
+#if IIAPI_VERSION >= 4
+#define INGRES_BIGINT
+#endif
 
 #endif  /* HAVE_II */
 #endif	/* II_H */
