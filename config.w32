@@ -12,6 +12,12 @@ if (PHP_INGRES != "no") {
 		if (ii_system != "") {
 			if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", ii_system + "\\ingres\\files;" + PHP_INGRES) &&
 				CHECK_LIB("iilibapi.lib", "ingres", ii_system + "\\ingres\\lib;" + PHP_INGRES)) {
+				// Ingres r3 
+				AC_DEFINE('HAVE_II', 1);
+				EXTENSION("ingres","ii.c");
+			} else if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", ii_system + "\\ingres\\files;" + PHP_INGRES) &&
+				CHECK_LIB("oiapi.lib", "ingres", ii_system + "\\ingres\\lib;" + PHP_INGRES)) {
+				// Ingres 2.0/2.5/2.6
 				AC_DEFINE('HAVE_II', 1);
 				EXTENSION("ingres","ii.c");
 			} else {
@@ -28,6 +34,11 @@ if (PHP_INGRES != "no") {
 			CHECK_LIB("iilibapi.lib", "ingres", PHP_INGRES + "\\ingres\\lib;"))  {
 			AC_DEFINE('HAVE_II', 1);
 			EXTENSION("ingres","ii.c");
+		} else if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", PHP_INGRES + "\\ingres\\files;" + PHP_INGRES) &&
+				CHECK_LIB("oiapi.lib", "ingres", PHP_INGRES + "\\ingres\\lib;")) {
+				// Ingres 2.0/2.5/2.6
+				AC_DEFINE('HAVE_II', 1);
+				EXTENSION("ingres","ii.c");
 		} else {
 			// cannot find files in supplied path
 			WARNING("Ingres not enabled; libraries and headers not found");
