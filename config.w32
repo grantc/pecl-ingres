@@ -25,8 +25,15 @@ if (PHP_INGRES != "no") {
 				WARNING("Ingres not enabled; libraries and headers not found in " + ii_system);
 			}
 		} else {
-			// %II_SYSTEM% is not set
-			WARNING("Ingres not enabled; %II_SYSTEM% has not been defined");
+			// Check php_build dirs for headers
+			if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", PHP_PHP_BUILD + "\\include\\ingres") &&
+				CHECK_LIB("iilibapi.lib", "ingres", PHP_PHP_BUILD + "\\lib")) {
+				AC_DEFINE('HAVE_II', 1);
+				EXTENSION("ingres","ii.c");
+			} else {				
+				// %II_SYSTEM% is not set
+				WARNING("Ingres not enabled; %II_SYSTEM% has not been defined");
+			}
 		}
 	} else { 
 		// path supplied to  --with-ingres
