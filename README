@@ -1,13 +1,316 @@
-Ingres II extension for PHP
-===========================
+Ingres extension for PHP
+========================
 
-This extension provides access to Ingres II servers from PHP 4.0.
-It is still in development and has been only quickly tested on
-Linux (Mandrake 5.3 for Intel), so you should avoid using it with
-critical data.
+Contents
+--------
+ - Introduction
+ - Platform support
+ - Function support
+ - Setting up a build environment
+   - Windows build environment
+   - Unix/Linux build environment
+ - Getting the extension
+   - CVS
+   - Project home page
+   - Pear
+ - Building the extension
+ - Testing the extension
+ - Known issues
+   - Linux
+ - Future direction
+ - Comments/suggestions/credits
 
-To enable the extension just add --with-ingres to your ./configure
-line. If the Ingres files are not found, use --with-ingres=DIR instead
-to specify your Ingres installation directory.
+Introduction
+============
 
-Please report suggestions to henot@php.net.
+This extension is designed to provide access to the Ingres Enterprise
+Relational Database Management System. Native or direct access is provided
+for Ingres II 2.0, Ingres II 2.5, Advantage Ingres 2.6 and Ingres r3. To
+access older versions a supported client environment can be used with 
+Ingres/NET.
+
+In 2005, the Ingres extension was moved to the PHP extension community
+library (PECL) to resolve a build conflict with Windows and UNIX/Linux
+platforms. One advantage of this move is it allows the extension to be
+developed with its own release cycle. This permits new functionality to be
+released when possible instead of waiting for the next official
+PHP release. Rather than being available via the main PHP tarball/zip
+archive (http://www.php.net/downloads) an additional download is required.
+
+The project home page for the Ingres extension is
+http://pecl.php.net/project/ingres.
+
+Platform support
+================
+
+This extension has been written to support the following versions of
+Ingres:
+ - Ingres II 2.0/OpenIngres 2.0
+ - Ingres II 2.5
+ - Advantage Ingres 2.6
+ - Ingres r3
+
+In theory the extension should work against any platform where the above
+Ingres releases are supported. In practice the extension has been developed
+on Windows XP using Visual Studio .Net 2003 (VC7) and SuSE 9.3/Fedora Core
+3 using GCC 3.3.x. There has been limited testing on Solaris 9 Sparc. If you
+find the extension does not work please contact grantc@php.net with the
+following information:
+  - operating system and patches/service pack installed
+  - compiler + version used to build the extension
+  - version of PHP being used
+  - version of Ingres being used
+  - if you managed to get the extension built, the value of the constants
+    INGRES_EXT_VERSION and INGRES_API_VERSION:
+    <?php
+		echo INGRES_EXT_VERSION + " " + INGRES_API_VERSION;
+    ?> 
+
+Function support
+================
+
+The extension provides the following functionality:
+
+ingres_autocommit 		Switch autocommit on or off
+ingres_close 			Close an Ingres database connection
+ingres_commit 			Commit a transaction
+ingres_connect 	 		Open a connection to an Ingres database
+ingres_cursor  			Get the name of the cursor in use
+ingres_error 			Get the error text
+ingres_errno 			Get the error code
+ingres_errsqlstate 		Get the SQLState
+ingres_fetch_array 		Fetch a row of result into an array
+ingres_fetch_object		Fetch a row of result into an object
+ingres_fetch_row  		Fetch a row of result into an enumerated array
+ingres_field_length		Get the length of a field
+ingres_field_name 		Get the name of a field in a query result
+ingres_field_nullable 	Test if a field is nullable
+ingres_field_precision	Get the precision of a field
+ingres_field_scale 		Get the scale of a field
+ingres_field_type  		Get the type of a field in a query result
+ingres_num_fields  		Get the number of fields returned by the last 
+						query
+ingres_num_rows   		Get the number of rows affected or returned by
+						the last query
+ingres_pconnect  		Open a persistent connection to an Ingres 
+						database
+ingres_query  			Send a SQL query to Ingres
+ingres_rollback  		Rollback a transaction
+
+Project home page
+-----------------
+
+The latest tar ball for this extension can be downloaded from
+http://pecl.php.net/project/ingres. At the moment only source code is
+available for download via this page. Development snapshot builds of
+the PECL extension for Windows can be downloaded from
+http://snaps.php.net. Binary releases for certain operating systems
+will be provided in due course.
+
+
+Setting up a build environment
+==============================
+
+Get PHP
+-------
+
+Getting PHP from CVS
+
+1. Set CVSROOT to ':pserver:cvsread@cvs.php.net:/repository'.
+2. Login to PHP CVS repository - using the password phpfi.
+     cvs login
+3. Checkout the source code, note the following will checkout from PHP's
+   HEAD branch. For other branches use '-r label' for a different branch,
+   e.g. PHP_5_0 for PHP 5.0.
+     cvs checkout php_src
+4. The source code will be downloaded to php_src within the current working
+   directory.
+
+Getting PHP from http://www.php.net/downloads.php
+
+1. Download the source for PHP code from - http://www.php.net/downloads.php
+2. Extract the archive to disk, opting to keep the existing folder
+   structure.
+
+Windows build environment
+-------------------------
+
+To build the extension on Windows requires Microsoft's Visual C++ toolkit. 
+this can be downloaded for free from 
+http://msdn.microsoft.com/visualc/vctoolkit2003/. Once that has been
+installed follow the steps to the letter on 
+http://www.php.net/manual/en/install.Windows.building.php.
+
+
+UNIX/Linux build environment
+----------------------------
+
+The requirements for building PHP for UNIX/Linux are outlined within PHP's
+documentation - http://www.php.net/manual/en/install.UNIX.php
+
+Getting the extension
+=====================
+
+There are two options for downloading the extension:
+
+- via CVS
+- via the project home page
+
+CVS
+---
+to download the source via cvs:
+
+1. Set cvsroot to ':pserver:cvsread@cvs.php.net:/repository'
+2. Login to PHP cvs repository - using the password phpfi.
+     cvs login
+3. Checkout the source code
+     cvs checkout pecl/ingres
+4. The source code should be in a directory called pecl/ingres 
+   (UNIX/Linux) or pecl\ingres (Windows)
+
+At this point in time the source for the extension is outside of the PHP
+source tree setup earlier. To build the extension the code needs to be
+accessible within the PHP source tree. The simplest way to achieve
+this is to copy the Ingres extension directory to the 'ext' directory 
+within the PHP source tree. Alternatively it's possible to create a 
+symbolic link between the extension source and the PHP source tree:
+
+UNIX/Linux
+----------
+
+   ln -s <extension dir>/pecl/ingres <php dir>/ext/ingres
+
+Windows
+-------
+
+For Windows 2000 and later versions its possible to create 'junctions'
+to link a directory to a virtual or symbolic location. Microsoft does
+not provide a tool to create junction with Windows. However, it is
+possible to download such a tool from :
+
+	http://www.sysinternals.com/Utilities/Junction.html
+
+Building the extension
+======================
+
+The following instructions build a shared library which allows for
+changes to be applied to an extension without the need to rebuild PHP.
+
+UNIX/Linux
+-----------
+
+1. cd <php dir> 
+2. rm configure
+3. ./buildconf --force
+4. ./configure --help
+5. ./configure --with-ingres=shared --enable-someotherext --with-foobar
+6. make
+7. make install
+
+Windows
+-------
+
+1. cd <php dir> 
+3. buildconf.bat
+4. cscript /nologo configure.js --help
+5. cscript /nologo configure.js --with-ingres=shared --enable-someotherext --with-foobar
+6. nmake
+7. nmake install
+
+
+Installing the extension
+------------------------
+
+The install location for the extension is determined by the parameter,
+extension_dir, in PHP's configuration file 'php.ini'. To install the
+Ingres extension copy the generated library file to this directory.
+For UNIX/Linux the extension file is called ingres.so. For Windows the
+extension is called php_ingres.dll. After copying the library, add the
+following line to php.ini under the section labelled "Dynamic
+Extensions":
+
+UNIX/Linux
+----------
+extension=ingres.so
+
+Windows
+-------
+extension=php_ingres.dll
+
+Known issues
+============
+
+Linux
+-----
+ - the extension fails to build with GCC 4.0.0 ( discovered with FC4 )
+
+Future direction
+================
+
+Since the code has been relatively stable for a number of years, all current
+development efforts have tried to avoid, where possible, changing syntax of 
+any existing function. The TODO file covers the items that are on the list 
+to be implemented. 
+
+There are, however, some things that would be nice to have but might prove 
+difficult to implement without breaking backwards compatibility, either 
+with versions of Ingres or with existing Ingres based PHP code.
+
+The following requires that Ingres 2.0 is no longer supported.
+
+- not casting to varchar to see the expected date format or money format
+
+  The extension uses IIapi_setConnectParm() to affect the behaviour of the
+  extension. Such that it is possible to override the current date format,
+  money format amongst other things. Since PHP is weakly typed (there are
+  only 4 types that map to Ingres types) conversion from Ingres types to PHP
+  types needs to take place when fetching data. The OpenAPI function
+  IIapi_convertData() is used to do this. However IIapi_convertData() is
+  unable to observe certain environmental parameters since setting
+  parameter values via IIapi_setConnectParm() affects all connections.
+  Ingres II 2.5 overcomes this with the addition of an environment handle
+  and a new function to convert between different data types,
+  IIapi_formatData(). To properly support data conversion Ingres 2.0 can no
+  longer be used, on the client.
+
+The following will change compatibility with existing Ingres based PHP.
+
+- Multiple resultsets
+
+  the current extenion maintains a single statement handle. Whenever a
+  query is exectuted via ingres_query() or ingres_prepare() any existing
+  statement is terminated/closed. For multiple resultsets to work the
+  ingres_fetch_*() statements will need to be able to accept a resource
+  that represents an Ingres resultset. Such that
+
+  ingres_fetch_row( [resource link] ) 
+
+  would have to change to
+
+  ingres_fetch_row( resource result )
+
+  note '[]' means anything contained within is optional. Apart from 
+  passing a result resource instead of a link resource the main 
+  difference is the parameter passed would be a mandatory parameter 
+  rather than optional as it is at the moment. This is more in keeping 
+  with how other PHP database interfaces work. Link resource
+  parameters that are currently optional would become mandatory.  
+
+It is possible for the code to be branched such that any future versions
+that break backwards compatibility are clearly marked as doing so. This
+will done according to demand.
+
+Comments/suggestions/credits
+============================
+
+The architecture for the Ingres extension is based on code written by David
+Henot (henot@php.net) from 2000-2004. Since February 2005 Grant Croker,
+(grantc@php.net), took over the maintenance and development of the
+extension.
+
+If you have any comments, features or if you wish to assist in some way 
+with coding, testing or documentation please contact grantc@php.net.
+
+// please keep the line below
+// vim:textwidth=70 autoindent sw=4 ts=4
+
