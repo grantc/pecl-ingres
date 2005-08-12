@@ -43,12 +43,12 @@
 				<file role="doc">README.html</file>
 				<file role="doc">TODO</file>
 				<dir name="tests" role="test">
-					<file>tests/test_001.phpt</file>
-					<file>tests/test_002.phpt</file>
-					<file>tests/test_003.phpt</file>
-					<file>tests/test_004.phpt</file>
-					<file>tests/test_005.phpt</file>
-					<file>tests/test_006.phpt</file>
+					<file>test_001.phpt</file>
+					<file>test_002.phpt</file>
+					<file>test_003.phpt</file>
+					<file>test_004.phpt</file>
+					<file>test_005.phpt</file>
+					<file>test_006.phpt</file>
 				</dir>
 			</dir>
 		</filelist>
