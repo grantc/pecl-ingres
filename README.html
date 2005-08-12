@@ -64,13 +64,13 @@ PRE {
 
 <H2>Contents</H2>
 
-<A HREF="#Introduction">1. Introduction</A><BR>
-<A HREF="#Platform support">2. Platform support</A><BR>
-<A HREF="#Function support">3. Function support</A><BR>
-<A HREF="#Installing the extension">4. Installing the extension</A><BR>
-<A HREF="#Known issues">5. Known issues</A><BR>
-<A HREF="#Future direction">6. Future direction</A><BR>
-<A HREF="#Comments/suggestions/credits">7. Comments/suggestions/credits</A><BR>
+<A href="#Introduction">1. Introduction</A><BR>
+<A href="#Platform support">2. Platform support</A><BR>
+<A href="#Function support">3. Function support</A><BR>
+<A href="#Installing the extension">4. Installing the extension</A><BR>
+<A href="#Known issues">5. Known issues</A><BR>
+<A href="#Future direction">6. Future direction</A><BR>
+<A href="#Comments/suggestions/credits">7. Comments/suggestions/credits</A><BR>
 <BR><HR>
 <A NAME="Introduction"><H2>1. Introduction</H2>
 
@@ -78,7 +78,7 @@ PRE {
 This extension is designed to provide access to the Ingres Enterprise
 Relational Database Management System. Native or direct access is provided
 for Ingres II 2.0, Ingres II 2.5, Advantage Ingres 2.6 and Ingres r3. To
-access older versions a supported client environment can be used with 
+access older versions, a supported client environment can be used with 
 Ingres/NET.
 </P>
 
@@ -89,7 +89,7 @@ platforms. One advantage of this move is it allows the extension to be
 developed with its own release cycle. This permits new functionality to be
 released when possible instead of waiting for the next official
 PHP release. Rather than being available via the main PHP tarball/zip
-archive (<A HREF="http://www.php.net/downloads) an additional download is required">http://www.php.net/downloads</A>) an additional download is required.
+archive (<A HREF="http://www.php.net/downloads"     >http://www.php.net/downloads</A>), an additional download is required.
 </P>
 
 <BR><HR>
@@ -101,9 +101,12 @@ This extension has been written to support the following versions of
 Ingres:
 </P>
 <UL>
-<LI>Ingres II 2.0/OpenIngres 2.0</LI>
-<LI>Ingres II 2.5</LI>
-<LI>Advantage Ingres 2.6</LI>
+<LI>Ingres II 2.0/OpenIngres 2.0 
+  
+<LI>Ingres II 2.5 
+  
+<LI>Advantage Ingres 2.6 
+  
 <LI>Ingres r3</LI>
 </UL>
 
@@ -111,7 +114,7 @@ Ingres:
 
 <P>
 This extension has been written against PHP 5.1. Prior versions of
-PHP i.e. 4.0.x - 5.0, contain an earlier version of the Ingres
+PHP, i.e. 4.0.x - 5.0, contain an earlier version of the Ingres
 extension. Building the extension with earlier versions requires the
 deletion of the <I>ingres_ii</I> directory under <I>ext</I>.
 </P>
@@ -122,14 +125,18 @@ The extension should work against any platform where the above
 Ingres releases are supported. In practice the extension has been developed
 on Windows XP using Visual Studio .Net 2003 (VC7) and SuSE 9.3/Fedora Core
 3 using GCC 3.3.x. There has been limited testing on Solaris 9 Sparc. If you
-find the extension does not work please contact <A HREF="mailto:grantc@php.net">grantc@php.net</A> with the
+find the extension does not work, please contact <A href="mailto:grantc@php.net">grantc@php.net</A> with the
 following information:
 </P>
 <UL>
-<LI>operating system and patches/service pack installed</LI>
-<LI>compiler + version used to build the extension</LI>
-<LI>version of PHP being used</LI>
-<LI>version of Ingres being used</LI>
+<LI>operating system and patches/service pack installed 
+  
+<LI>compiler + version used to build the extension 
+  
+<LI>version of PHP being used 
+  
+<LI>version of Ingres being used 
+  
 <LI>if you managed to get the extension built, the value of the constants
 INGRES_EXT_VERSION and INGRES_API_VERSION:
 <PRE>
@@ -189,16 +196,22 @@ will be provided in due course.
 <H3>Windows Installation</H3>
 
 The latest binaries for the Ingres extension can be downloaded from <A
-HREF="http://snaps.php.net">http://snaps.php.net</A>. Direct links are
+ HREF="http://snaps.php.net">http://snaps.php.net</A>. Direct links are
 provided below for different PHP releases:
 
 <UL>
 <LI><A
-HREF="http://snaps.php.net/win32/PECL_5_0/php_ingres.dll">http://snaps.php.net/win32/PECL_5_0/php_ingres.dll</A></LI>
+ 
+  HREF="http://snaps.php.net/win32/PECL_5_0/php_ingres.dll" 
+ >http://snaps.php.net/win32/PECL_5_0/php_ingres.dll</A>
 <LI><A
-HREF="http://snaps.php.net/win32/PECL_5_1/php_ingres.dll">http://snaps.php.net/win32/PECL_5_1/php_ingres.dll</A></LI>
+ 
+  HREF="http://snaps.php.net/win32/PECL_5_1/php_ingres.dll" 
+ >http://snaps.php.net/win32/PECL_5_1/php_ingres.dll</A>
 <LI><A
-HREF="http://snaps.php.net/win32/PECL_UNSTABLE/php_ingres.dll">http://snaps.php.net/win32/PECL_UNSTABLE/php_ingres.dll</A></LI>
+ 
+  HREF="http://snaps.php.net/win32/PECL_UNSTABLE/php_ingres.dll" 
+ >http://snaps.php.net/win32/PECL_UNSTABLE/php_ingres.dll</A></LI>
 </UL>
 
 <P>To activate the extension copy <i>php_ingres.dll</i> into the
@@ -208,7 +221,7 @@ line to <i>php.ini</i>:
 <PRE>
 	extension=php_ingres.dll
 </PRE>
-</P>
+<P></P>
 
 <H3>UNIX/Linux Installation</H3>
 
@@ -217,7 +230,7 @@ complilation environment.
 </P>
 
 <P>The latest source code can be downloaded manually from <A
-HREF="http://pecl.php.net/get/ingres">http://pecl.php.net/get/ingres</A>.
+ HREF="http://pecl.php.net/get/ingres">http://pecl.php.net/get/ingres</A>.
 Or by using PEAR:
 </P>
 
@@ -229,11 +242,11 @@ Once you have the source archive run through the following steps to
 build and install:
 
 <OL>
-<LI>Extract the archive, adapt the version number accordingly:<PRE>tar -zxvf ingres-1.0.tgz</PRE></LI>
+<LI>Extract the archive, adapt the version number accordingly:<PRE>tar -zxvf ingres-1.0.tgz</PRE>
 <LI>Enter the newly created directory:<PRE>cd ingres-1.0</PRE>
-<LI>Generate the configuration file for the extension:<PRE>phpize</PRE></LI>
-<LI>Generate the Makefile needed to build the extension:<PRE>./configure</PRE></LI>
-<LI>Build the extension:<PRE>make</PRE></LI>
+<LI>Generate the configuration file for the extension:<PRE>phpize</PRE>
+<LI>Generate the Makefile needed to build the extension:<PRE>./configure</PRE>
+<LI>Build the extension:<PRE>make</PRE>
 <LI>Install the extension, N.B. this may require <i>root</i> access :<PRE>make install</PRE></LI>
 </OL>
 
@@ -262,24 +275,21 @@ with versions of Ingres or with existing Ingres based PHP code.
 </P>
 
 <P>
-The extension uses IIapi_setConnectParm() to affect the behaviour of the
-extension. Such that it is possible to override the current date format,
-money format amongst other things. Since PHP is weakly typed (there are
-only 4 types that map to Ingres types) conversion from Ingres types to PHP
-types needs to take place when fetching data. The OpenAPI function
-IIapi_convertData() is used to do this. However IIapi_convertData() is
-unable to observe certain environmental parameters since setting
-parameter values via IIapi_setConnectParm() affects all connections.
-Ingres II 2.5 overcomes this with the addition of an environment handle
-and a new function to convert between different data types,
-IIapi_formatData(). To properly support data conversion Ingres 2.0 can no
-longer be used, on the client.
+Since PHP is weakly typed (there are only 4 types that map to Ingres 
+types), conversion to Ingres types from PHP types needs to take place 
+when fetching data. The OpenAPI function IIapi_convertData() is used 
+to do this. However IIapi_convertData() is unable to observe certain 
+environmental parameters since setting parameter values via 
+IIapi_setConnectParm() affects all connections.  Ingres II 2.5 overcomes 
+this with the addition of an environment handle and a new function to 
+convert between different data types, IIapi_formatData(). To properly 
+support data conversion Ingres 2.0 can no longer be used, on the client.
 </P>
 
 <P>
-The current extenion maintains a single statement handle. Whenever a
-query is exectuted via ingres_query() or ingres_prepare() any existing
-statement is terminated/closed. For multiple resultsets to work the
+The current extension maintains a single statement handle. Whenever a
+query is executed via ingres_query() or ingres_prepare(), any existing
+statement is terminated/closed. For multiple resultsets to work, the
 ingres_fetch_*() statements will need to be able to accept a resource
 that represents an Ingres resultset. Such that:
 </P>
@@ -293,8 +303,8 @@ would have to change to:
   ingres_fetch_row( resource result )
 </PRE>
 <P>
-note '[]' means anything contained within is optional. Apart from 
-passing a result resource instead of a link resource the main 
+Note '[]' means anything contained within is optional. Apart from 
+passing a result resource instead of a link resource, the main 
 difference is the parameter passed would be a mandatory parameter 
 rather than optional as it is at the moment. This is more in keeping 
 with how other PHP database interfaces work. Link resource
@@ -303,9 +313,10 @@ Implementing this would make the extension incompatible with existing
 scripts that use Ingres.
 </P>
 <P>
-It is possible for the code to be branched such that any future versions
-that break backwards compatibility are clearly marked as doing so. This
-will done according to demand.
+It 
+is possible for the code to be branched such that any future versions that
+break backwards compatibility are clearly marked as doing so. This will
+be done according to demand.
 </P>
 
 <BR><HR>
@@ -313,16 +324,15 @@ will done according to demand.
 
 <P>
 The architecture for the Ingres extension is based on code written by David
-Henot (<A HREF="mailto:henot@php.net">henot@php.net</A>) from 2000-2004. i
-Since February 2005 Grant Croker, (<A HREF="mailto:grantc@php.net">grantc@php.net</A>), took over the maintenance and development of the
+Henot (<A href="mailto:henot@php.net">henot@php.net</A>) from 2000-2004.&nbsp;
+Since February 2005, Grant Croker, (<A href="mailto:grantc@php.net">grantc@php.net</A>), took over the maintenance and development of the
 extension.
 </P>
 
 <P>
 If you have any comments, features or if you wish to assist in some way 
-with coding, testing or documentation please contact <A HREF="mailto:grantc@php.net">grantc@php.net</A>.
-</P>
-<!--
+with coding, testing or documentation please contact <A href="mailto:grantc@php.net">grantc@php.net</A>.
+</P><!--
 // please keep the line below
 // vim:textwidth=70 autoindent sw=4 ts=4
 -->
