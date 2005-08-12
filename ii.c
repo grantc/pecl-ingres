@@ -14,12 +14,12 @@
    +----------------------------------------------------------------------+
    | Contributed by ECL IP'S Software & Services                          |
    |                http://www.eclips-software.com                        |
-   |                mailto://idev@eclips-software.com                     |
+   |                mailto:idev@eclips-software.com                       |
    |                Computer Associates, http://ingres.ca.com             |
    | Authors: David Hénot <henot@php.net>                                 |
    |          Grant Croker <grantc@php.net>                               |
    +----------------------------------------------------------------------+
- */
+*/
 
 /* $Id$ */
 
@@ -1866,7 +1866,6 @@ PHP_FUNCTION(ingres_num_fields)
 	RETURN_LONG(ii_link->fieldCount);
 }
 /* }}} */
-
 
 /* {{{ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type)
  *  Return information about a field in a query result

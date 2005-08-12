@@ -14,7 +14,7 @@
    +----------------------------------------------------------------------+
    | Contributed by ECL IP'S Software & Services                          |
    |                http://www.eclips-software.com                        |
-   |                mailto://idev@eclips-software.com                     |
+   |                mailto:idev@eclips-software.com                       |
    |                Computer Associates, http://ingres.ca.com             |
    | Authors: David Hénot <henot@php.net>                                 |
    |          Grant Croker <grantc@php.net>                               |
