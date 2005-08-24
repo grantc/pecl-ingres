@@ -15,20 +15,9 @@
 		</maintainer>
 	</maintainers>
 	<release>
-		<version>1.1</version>
-		<date>2005-08-12</date>
+		<version>1.1.1</version>
+		<date>2005-08-27</date>
 		<state>alpha</state>
-		<notes>
-				- Added README [grantc 11-08-05]
-				- Added support for a number of connection options [grantc 30-06-05]
-				- Added Mode support to cursor selects [grantc 28-06-05]
-				- Added named parameter support to database procedures [grantc 27-06-05] 
-				- Added support for procedures without parameters. Handles row producing procedures [grantc 23-06-05]
-				- No longer EXPERIMENTAL [grantc 15-06-05]
-				- Added functions ingres_prepare(), ingres_execute(), ingres_cursor() [grantc 15-06-05]
-				- Added some simple tests [grantc 15-06-05]
-				- Added support for reporting/testing Ingres error messages [grantc 30-05-05]
-		</notes>
 		<configureoptions>
 			<configureoption name="with-ingres" prompt="Ingres II_SYSTEM dir?" />
 		</configureoptions>
@@ -42,6 +31,7 @@
 				<file role="doc">README</file>
 				<file role="doc">README.html</file>
 				<file role="doc">TODO</file>
+				<file role="doc">CHANGELOG</file>
 				<dir name="tests" role="test">
 					<file>test_001.phpt</file>
 					<file>test_002.phpt</file>
@@ -55,19 +45,11 @@
 	</release>
 	<changelog>
 		<release>
-			<version>1.1</version>
+			<version>1.1.1</version>
 			<date>2005-08-12</date>
 			<state>alpha</state>
 			<notes>
-				- Added README [grantc 11-08-05]
-				- Added support for a number of connection options [grantc 30-06-05]
-				- Added Mode support to cursor selects [grantc 28-06-05]
-				- Added named parameter support to database procedures [grantc 27-06-05] 
-				- Added support for procedures without parameters. Handles row producing procedures [grantc 23-06-05]
-				- No longer EXPERIMENTAL [grantc 15-06-05]
-				- Added functions ingres_prepare(), ingres_execute(), ingres_cursor() [grantc 15-06-05]
-				- Added some simple tests [grantc 15-06-05]
-				- Added support for reporting/testing Ingres error messages [grantc 30-05-05]
+				Parameterized queries with ingres_query() Uses '?' as a param marker.
 			</notes>
 		</release>
 	</changelog>
