@@ -101,10 +101,12 @@ static char *php_ii_field_name(II_LINK *ii_link, int index TSRMLS_DC);
 static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type);
 static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int result_type);
 static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode);
-static long php_ii_queryparse(char *statement TSRMLS_DC);
+static long php_ii_paramcount(char *statement TSRMLS_DC);
 static void php_ii_gen_cursor_id(II_LINK *ii_link TSRMLS_DC);
-static void php_ii_check_procedure(char *statement, II_LINK *ii_link TSRMLS_DC);
+static char *php_ii_check_procedure(char *statement, II_LINK *ii_link TSRMLS_DC);
 static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, II_LOGIN *user_details TSRMLS_DC);
+static char * php_ii_convert_param_markers ( char *statement TSRMLS_DC);
+static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, zval **queryParams);
 
 #if IIAPI_VERSION >= 3
 #define INGRES_UNICODE

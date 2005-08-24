@@ -1,4 +1,7 @@
 CVS
+- Added parameter support to ingres_query(), uses '?' for param markers [grantc 30-06-05]
+
+version 1.1
 - Added support for a number of connection options [grantc 30-06-05]
 - Added Mode support to cursor selects [grantc 28-06-05]
 - Added named parameter support to database procedures [grantc 27-06-05] 
