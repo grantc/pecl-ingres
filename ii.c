@@ -1041,13 +1041,15 @@ PHP_FUNCTION(ingres_query)
 		RETURN_FALSE;
 	}
 
+	convert_to_string_ex(query);
+
 	/* check to see if there are any parameters to the query */
 
 	ii_link->paramCount = php_ii_paramcount(Z_STRVAL_PP(query) TSRMLS_CC);
 
 	if ( ii_link->paramCount > 0 )
 	{
-		if (Z_TYPE_PP(queryParams) != IS_ARRAY )
+		if ((argc != 3) || (Z_TYPE_PP(queryParams) != IS_ARRAY))
 		{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: Expecting a parameter array but did not get one" );
 			RETURN_FALSE;
@@ -1062,8 +1064,6 @@ PHP_FUNCTION(ingres_query)
 		}
 		zend_hash_internal_pointer_reset(Z_ARRVAL_PP(queryParams));
 	}
-
-	convert_to_string_ex(query);
 
 	/* check to see if this is a procedure or not
 	load the procedure name into ii_link->procname.
@@ -2960,7 +2960,9 @@ static char *php_ii_convert_param_markers (char *statement TSRMLS_DC)
 	{
 		if ( ch == '?' )
 		{
-			if ( tmp_ch != ' ') /* check for leading space */
+			if ( *(p-2) != ' ') /* check for space before '?' */
+								/* if there is no space we add '~V' */
+								/* ingres will error with "Invalid operator '~V'" */
 			{
 				*tmp_p = ' ';
 				*tmp_p++;
@@ -2970,7 +2972,9 @@ static char *php_ii_convert_param_markers (char *statement TSRMLS_DC)
 			*tmp_p++;
 			*tmp_p = 'V';
 			
-			if ( *(p + 1) != ' ') /* check for trailing space */
+			if ( *p != ' ') /* check for space after '?' */
+							/* if there is no space we add '~V' */
+							/* ingres will error with "Invalid operator '~V'" */
 			{
 				*tmp_p++;
 				*tmp_p = ' ';
@@ -3014,6 +3018,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 	char *key;
 	int key_len;
 	long index;
+
 
 	arr_hash = Z_ARRVAL_PP(queryParams);
 
@@ -3103,7 +3108,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 					}
 					break;
 				case IS_DOUBLE:
-					convert_to_double_ex(val);			
+					convert_to_double_ex(val);
 					setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_FLT_TYPE;
 					setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
 					setDescrParm.sd_descriptor[param].ds_length = sizeof(Z_DVAL_PP(val));
