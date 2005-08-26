@@ -33,12 +33,18 @@
 				<file role="doc">TODO</file>
 				<file role="doc">CHANGELOG</file>
 				<dir name="tests" role="test">
+					<file>connection.inc</file>
+					<file>skipif.inc</file>
 					<file>test_001.phpt</file>
 					<file>test_002.phpt</file>
 					<file>test_003.phpt</file>
 					<file>test_004.phpt</file>
 					<file>test_005.phpt</file>
 					<file>test_006.phpt</file>
+					<file>test_007.phpt</file>
+					<file>test_008.phpt</file>
+					<file>test_009.phpt</file>
+					<file>test_010.phpt</file>
 				</dir>
 			</dir>
 		</filelist>
