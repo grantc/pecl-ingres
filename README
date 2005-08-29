@@ -175,12 +175,7 @@ install, note that $II_SYSTEM needs to be defined beforehand:
 
 5. Known issues
 
-
-Linux
-
-
-* the extension fails to build with GCC 4.0.0 ( discovered with FC4 )
-
+There are no known issues at this time.
 
 -------------------------------------------------------------------------------
 
@@ -230,7 +225,7 @@ according to demand.
 7. Comments/suggestions/credits
 
 The architecture for the Ingres extension is based on code written by David
-Henot (henot@php.net) from 2000-2004.  Since February 2005, Grant Croker,
+Henot (henot@php.net) from 2000-2004. Since February 2005, Grant Croker,
 (grantc@php.net), took over the maintenance and development of the extension.
 If you have any comments, features or if you wish to assist in some way with
 coding, testing or documentation please contact grantc@php.net.
