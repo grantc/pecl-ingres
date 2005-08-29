@@ -1954,7 +1954,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 	IIAPI_GETQINFOPARM getQInfoParm;
 	IIAPI_CONVERTPARM convertParm;
 
-	int i, j, k;
+	int i, j, k, m;
 	int more;
 	double value_double = 0;
 	long value_long = 0;
@@ -2160,7 +2160,8 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 								/* real length is stored in first 2 bytes of data, so adjust
 								   length variable and data pointer */
 								columnData[k - 1].dv_length = *((II_INT2 *) columnData[k - 1].dv_value);
-								((II_INT2 *) columnData[k - 1].dv_value)++;
+								(columnData[k - 1].dv_value)++;
+								(columnData[k - 1].dv_value)++;
 								correct_length = 1;
 								/* NO break */
 
@@ -2210,9 +2211,16 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 								{
 									if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_NVCH_TYPE)
 									{
-										((II_UINT2 *) columnData[k - 1].dv_value)--;
+										for ( m = 0; m < sizeof(II_UINT2); m++)
+										{
+											(columnData[k - 1].dv_value)--;
+										}
+				
 									} else {
-										((II_INT2 *) columnData[k - 1].dv_value)--;
+										for ( m = 0; m < sizeof(II_INT2); m++)
+										{
+											(columnData[k - 1].dv_value)--;
+										}
 									}
 								}
 								break;
