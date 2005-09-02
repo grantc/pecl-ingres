@@ -27,7 +27,7 @@
 #define PHP_II_H
 
 #if HAVE_II
-
+#include<iiapi.h>
 extern zend_module_entry ingres_module_entry;
 #define phpext_ingres_ptr &ingres_module_entry
 
@@ -67,6 +67,7 @@ PHP_FUNCTION(ingres_errsqlstate);
 PHP_FUNCTION(ingres_prepare);
 PHP_FUNCTION(ingres_execute);
 PHP_FUNCTION(ingres_cursor);
+PHP_FUNCTION(ingres_set_environment);
 
 ZEND_BEGIN_MODULE_GLOBALS(ii)
 	long allow_persistent;
@@ -89,12 +90,15 @@ ZEND_BEGIN_MODULE_GLOBALS(ii)
 
 	long cursor_no;
 	long cursor_mode;
+
+	II_PTR *envHandle; /* environment handle */
+
 ZEND_END_MODULE_GLOBALS(ii)
 
 #define II_ASSOC (1<<0)
 #define II_NUM   (1<<1)
 #define II_BOTH  (II_ASSOC|II_NUM)
-#define II_VERSION "1.1.1-dev"
+#define II_VERSION "1.2.0-dev"
 
 #define II_CURSOR_UPDATE 0    /* default */
 #define II_CURSOR_READONLY 1
@@ -118,6 +122,9 @@ ZEND_END_MODULE_GLOBALS(ii)
 /*
  * Local variables:
  * tab-width: 4
+ * shift-width: 4
  * c-basic-offset: 4
  * End:
+ * vim600: sw=4 ts=4 fdm=marker ff=unix
+ * vim<600: sw=4 ts=4
  */

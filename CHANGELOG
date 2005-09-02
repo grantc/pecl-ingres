@@ -1,4 +1,7 @@
 CVS
+- Added ingres_set_environment() [grantc 02-09-05]
+- Fixed ingres_connect() to allow locale params to function without a cast [grantc 01-09-05]
+- Extension now builds with GCC 4.x [grantc 29-08-05]
 - Added parameter support to ingres_query(), uses '?' for param markers [grantc 23-08-05]
 
 version 1.1

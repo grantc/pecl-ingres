@@ -8,8 +8,9 @@ Still to do
 - connection options
   - money precision
   - float precision, not sure how this will work with PHP DOUBLES.
-  - error type for numerical overflow
   - support for IIAPI_CP_LOCAL_LOGIN
 - Add/Show/Delete Ingres Name server entries
 - IIAPI_VERSION checks for functionality support
   - BIG int / int8 support
+
+vim: ff=unix

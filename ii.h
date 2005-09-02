@@ -104,18 +104,11 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode);
 static long php_ii_paramcount(char *statement TSRMLS_DC);
 static void php_ii_gen_cursor_id(II_LINK *ii_link TSRMLS_DC);
 static char *php_ii_check_procedure(char *statement, II_LINK *ii_link TSRMLS_DC);
-static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, II_LOGIN *user_details TSRMLS_DC);
+static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, char *database TSRMLS_DC);
 static char * php_ii_convert_param_markers ( char *statement TSRMLS_DC);
 static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, zval **queryParams);
-
-#if IIAPI_VERSION >= 3
-#define INGRES_UNICODE
-#define INGRES_CP_LOCAL
-#endif
-
-#if IIAPI_VERSION >= 4
-#define INGRES_BIGINT
-#endif
+static short php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_LINK *ii_link, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC );
+static short int php_ii_set_environment_options (zval **options, II_LINK *ii_link TSRMLS_DC);
 
 #endif  /* HAVE_II */
 #endif	/* II_H */
@@ -127,4 +120,6 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
  * shift-width: 4
  * c-basic-offset: 4
  * End:
+ * vim600: sw=4 ts=4 fdm=marker ff=unix
+ * vim<600: sw=4 ts=4
  */

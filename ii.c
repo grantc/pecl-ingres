@@ -72,6 +72,7 @@ function_entry ii_functions[] = {
 	PHP_FE(ingres_prepare,			NULL)
 	PHP_FE(ingres_execute,			NULL)
 	PHP_FE(ingres_cursor,			NULL)
+	PHP_FE(ingres_set_environment,	NULL)
 
 	{NULL, NULL, NULL}	/* Must be the last line in ii_functions[] */
 };
@@ -363,11 +364,29 @@ PHP_MINIT_FUNCTION(ii)
 
 	/* Ingres api initialization */
 	initParm.in_timeout = -1;				/* timeout in ms, -1 = no timeout */
-	initParm.in_version = IIAPI_VERSION;	/* api version used */
+
+#if defined(IIAPI_VERSION_4) 
+    initParm.in_version = IIAPI_VERSION_4;
+#elif defined(IIAPI_VERSION_3)
+    initParm.in_version = IIAPI_VERSION_3;
+#elif defined(IIAPI_VERSION_2) 
+    initParm.in_version = IIAPI_VERSION_2;
+#else
+    initParm.in_version = IIAPI_VERSION_1;
+#endif
 
 	IIapi_initialize(&initParm);
 	if (initParm.in_status == IIAPI_ST_SUCCESS)
 	{
+
+#ifdef IIAPI_VERSION_2
+		if ( initParm.in_envHandle != NULL )
+		{	
+			IIG(envHandle) = initParm.in_envHandle; 
+		}
+#else
+		IIG(envHandle) = NULL;
+#endif
 		return SUCCESS;
 	} else {
 		return FAILURE;
@@ -379,8 +398,16 @@ PHP_MINIT_FUNCTION(ii)
 PHP_MSHUTDOWN_FUNCTION(ii)
 {
 	IIAPI_TERMPARM termParm;
+#ifdef IIAPI_VERSION_2
+	IIAPI_RELENVPARM   relEnvParm;
+#endif
 
 	UNREGISTER_INI_ENTRIES();
+
+#ifdef IIAPI_VERSION_2
+	relEnvParm.re_envHandle = IIG(envHandle);
+    IIapi_releaseEnv( &relEnvParm );
+#endif
 
 	/* Ingres api termination */
 	IIapi_terminate(&termParm);
@@ -522,34 +549,30 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 	IIAPI_CONNPARM connParm;
 	II_LINK *ii_link;
 	II_PTR	envHandle = (II_PTR)NULL;
-	II_LOGIN *user_details;
-
 	char *z_type;
 
 	/* Setting db, user and pass according to sql_safe_mode, parameters and/or default values */
 	argc = ZEND_NUM_ARGS();
-
-	user_details = (II_LOGIN *)emalloc(sizeof(II_LOGIN));
 
 	if (PG(sql_safe_mode))
 	{	/* sql_safe_mode */
 
 		if (argc > 0)
 		{
-			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "SQL safe mode in effect - ignoring host/user/password information");
+			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "SQL safe mode in effect - ignoring host/user/password/option information");
 		}
 
-		user_details->database = NULL;
-		user_details->password = NULL;
-		user_details->user = php_get_current_user();
-		hashed_details_length = strlen(user_details->user) + sizeof("ingres___") - 1;
+		db = NULL;
+		pass = NULL;
+		user = php_get_current_user();
+		hashed_details_length = strlen(user) + sizeof("ingres___") - 1;
 		hashed_details = (char *) emalloc(hashed_details_length + 1);
-		sprintf(hashed_details, "Ingres__%s_", user_details->user);
+		sprintf(hashed_details, "Ingres__%s_", user);
 
 	} else {					/* non-sql_safe_mode */
-		user_details->database = IIG(default_database);
-		user_details->user = IIG(default_user);
-		user_details->password = IIG(default_password);
+		db = IIG(default_database);
+		user = IIG(default_user);
+		pass = IIG(default_password);
 
 		if (argc > 4 || zend_get_parameters_ex(argc, &database, &username, &password, &options) == FAILURE)
 		{
@@ -600,17 +623,17 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 				/* Fall-through.  */
 			case 3:
 				convert_to_string_ex(password);
-				user_details->password = Z_STRVAL_PP(password);
+				pass = Z_STRVAL_PP(password);
 				/* Fall-through. */
 		
 			case 2:
 				convert_to_string_ex(username);
-				user_details->user = Z_STRVAL_PP(username);
+				user = Z_STRVAL_PP(username);
 				/* Fall-through. */
 		
 			case 1:
 				convert_to_string_ex(database);
-				user_details->database = Z_STRVAL_PP(database);
+				db = Z_STRVAL_PP(database);
 				/* Fall-through. */
 
 			case 0:
@@ -618,7 +641,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		}
 		
 		/* Perform Sanity Check. If no database has been set then we have a problem */
-        dblen = strlen(user_details->database);
+        dblen = strlen(db);
 		if ( dblen == 0 )
 		{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: No default database available to connect to" );
@@ -626,15 +649,15 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		}
 
 		hashed_details_length =	sizeof("ingres___") - 1 + 
-								strlen(SAFE_STRING(user_details->database)) +
-								strlen(SAFE_STRING(user_details->user)) + 
-								strlen(SAFE_STRING(user_details->password));
+								strlen(SAFE_STRING(db)) +
+								strlen(SAFE_STRING(user)) + 
+								strlen(SAFE_STRING(pass));
 
 		hashed_details = (char *) emalloc(hashed_details_length + 1);
 		sprintf(hashed_details, "Ingres_%s_%s_%s", 
-								SAFE_STRING(user_details->database),	
-								SAFE_STRING(user_details->user), 
-								SAFE_STRING(user_details->password));
+								SAFE_STRING(db),	
+								SAFE_STRING(user), 
+								SAFE_STRING(pass));
 	}
 
 	/* if asked for unauthorized persistency, issue a warning
@@ -669,7 +692,15 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
 			/* setup the link */
 			ii_link = (II_LINK *) malloc(sizeof(II_LINK));
-			ii_link->connHandle = NULL;
+			ii_link->envHandle = IIG(envHandle);
+			if ( ii_link->envHandle != NULL )
+			{
+				ii_link->connHandle = ii_link->envHandle;
+			}
+			else
+			{
+				ii_link->connHandle = NULL;
+			}
 			ii_link->tranHandle = NULL;
 			ii_link->stmtHandle = NULL;
 			ii_link->fieldCount = 0;
@@ -684,10 +715,9 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
 			if ( argc == 4 ) /* set options */
 			{
-				if ( php_ii_set_connect_options(options, ii_link, user_details TSRMLS_CC ) == II_FAIL )
+				if ( php_ii_set_connect_options(options, ii_link, db TSRMLS_CC ) == II_FAIL )
 				{
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set options provided", IIG(num_persistent));
-					efree(user_details);
 					RETURN_FALSE;
 				}	
 			}
@@ -695,18 +725,20 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			/* create the link */
 			connParm.co_genParm.gp_callback = NULL;
 			connParm.co_genParm.gp_closure = NULL;
-			connParm.co_target = user_details->database;
-			connParm.co_username = user_details->user;
-			connParm.co_password = user_details->password;
+			connParm.co_target = db;
+			connParm.co_username = user;
+			connParm.co_password = pass;
 			connParm.co_timeout = -1;	/* -1 is no timeout */
-			if ( ii_link->connHandle != NULL )
-			{ /* use the connection handle which has had options set */
-				connParm.co_connHandle = ii_link->connHandle;
+			connParm.co_type = IIAPI_CT_SQL;
+			if ( ii_link->connHandle == NULL ) 
+			{	
+				connParm.co_connHandle =  ii_link->envHandle;
 			}
 			else
 			{
-				connParm.co_connHandle = NULL;
+				connParm.co_connHandle =  ii_link->connHandle;
 			}
+			
 			connParm.co_tranHandle = NULL;
 
 			IIapi_connect(&connParm);
@@ -715,12 +747,23 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			{
 				free(ii_link);
 				efree(hashed_details);
-				efree(user_details);
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to connect to database (%s)", user_details->database);
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to connect to database (%s)", db);
 				RETURN_FALSE;
 			}
 
 			ii_link->connHandle = connParm.co_connHandle;
+
+			/* set environment params */
+
+			if ( argc == 4 ) /* set options */
+			{
+				if ( php_ii_set_environment_options(options, ii_link TSRMLS_CC) == II_FAIL )
+				{
+					efree(hashed_details);
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided", IIG(num_persistent));
+					RETURN_FALSE;
+				}	
+			}
 			
 			/* hash it up */
 			Z_TYPE(new_le) = le_ii_plink;
@@ -730,7 +773,6 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to hash (%s)", hashed_details);
 				free(ii_link);
 				efree(hashed_details);
-				efree(user_details);
 				RETURN_FALSE;
 			}
 			IIG(num_persistent)++;
@@ -741,7 +783,6 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			if (Z_TYPE_P(le) != le_ii_plink)
 			{
 				efree(hashed_details);
-				efree(user_details);
 				RETURN_FALSE;
 			}
 			/* here we should ensure that the link did not die */
@@ -754,19 +795,17 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			/* Have to reconnect if cleaning function has flagged link as broken */
 			if (ii_link->connHandle == NULL)
 			{
-				php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres:  Broken link (%s),reconnect", user_details->database);
-				
-				/* Recreate the link */
-				connParm.co_genParm.gp_callback = NULL;
-				connParm.co_genParm.gp_closure = NULL;
-				connParm.co_target = user_details->database;
-				connParm.co_username = user_details->user;
-				connParm.co_password = user_details->password;
-				connParm.co_timeout = -1; /* no timeout */
-				connParm.co_connHandle = NULL;
-				connParm.co_tranHandle = NULL;
+				php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres:  Broken persistent link (%s),reconnect", db);
 
-				ii_link->connHandle = NULL;
+				ii_link->envHandle = IIG(envHandle);
+				if ( ii_link->envHandle != NULL )
+				{
+					ii_link->connHandle = ii_link->envHandle;
+				}
+				else
+				{
+					ii_link->connHandle = NULL;
+				}
 				ii_link->tranHandle = NULL;
 				ii_link->stmtHandle = NULL;
 				ii_link->fieldCount = 0;
@@ -774,18 +813,51 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 				ii_link->autocommit = 0;
 				ii_link->errorCode = 0;
 				ii_link->errorText = NULL;
+
+				if ( argc == 4 ) /* set options */
+				{
+					if ( php_ii_set_connect_options(options, ii_link, db TSRMLS_CC ) == II_FAIL )
+					{
+						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set options provided", IIG(num_persistent));
+						RETURN_FALSE;
+					}	
+				}
+
+				/* Recreate the link */
+
+				connParm.co_connHandle = ii_link->connHandle;
+				connParm.co_tranHandle = NULL;
+				connParm.co_genParm.gp_callback = NULL;
+				connParm.co_genParm.gp_closure = NULL;
+				connParm.co_target = db;
+				connParm.co_username = user;
+				connParm.co_password = pass;
+				connParm.co_timeout = -1; /* no timeout */
+				connParm.co_tranHandle = NULL;
+				connParm.co_type = IIAPI_CT_SQL;
 				
 				IIapi_connect(&connParm);
 
 				if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL)
 				{
 					efree(hashed_details);
-					php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres:  Unable to connect to database (%s)", user_details->database);
+					php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres:  Unable to connect to database (%s)", db);
 					RETURN_FALSE;
 				}
 
 				ii_link->connHandle = connParm.co_connHandle;
 
+				/* set environment params */
+
+				if ( argc == 4 ) /* set options */
+				{
+					if ( php_ii_set_environment_options(options, ii_link TSRMLS_CC) == II_FAIL )
+					{
+						efree(hashed_details);
+						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided", IIG(num_persistent));
+						RETURN_FALSE;
+					}	
+				}
 			}
 		}
 		
@@ -833,7 +905,16 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
 		/* setup the link */
 		ii_link = (II_LINK *) malloc(sizeof(II_LINK));
-		ii_link->connHandle = NULL;
+		
+		ii_link->envHandle = IIG(envHandle);
+		if ( ii_link->envHandle != NULL )
+		{
+			ii_link->connHandle = ii_link->envHandle;
+		}
+		else
+		{
+			ii_link->connHandle = NULL;
+		}
 		ii_link->tranHandle = NULL;
 		ii_link->stmtHandle = NULL;
 		ii_link->fieldCount = 0;
@@ -850,10 +931,10 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
 		if ( argc == 4 ) /* set options */
 		{
-			if ( php_ii_set_connect_options(options, ii_link, user_details TSRMLS_CC) == II_FAIL )
+			if ( php_ii_set_connect_options(options, ii_link, db TSRMLS_CC) == II_FAIL )
 			{
+				efree(hashed_details);
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set options provided", IIG(num_persistent));
-				efree(user_details);
 				RETURN_FALSE;
 			}	
 		}
@@ -861,18 +942,20 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		/* create the link */
 		connParm.co_genParm.gp_callback = NULL;
 		connParm.co_genParm.gp_closure = NULL;
-		connParm.co_target = user_details->database;
-		connParm.co_username = user_details->user;
-		connParm.co_password = user_details->password;
+		connParm.co_target = db;
+		connParm.co_username = user;
+		connParm.co_password = pass;
 		connParm.co_timeout = -1;	/* -1 is no timeout */
-		if ( ii_link->connHandle != NULL )
-		{ /* use the connection handle which has had options set */
-			connParm.co_connHandle = ii_link->connHandle;
+		connParm.co_type = IIAPI_CT_SQL;
+		if ( ii_link->connHandle == NULL ) 
+		{
+			connParm.co_connHandle =  ii_link->envHandle;
 		}
 		else
 		{
-			connParm.co_connHandle = NULL;
+			connParm.co_connHandle =  ii_link->connHandle;
 		}
+
 		connParm.co_tranHandle = NULL;
 
 		IIapi_connect(&connParm);
@@ -880,10 +963,24 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL)
 		{
 			efree(hashed_details);
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to connect to database (%s)", user_details->database);
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to connect to database (%s)", db);
 			RETURN_FALSE;
 		}
+
 		ii_link->connHandle = connParm.co_connHandle;		
+
+		/* set environment params */
+
+		if ( argc == 4 ) /* set options */
+		{
+			if ( php_ii_set_environment_options(options, ii_link TSRMLS_CC) == II_FAIL )
+			{
+				efree(hashed_details);
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided", IIG(num_persistent));
+				RETURN_FALSE;
+			}	
+		}
+
 		
 		/* add it to the list */
 		ZEND_REGISTER_RESOURCE(return_value, ii_link, le_ii_link);
@@ -1792,7 +1889,7 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type)
 	
 				case IIAPI_VCH_TYPE:
 					RETURN_STRING("IIAPI_VCH_TYPE", 1);
-#ifdef INGRES_UNICODE
+#if defined(IIAPI_VERSION_3)
 				case IIAPI_NCHA_TYPE:
 					RETURN_STRING("IIAPI_NCHA_TYPE", 1);
 
@@ -1909,39 +2006,83 @@ PHP_FUNCTION(ingres_field_scale)
 }
 /* }}} */
 
-/* {{{ #define IIAPI_CONVERT(destType, destSize, precision) */
+/* {{{static short php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_LINK *ii_link, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm TSRMLS_DC) */
 /* Convert complex Ingres data types to php-usable ones */
-#define IIAPI_CONVERT(destType, destSize, precision) {\
-      convertParm.cv_srcDesc.ds_dataType = (ii_link->descriptor[i+k-2]).ds_dataType;\
-      convertParm.cv_srcDesc.ds_nullable = (ii_link->descriptor[i+k-2]).ds_nullable;\
-      convertParm.cv_srcDesc.ds_length = (ii_link->descriptor[i+k-2]).ds_length;\
-      convertParm.cv_srcDesc.ds_precision = (ii_link->descriptor[i+k-2]).ds_precision;\
-      convertParm.cv_srcDesc.ds_scale = (ii_link->descriptor[i+k-2]).ds_scale;\
-      convertParm.cv_srcDesc.ds_columnType = (ii_link->descriptor[i+k-2]).ds_columnType;\
-      convertParm.cv_srcDesc.ds_columnName = (ii_link->descriptor[i+k-2]).ds_columnName;\
-      convertParm.cv_srcValue.dv_null = columnData[k-1].dv_null;\
-      convertParm.cv_srcValue.dv_length = columnData[k-1].dv_length;\
-      convertParm.cv_srcValue.dv_value = columnData[k-1].dv_value;\
-      convertParm.cv_dstDesc.ds_dataType = destType;\
-      convertParm.cv_dstDesc.ds_nullable = FALSE;\
-      convertParm.cv_dstDesc.ds_length = destSize;\
-      convertParm.cv_dstDesc.ds_precision = precision;\
-      convertParm.cv_dstDesc.ds_scale = 0;\
-      convertParm.cv_dstDesc.ds_columnType = IIAPI_COL_TUPLE;\
-      convertParm.cv_dstDesc.ds_columnName = NULL;\
-      convertParm.cv_dstValue.dv_null = FALSE;\
-      convertParm.cv_dstValue.dv_length = convertParm.cv_dstDesc.ds_length;\
-      convertParm.cv_dstValue.dv_value = emalloc(convertParm.cv_dstDesc.ds_length+1);\
-\
-      IIapi_convertData(&convertParm);\
-\
-      if(ii_success(&(getColParm.gc_genParm), ii_link TSRMLS_CC)!=II_OK) {\
-          RETURN_FALSE;\
-      }\
-\
-      columnData[k-1].dv_length = convertParm.cv_dstValue.dv_length;\
-      columnData[k-1].dv_value = convertParm.cv_dstValue.dv_value;\
-      efree(convertParm.cv_srcValue.dv_value);\
+static short php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_LINK *ii_link, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC )
+{
+#if defined (IIAPI_VERSION_2)
+	IIAPI_FORMATPARM formatParm;
+
+	formatParm.fd_envHandle = IIG(envHandle);
+
+	formatParm.fd_srcDesc.ds_dataType = (ii_link->descriptor[field+column-2]).ds_dataType;
+	formatParm.fd_srcDesc.ds_nullable = (ii_link->descriptor[field+column-2]).ds_nullable;
+	formatParm.fd_srcDesc.ds_length = (ii_link->descriptor[field+column-2]).ds_length;
+	formatParm.fd_srcDesc.ds_precision = (ii_link->descriptor[field+column-2]).ds_precision;
+	formatParm.fd_srcDesc.ds_scale = (ii_link->descriptor[field+column-2]).ds_scale;
+	formatParm.fd_srcDesc.ds_columnType = (ii_link->descriptor[field+column-2]).ds_columnType;
+	formatParm.fd_srcDesc.ds_columnName = (ii_link->descriptor[field+column-2]).ds_columnName;
+	formatParm.fd_srcValue.dv_null = columnData[column-1].dv_null;
+	formatParm.fd_srcValue.dv_length = columnData[column-1].dv_length;
+	formatParm.fd_srcValue.dv_value = columnData[column-1].dv_value;
+
+	formatParm.fd_dstDesc.ds_dataType = destType;
+	formatParm.fd_dstDesc.ds_nullable = FALSE;
+	formatParm.fd_dstDesc.ds_length = destSize;
+	formatParm.fd_dstDesc.ds_precision = precision;
+	formatParm.fd_dstDesc.ds_scale = 0;
+	formatParm.fd_dstDesc.ds_columnType = IIAPI_COL_TUPLE;
+	formatParm.fd_dstDesc.ds_columnName = NULL;
+	formatParm.fd_dstValue.dv_null = FALSE;
+	formatParm.fd_dstValue.dv_length = formatParm.fd_dstDesc.ds_length;
+	formatParm.fd_dstValue.dv_value = emalloc(formatParm.fd_dstDesc.ds_length+1);
+
+	IIapi_formatData(&formatParm);
+
+	if (formatParm.fd_status != IIAPI_ST_SUCCESS ) {
+	  return formatParm.fd_status;
+	}
+
+	columnData[column-1].dv_length = formatParm.fd_dstValue.dv_length;
+	columnData[column-1].dv_value = formatParm.fd_dstValue.dv_value;
+	efree(formatParm.fd_srcValue.dv_value);
+
+#else
+	IIAPI_CONVERTPARM convertParm;
+	
+	convertParm.cv_srcDesc.ds_dataType = (ii_link->descriptor[field+column-2]).ds_dataType;
+	convertParm.cv_srcDesc.ds_nullable = (ii_link->descriptor[field+column-2]).ds_nullable;
+	convertParm.cv_srcDesc.ds_length = (ii_link->descriptor[field+column-2]).ds_length;
+	convertParm.cv_srcDesc.ds_precision = (ii_link->descriptor[field+column-2]).ds_precision;
+	convertParm.cv_srcDesc.ds_scale = (ii_link->descriptor[field+column-2]).ds_scale;
+	convertParm.cv_srcDesc.ds_columnType = (ii_link->descriptor[field+column-2]).ds_columnType;
+	convertParm.cv_srcDesc.ds_columnName = (ii_link->descriptor[field+column-2]).ds_columnName;
+	convertParm.cv_srcValue.dv_null = columnData[column-1].dv_null;
+	convertParm.cv_srcValue.dv_length = columnData[column-1].dv_length;
+	convertParm.cv_srcValue.dv_value = columnData[column-1].dv_value;
+	convertParm.cv_dstDesc.ds_dataType = destType;
+	convertParm.cv_dstDesc.ds_nullable = FALSE;
+	convertParm.cv_dstDesc.ds_length = destSize;
+	convertParm.cv_dstDesc.ds_precision = precision;
+	convertParm.cv_dstDesc.ds_scale = 0;
+	convertParm.cv_dstDesc.ds_columnType = IIAPI_COL_TUPLE;
+	convertParm.cv_dstDesc.ds_columnName = NULL;
+	convertParm.cv_dstValue.dv_null = FALSE;
+	convertParm.cv_dstValue.dv_length = convertParm.cv_dstDesc.ds_length;
+	convertParm.cv_dstValue.dv_value = emalloc(convertParm.cv_dstDesc.ds_length+1);
+
+	IIapi_convertData(&convertParm);
+
+	if(convertParm.fd_status != IIAPI_ST_SUCCESS ) {
+	  return convertParm.cv_status;
+	}
+
+	columnData[column-1].dv_length = convertParm.cv_dstValue.dv_length;
+	columnData[column-1].dv_value = convertParm.cv_dstValue.dv_value;
+	efree(convertParm.cv_srcValue.dv_value);
+#endif
+
+	return II_OK;
 }
 /* }}} */
 
@@ -1952,7 +2093,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 	IIAPI_GETCOLPARM getColParm;
 	IIAPI_DATAVALUE *columnData;
 	IIAPI_GETQINFOPARM getQInfoParm;
+#ifdef IIAPI_VERSION_2
+	IIAPI_FORMATPARM  formatParm;
+#else
 	IIAPI_CONVERTPARM convertParm;
+#endif
 
 	int i, j, k, m;
 	int more;
@@ -2046,6 +2191,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 			if (ii_success(&(getColParm.gc_genParm), ii_link TSRMLS_CC) != II_OK)
 			{
+				for (k = 1; k <= j; k++)
+				{
+					efree(columnData[k - 1].dv_value);
+				}
+				efree(columnData);
 				RETURN_FALSE;
 			}
 
@@ -2082,7 +2232,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 							case IIAPI_DEC_TYPE:	/* decimal (fixed point number) */
 							case IIAPI_MNY_TYPE:	/* money */
 								/* convert to floating point number */
-								IIAPI_CONVERT(IIAPI_FLT_TYPE, sizeof(II_FLOAT8), 53);
+								php_ii_convert_data ( IIAPI_FLT_TYPE, sizeof(II_FLOAT8), 53, ii_link, columnData, getColParm, i, k TSRMLS_CC );
 								/* NO break */
 	
 							case IIAPI_FLT_TYPE:	/* floating point number */
@@ -2147,12 +2297,12 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 							case IIAPI_TXT_TYPE:	/* variable length character string */
 							case IIAPI_VBYTE_TYPE:	/* variable length binary string */
-#ifdef INGRES_UNICODE
+#ifdef IIAPI_VERSION_3
 							case IIAPI_NVCH_TYPE:	/* variable length unicode character string */
 								/* Convert it to IIAPI_VCH_TYPE */
 								if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_NVCH_TYPE)
 								{
-									IIAPI_CONVERT(IIAPI_CHA_TYPE, (columnData[k - 1]).dv_length, 0);
+									php_ii_convert_data ( IIAPI_CHA_TYPE, (columnData[k - 1]).dv_length, 0, ii_link, columnData, getColParm, i, k TSRMLS_CC );
 								}
 								/* let the next 'case' handle the conversion to a format usable by php */
 #endif								
@@ -2160,15 +2310,14 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 								/* real length is stored in first 2 bytes of data, so adjust
 								   length variable and data pointer */
 								columnData[k - 1].dv_length = *((II_INT2 *) columnData[k - 1].dv_value);
-								(columnData[k - 1].dv_value)++;
-								(columnData[k - 1].dv_value)++;
+								columnData[k - 1].dv_value = (II_CHAR *)(columnData[k - 1]).dv_value + 2;
 								correct_length = 1;
 								/* NO break */
 
 							case IIAPI_NCHA_TYPE:	/* fixed length unicode character string */	
 								if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_NCHA_TYPE)
 								{
-									IIAPI_CONVERT(IIAPI_CHA_TYPE, (columnData[k - 1]).dv_length, 0);
+									php_ii_convert_data ( IIAPI_CHA_TYPE, (columnData[k - 1]).dv_length, 0, ii_link, columnData, getColParm, i, k TSRMLS_CC );
 								}
 							case IIAPI_BYTE_TYPE:	/* fixed length binary string */
 							case IIAPI_CHA_TYPE:	/* fixed length character string */
@@ -2178,10 +2327,9 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 							case IIAPI_DTE_TYPE:	/* date */
 
 								/* eventualy convert date to string */
-								if ((ii_link->descriptor[i + k - 2]).
-									ds_dataType == IIAPI_DTE_TYPE)
+								if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_DTE_TYPE)
 								{
-									IIAPI_CONVERT(IIAPI_CHA_TYPE, 32, 0);
+									php_ii_convert_data ( IIAPI_CHA_TYPE, 32, 0, ii_link, columnData, getColParm, i, k TSRMLS_CC );
 								}
 	
 								/* use php_addslashes if asked to */
@@ -2209,19 +2357,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 							 	   variable length data types */
 								if (correct_length)
 								{
-									if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_NVCH_TYPE)
-									{
-										for ( m = 0; m < sizeof(II_UINT2); m++)
-										{
-											(columnData[k - 1].dv_value)--;
-										}
-				
-									} else {
-										for ( m = 0; m < sizeof(II_INT2); m++)
-										{
-											(columnData[k - 1].dv_value)--;
-										}
-									}
+									columnData[k - 1].dv_value = (II_CHAR *)(columnData[k - 1]).dv_value - 2;
 								}
 								break;
 			
@@ -2771,41 +2907,190 @@ static char *php_ii_check_procedure(char *statement, II_LINK *ii_link TSRMLS_DC)
 }
 /* }}} */
 
-/* {{{ static short int php_ii_set_connect_options(INTERNAL_FUNCTION_PARAMETERS, zval **options, II_LINK *ii_link, II_LOGIN *user_details) */
+/* {{{ static short int php_ii_set_environment_options(zval **options, II_LINK *ii_link) */
 /*     Sets up options provided to ingres_connect() via a parameter array */
-static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, II_LOGIN *user_details TSRMLS_DC)
+static short int php_ii_set_environment_options (zval **options, II_LINK *ii_link TSRMLS_DC)
 {
-	zval **data;
-	char *key;
+
+#ifdef IIAPI_VERSION_2
 	II_LONG parameter_id;
 	II_PTR  parameter_value;
-	IIAPI_SETCONPRMPARM	setConPrmParm;
-	IIAPI_CONNPARM connParm;
-	IIAPI_DISCONNPARM	disconnParm;
+	IIAPI_SETENVPRMPARM	setEnvPrmParm;
+	zval **data;
+	char *key;
 	long index;
 	int i;
 	int num_options;
 	char *temp_string;
 	long temp_long;
+	II_BOOL ignore;
+
+    num_options = zend_hash_num_elements(Z_ARRVAL_PP(options));
+	zend_hash_internal_pointer_reset(Z_ARRVAL_PP(options));
+
+	setEnvPrmParm.se_envHandle = ii_link->envHandle;
+
+	for ( i = 0; i < num_options; i++ )
+	{
+		ignore = FALSE;
+
+		if (zend_hash_get_current_key(Z_ARRVAL_PP(options), &key, &index, 0) == HASH_KEY_IS_STRING)
+	   	{
+			zend_hash_get_current_data(Z_ARRVAL_PP(options), (void**)&data);
+
+			if ( strcmp("role", key) == 0 ) 
+			{
+					ignore = TRUE;
+			}
+			else if ( strcmp("group", key) == 0 )
+			{
+					ignore = TRUE;
+			}
+			else if ( strcmp("effective_user", key) == 0 )
+			{
+					ignore = TRUE;
+			}
+			else if ( strcmp("dbms_password", key) == 0 )
+			{
+					ignore = TRUE;
+			}
+			else if ( strcmp("timezone", key) == 0 )
+			{
+					parameter_id = IIAPI_EP_TIMEZONE;
+			}
+			else if (strcmp( "date_format", key) == 0 )
+			{
+					parameter_id = IIAPI_EP_DATE_FORMAT;
+			}
+			else if ( strcmp("decimal_separator", key) == 0 ) 
+			{
+					parameter_id = IIAPI_EP_DECIMAL_CHAR;
+			}
+			else if ( strcmp("date_century_boundary", key) == 0 )
+			{
+					parameter_id = IIAPI_EP_CENTURY_BOUNDARY;
+			}
+			else if ( strcmp("money_lort", key) == 0 ) /* leading or trailing money sign, default is leading*/
+			{
+					parameter_id = IIAPI_EP_MONEY_LORT;
+			}
+			else if ( strcmp("money_sign", key) == 0 ) /* defaults to the ingres variable II_MONEY_FORMAT or "$" */
+			{
+					parameter_id = IIAPI_EP_MONEY_SIGN;
+			}
+			else if ( strcmp("money_precision", key) == 0 ) /* defaults to 2 if not set */
+			{
+					parameter_id = IIAPI_EP_MONEY_PRECISION;
+			}
+			else 
+			{
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unknown connection option '%s'",key );
+					return II_FAIL;
+			}
+		}
+		else
+		{
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unexpected index in connection options array.");
+			return II_FAIL;
+		}
+
+		if (ignore != TRUE) {
+
+			setEnvPrmParm.se_paramID = parameter_id;
+
+			switch (Z_TYPE_PP(data))
+			{
+				case IS_STRING:
+					convert_to_string_ex(data);
+					temp_string = Z_STRVAL_PP(data);
+					setEnvPrmParm.se_paramValue = temp_string;
+					break;
+				case IS_LONG:
+					convert_to_long_ex(data);
+					temp_long = Z_LVAL_PP(data);
+					setEnvPrmParm.se_paramValue = (II_PTR)&temp_long;
+					break;
+				case IS_BOOL:
+					convert_to_long_ex(data);
+					temp_long = Z_LVAL_PP(data);
+					setEnvPrmParm.se_paramValue = (II_PTR)&temp_long;
+					break;
+				default:
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unknown option type, %l, in connection options", Z_TYPE_PP(data));
+					return II_FAIL;
+			}
+
+			IIapi_setEnvParam( &setEnvPrmParm );
+
+			if (setEnvPrmParm.se_status != IIAPI_ST_SUCCESS)
+			{
+				if ( Z_TYPE_PP(data) == IS_STRING )
+				{
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
+					return II_FAIL;
+				}
+				else
+				{
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  failed to set option, %s, with value, %ld", key, Z_LVAL_PP(data));
+					return II_FAIL;
+				}
+			}
+		}
+
+		zend_hash_move_forward(Z_ARRVAL_PP(options));
+
+	}
+
+	return II_OK;
+#else
+	php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  setting environment options requires Ingres II 2.5 or newer", key, Z_LVAL_PP(data));
+	return II_FAIL;
+#endif
+
+}
+/* }}} */
+
+/* {{{ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, char *database TSRMLS_DC) */
+/*     Sets up options provided to ingres_connect() via a parameter array */
+static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, char *database TSRMLS_DC)
+{
+	II_LONG parameter_id;
+	II_PTR  parameter_value;
+	IIAPI_SETCONPRMPARM	setConPrmParm;
+	IIAPI_CONNPARM connParm;
+	IIAPI_DISCONNPARM	disconnParm;
+	zval **data;
+	char *key;
+	long index;
+	int i;
+	int num_options;
+	char *temp_string;
+	long temp_long;
+	II_BOOL ignore;
 
     num_options = zend_hash_num_elements(Z_ARRVAL_PP(options));
 	zend_hash_internal_pointer_reset(Z_ARRVAL_PP(options));
 
 	connParm.co_genParm.gp_callback = NULL;
 	connParm.co_genParm.gp_closure = NULL;
-	connParm.co_target = user_details->database;
+	connParm.co_target = database;
+#ifdef IIAPI_VERSION_2
+	/* Use the environment handle in ii_link->connHandle */
+	connParm.co_connHandle = ii_link->envHandle;
+#else
 	connParm.co_connHandle = NULL;
+#endif
 	connParm.co_tranHandle = NULL;
 	connParm.co_type = IIAPI_CT_SQL; 
-	connParm.co_username = user_details->user;
-	connParm.co_password = user_details->password;
+	connParm.co_username = NULL;
+	connParm.co_password = NULL;
 	connParm.co_timeout = -1;
 
 	IIapi_connect( &connParm );
 
 	if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL)
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to connect to database (%s), to setup options", user_details->database);
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to connect to database (%s), to setup options", database);
 		return II_FAIL;
 	}
 
@@ -2823,59 +3108,59 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, II
 		return II_FAIL;
 	}
 
+	ii_link->connHandle = NULL;
+
 	for ( i = 0; i < num_options; i++ )
 	{
+		ignore = FALSE;
+
 		if (zend_hash_get_current_key(Z_ARRVAL_PP(options), &key, &index, 0) == HASH_KEY_IS_STRING)
 	   	{
 			zend_hash_get_current_data(Z_ARRVAL_PP(options), (void**)&data);
 
 			if ( strcmp("role", key) == 0 ) 
 			{
-					parameter_id = IIAPI_CP_APP_ID;
+				parameter_id = IIAPI_CP_APP_ID;
 			}
 			else if ( strcmp("group", key) == 0 )
 			{
-					parameter_id = IIAPI_CP_GROUP_ID;
+				parameter_id = IIAPI_CP_GROUP_ID;
 			}
 			else if ( strcmp("effective_user", key) == 0 )
 			{
-					parameter_id = IIAPI_CP_EFFECTIVE_USER;
+				parameter_id = IIAPI_CP_EFFECTIVE_USER;
 			}
 			else if ( strcmp("dbms_password", key) == 0 )
 			{
-					parameter_id = IIAPI_CP_DBMS_PASSWORD;
+				parameter_id = IIAPI_CP_DBMS_PASSWORD;
 			}
 			else if ( strcmp("timezone", key) == 0 )
 			{
-					parameter_id = IIAPI_CP_TIMEZONE;
+				ignore = TRUE;
 			}
 			else if (strcmp( "date_format", key) == 0 )
 			{
-					/* this has no effect unless casting a date column to varchar first */
-				    /* IIapi_formatData() would need to be used instead */
-					parameter_id = IIAPI_CP_DATE_FORMAT;
+				ignore = TRUE;
 			}
 			else if ( strcmp("decimal_separator", key) == 0 ) 
 			{
-					/* this has no effect unless casting a decimal/float column to varchar first */
-				    /* IIapi_formatData() would need to be used instead */
-					parameter_id = IIAPI_CP_DECIMAL_CHAR;
+				ignore = TRUE;
 			}
 			else if ( strcmp("date_century_boundary", key) == 0 )
 			{
-					parameter_id = IIAPI_CP_CENTURY_BOUNDARY;
+				ignore = TRUE;
 			}
 			else if ( strcmp("money_lort", key) == 0 ) /* leading or trailing money sign, default is leading*/
 			{
-					parameter_id = IIAPI_CP_MONEY_LORT;
+				ignore = TRUE;
 			}
 			else if ( strcmp("money_sign", key) == 0 ) /* defaults to the ingres variable II_MONEY_FORMAT or "$" */
 			{
-					parameter_id = IIAPI_CP_MONEY_SIGN;
+				ignore = TRUE;
 			}
 			else if ( strcmp("money_precision", key) == 0 ) /* defaults to 2 if not set */
 			{
-					parameter_id = IIAPI_CP_MONEY_PRECISION;
+				ignore = TRUE;
 			}
 			else 
 			{
@@ -2889,49 +3174,57 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, II
 			return II_FAIL;
 		}
 
-		setConPrmParm.sc_genParm.gp_callback = NULL;
-		setConPrmParm.sc_connHandle = NULL;
-		setConPrmParm.sc_paramID = parameter_id;
-
-		switch (Z_TYPE_PP(data))
+		if ( ignore != TRUE )
 		{
-			case IS_STRING:
-				convert_to_string_ex(data);
-				temp_string = Z_STRVAL_PP(data);
-				setConPrmParm.sc_paramValue = temp_string;
-				break;
-			case IS_LONG:
-				convert_to_long_ex(data);
-				temp_long = Z_LVAL_PP(data);
-				setConPrmParm.sc_paramValue =(II_PTR)&temp_long;
-				break;
-			case IS_BOOL:
-				convert_to_long_ex(data);
-				temp_long = Z_LVAL_PP(data);
-				setConPrmParm.sc_paramValue =(II_PTR)&temp_long;
-				break;
-			default:
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unknown option type, %l, in connection options", Z_TYPE_PP(data));
-				return II_FAIL;
-		}
 
-		IIapi_setConnectParam( &setConPrmParm );
+			setConPrmParm.sc_genParm.gp_callback = NULL;
+#ifdef IIAPI_VERSION_2
+			setConPrmParm.sc_connHandle = ii_link->envHandle;
+#else
+			setConPrmParm.sc_connHandle = NULL;
+#endif
+			setConPrmParm.sc_paramID = parameter_id;
 
-		if (!ii_sync(&(setConPrmParm.sc_genParm)) || ii_success(&(setConPrmParm.sc_genParm), ii_link TSRMLS_CC) == II_FAIL)
-		{
-			if ( Z_TYPE_PP(data) == IS_STRING )
+			switch (Z_TYPE_PP(data))
 			{
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
-				return II_FAIL;
+				case IS_STRING:
+					convert_to_string_ex(data);
+					temp_string = Z_STRVAL_PP(data);
+					setConPrmParm.sc_paramValue = temp_string;
+					break;
+				case IS_LONG:
+					convert_to_long_ex(data);
+					temp_long = Z_LVAL_PP(data);
+					setConPrmParm.sc_paramValue = (II_PTR)&temp_long;
+					break;
+				case IS_BOOL:
+					convert_to_long_ex(data);
+					temp_long = Z_LVAL_PP(data);
+					setConPrmParm.sc_paramValue = (II_PTR)&temp_long;
+					break;
+				default:
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unknown option type, %l, in connection options", Z_TYPE_PP(data));
+					return II_FAIL;
 			}
-			else
-			{
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  failed to set option, %s, with value, %ld", key, Z_LVAL_PP(data));
-				return II_FAIL;
-			}
-		}
 
-		ii_link->connHandle = setConPrmParm.sc_connHandle;
+			IIapi_setConnectParam( &setConPrmParm );
+
+			if (!ii_sync(&(setConPrmParm.sc_genParm)) || ii_success(&(setConPrmParm.sc_genParm), ii_link TSRMLS_CC) == II_FAIL)
+			{
+				if ( Z_TYPE_PP(data) == IS_STRING )
+				{
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
+					return II_FAIL;
+				}
+				else
+				{
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  failed to set option, %s, with value, %ld", key, Z_LVAL_PP(data));
+					return II_FAIL;
+				}
+			}
+
+			ii_link->connHandle = setConPrmParm.sc_connHandle;
+		}
 
 		zend_hash_move_forward(Z_ARRVAL_PP(options));
 
@@ -3001,6 +3294,33 @@ static char *php_ii_convert_param_markers (char *statement TSRMLS_DC)
 
 	statement = tmp_statement;
 	return statement;
+}
+/* }}} */
+
+/* {{{ proto string ingres_set_environment(resource link, array options)
+   Gets the last SQLSTATE generated for an error */
+PHP_FUNCTION(ingres_set_environment)
+{
+
+	zval **link, **options;
+	int argc;
+	II_LINK *ii_link;
+	int link_id = -1;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc > 2 || zend_get_parameters_ex(argc, &link, &options) == FAILURE)
+	{
+		WRONG_PARAM_COUNT;
+	}
+
+	ZEND_FETCH_RESOURCE2(ii_link, II_LINK *, link, link_id , "Ingres Link", le_ii_link, le_ii_plink);
+
+	if ( php_ii_set_environment_options(options, ii_link TSRMLS_CC) == II_FAIL )
+	{
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided", IIG(num_persistent));
+		RETURN_FALSE;
+	}	
+
 }
 /* }}} */
 
@@ -3288,8 +3608,9 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 /*
  * Local variables:
  * tab-width: 4
+ * shift-width: 4
  * c-basic-offset: 4
  * End:
- * vim600: sw=4 ts=4 fdm=marker
+ * vim600: sw=4 ts=4 fdm=marker ff=unix
  * vim<600: sw=4 ts=4
  */
