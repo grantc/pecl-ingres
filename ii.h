@@ -43,7 +43,7 @@ typedef struct _II_LINK {
 	II_LONG errorCode;
 	int paramCount;
 	char *cursor_id;
-	short int cursor_mode;
+	long cursor_mode;
 	char *procname;
 } II_LINK;
 
@@ -107,7 +107,7 @@ static char *php_ii_check_procedure(char *statement, II_LINK *ii_link TSRMLS_DC)
 static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, char *database TSRMLS_DC);
 static char * php_ii_convert_param_markers ( char *statement TSRMLS_DC);
 static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, zval **queryParams);
-static short php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_LINK *ii_link, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC );
+static II_LONG php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_LINK *ii_link, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC );
 static short int php_ii_set_environment_options (zval **options, II_LINK *ii_link TSRMLS_DC);
 
 #endif  /* HAVE_II */

@@ -5,12 +5,8 @@ Still to do
 - procedure byref parameters
 - Unicode
 - BLOBS, in and out.
-- connection options
-  - money precision
-  - float precision, not sure how this will work with PHP DOUBLES.
-  - support for IIAPI_CP_LOCAL_LOGIN
 - Add/Show/Delete Ingres Name server entries
-- IIAPI_VERSION checks for functionality support
-  - BIG int / int8 support
+- BIG int / int8 support
+  - not possible with PHP as yet since it does not support 8 byte int
 
 vim: ff=unix

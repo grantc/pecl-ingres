@@ -545,7 +545,6 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 	int argc, dblen;
 	char *hashed_details;
 	int hashed_details_length;
-	int option_count;
 	IIAPI_CONNPARM connParm;
 	II_LINK *ii_link;
 	II_PTR	envHandle = (II_PTR)NULL;
@@ -1091,23 +1090,13 @@ PHP_FUNCTION(ingres_close)
    (look for dedicated functions instead) */
 PHP_FUNCTION(ingres_query)
 {
-	zval **query, **link, **queryParams, **val;
+	zval **query, **link, **queryParams;
 	int argc;
-	int param;
 	int link_id = -1;
 	II_LINK *ii_link;
 	IIAPI_QUERYPARM     queryParm;
 	IIAPI_GETDESCRPARM  getDescrParm;
-	IIAPI_SETDESCRPARM	setDescrParm;
-    IIAPI_PUTPARMPARM   putParmParm;
-    IIAPI_DESCRIPTOR	*descriptorInfo; /* 1 entry for the procedure name */
-	IIAPI_GETQINFOPARM getQInfoParm;
-	IIAPI_DATAVALUE		*columnData;
 	
-	char *key;
-	int keylen;
-	long index, tmp_long;
-	double tmp_double;
 	HashTable *arr_hash;
 	int elementCount;
 	char *procname=NULL;
@@ -1432,22 +1421,14 @@ PHP_FUNCTION(ingres_prepare)
 PHP_FUNCTION (ingres_execute)
 {
 
-	zval **link, **queryParams, **val;
-	char *key;
-	int keylen;
-	long index;
+	zval **link, **queryParams;
 	int argc;
 	int link_id = -1;
 	II_LINK *ii_link;
 	IIAPI_QUERYPARM     queryParm;
 	IIAPI_GETDESCRPARM  getDescrParm;
-	IIAPI_SETDESCRPARM	setDescrParm;
-    IIAPI_PUTPARMPARM	putParmParm;
-    IIAPI_DESCRIPTOR	*descriptorInfo;
-    IIAPI_DATAVALUE		*columnData;
 	II_INT2				columnType;
 
-	int paramCount, param;
 	int elementCount;
 	char *statement;
 
@@ -2008,7 +1989,7 @@ PHP_FUNCTION(ingres_field_scale)
 
 /* {{{static short php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_LINK *ii_link, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm TSRMLS_DC) */
 /* Convert complex Ingres data types to php-usable ones */
-static short php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_LINK *ii_link, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC )
+static II_LONG php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_LINK *ii_link, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC )
 {
 #if defined (IIAPI_VERSION_2)
 	IIAPI_FORMATPARM formatParm;
@@ -2093,13 +2074,8 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 	IIAPI_GETCOLPARM getColParm;
 	IIAPI_DATAVALUE *columnData;
 	IIAPI_GETQINFOPARM getQInfoParm;
-#ifdef IIAPI_VERSION_2
-	IIAPI_FORMATPARM  formatParm;
-#else
-	IIAPI_CONVERTPARM convertParm;
-#endif
 
-	int i, j, k, m;
+	int i, j, k;
 	int more;
 	double value_double = 0;
 	long value_long = 0;
@@ -2914,7 +2890,6 @@ static short int php_ii_set_environment_options (zval **options, II_LINK *ii_lin
 
 #ifdef IIAPI_VERSION_2
 	II_LONG parameter_id;
-	II_PTR  parameter_value;
 	IIAPI_SETENVPRMPARM	setEnvPrmParm;
 	zval **data;
 	char *key;
@@ -2954,6 +2929,18 @@ static short int php_ii_set_environment_options (zval **options, II_LINK *ii_lin
 			{
 					ignore = TRUE;
 			}
+			else if ( strcmp("table_structure", key) == 0 )
+			{
+				ignore = TRUE;
+			}
+			else if ( strcmp("index_structure", key) == 0 )
+			{
+				ignore = TRUE;
+			}
+			else if ( strcmp("local_login", key) == 0 )
+			{
+				ignore = TRUE;
+			}
 			else if ( strcmp("timezone", key) == 0 )
 			{
 					parameter_id = IIAPI_EP_TIMEZONE;
@@ -2981,6 +2968,14 @@ static short int php_ii_set_environment_options (zval **options, II_LINK *ii_lin
 			else if ( strcmp("money_precision", key) == 0 ) /* defaults to 2 if not set */
 			{
 					parameter_id = IIAPI_EP_MONEY_PRECISION;
+			}
+			else if ( strcmp("float4_precision", key) == 0 )
+			{
+					parameter_id = IIAPI_EP_FLOAT4_PRECISION;
+			}
+			else if ( strcmp("float8_precision", key) == 0 ) 
+			{
+					parameter_id = IIAPI_EP_FLOAT8_PRECISION;
 			}
 			else 
 			{
@@ -3055,7 +3050,6 @@ static short int php_ii_set_environment_options (zval **options, II_LINK *ii_lin
 static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, char *database TSRMLS_DC)
 {
 	II_LONG parameter_id;
-	II_PTR  parameter_value;
 	IIAPI_SETCONPRMPARM	setConPrmParm;
 	IIAPI_CONNPARM connParm;
 	IIAPI_DISCONNPARM	disconnParm;
@@ -3134,6 +3128,18 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, ch
 			{
 				parameter_id = IIAPI_CP_DBMS_PASSWORD;
 			}
+			else if ( strcmp("table_structure", key) == 0 )
+			{
+				parameter_id = IIAPI_CP_RESULT_TBL;
+			}
+			else if ( strcmp("index_structure", key) == 0 )
+			{
+				parameter_id = IIAPI_CP_SECONDARY_INX;
+			}
+			else if ( strcmp("local_login", key) == 0 )
+			{
+				parameter_id = IIAPI_CP_SECONDARY_INX;
+			}
 			else if ( strcmp("timezone", key) == 0 )
 			{
 				ignore = TRUE;
@@ -3162,6 +3168,15 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, ch
 			{
 				ignore = TRUE;
 			}
+			else if ( strcmp("float4_precision", key) == 0 )
+			{
+				ignore = TRUE;
+			}
+			else if ( strcmp("float8_precision", key) == 0 ) 
+			{
+				ignore = TRUE;
+			}
+
 			else 
 			{
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unknown connection option '%s'",key );
@@ -3237,12 +3252,11 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, ch
 /* takes a statement with ? param markers and converts them to ~V */
 static char *php_ii_convert_param_markers (char *statement TSRMLS_DC)
 {
-	char *tmp;
 	char *tmp_statement;
 	char ch, tmp_ch;
 	char *p, *tmp_p;
 	long parameter_count;
-	int i,j;
+	int j;
 
 
     /* work out how many param markers there are */
@@ -3330,7 +3344,6 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 {
 
 	zval **val;
-	IIAPI_GETDESCRPARM  getDescrParm;
 	IIAPI_SETDESCRPARM	setDescrParm;
     IIAPI_PUTPARMPARM	putParmParm;
     IIAPI_DESCRIPTOR	*descriptorInfo;

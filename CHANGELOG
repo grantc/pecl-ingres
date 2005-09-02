@@ -1,4 +1,8 @@
 CVS
+- Added support for specifying the scope of login credentials for remote
+connections [grantc 02-09-05]
+- Added support for specifying the stucture of new tables and indexes [grantc 02-09-05]
+- Added support for specifying the precision of Ingres floats [grantc 02-09-05]
 - Added ingres_set_environment() [grantc 02-09-05]
 - Fixed ingres_connect() to allow locale params to function without a cast [grantc 01-09-05]
 - Extension now builds with GCC 4.x [grantc 29-08-05]
