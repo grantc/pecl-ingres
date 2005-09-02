@@ -36,3 +36,5 @@ if test "$PHP_INGRES" != "no"; then
   PHP_ADD_INCLUDE($II_INC_DIR)
   PHP_SUBST(INGRES_SHARED_LIBADD)
 fi
+
+dnl vim: ff=unix
