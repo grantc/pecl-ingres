@@ -1,5 +1,5 @@
 --TEST--
-Ingres: Adjust the date format to MULTINATIONAL4 and retrieve a date value.
+Ingres: Adjust the date format to ISO4 and retrieve a date value.
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
 --FILE--
@@ -7,7 +7,7 @@ Ingres: Adjust the date format to MULTINATIONAL4 and retrieve a date value.
 
 require_once('connection.inc');
 
-$options = array( "timezone" => "gmt", "date_format" => INGRES_DATE_MULTINATIONAL4 );
+$options = array( "timezone" => "gmt", "date_format" => INGRES_DATE_ISO4 );
 
 $conn=ingres_connect($database,$user,$password, $options);
 
@@ -45,4 +45,4 @@ else
 ingres_close($conn);
 ?>
 --EXPECT--
-Connection succeeded.06/09/2005 12:00:00
+Connection succeeded.20050906 12:00:00
