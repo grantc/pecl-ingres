@@ -1,4 +1,5 @@
 CVS
+- Added support for ISO4 dates [grantc 07-09-05]
 - Added support for specifying the scope of login credentials for remote
 connections [grantc 02-09-05]
 - Added support for specifying the stucture of new tables and indexes [grantc 02-09-05]
