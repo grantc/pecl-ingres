@@ -3362,10 +3362,11 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 	int key_len;
 	long index;
 
-
-	arr_hash = Z_ARRVAL_PP(queryParams);
-
-	zend_hash_internal_pointer_reset_ex(arr_hash, &pointer);
+    if ( ii_link->paramCount > 0 )
+	{
+		arr_hash = Z_ARRVAL_PP(queryParams);
+		zend_hash_internal_pointer_reset_ex(arr_hash, &pointer);
+	}
 
 	/* if we are sending params then we need to describe them into to Ingres */
 	/* if no parameters have been provided to a procedure call there is always 1 */
