@@ -103,7 +103,7 @@ PHP_INI_BEGIN()
 	STD_PHP_INI_ENTRY("ingres.default_database", NULL, PHP_INI_ALL, OnUpdateString, default_database, zend_ii_globals, ii_globals)
 	STD_PHP_INI_ENTRY("ingres.default_user", NULL, PHP_INI_ALL, OnUpdateString, default_user, zend_ii_globals, ii_globals)
 	STD_PHP_INI_ENTRY("ingres.default_password", NULL, PHP_INI_ALL, OnUpdateString, default_password, zend_ii_globals, ii_globals)
-	STD_PHP_INI_BOOLEAN("ingres.report_db_warnings","0", PHP_INI_ALL, OnUpdateBool, report_db_warnings, zend_ii_globals, ii_globals)
+	STD_PHP_INI_BOOLEAN("ingres.report_db_warnings","1", PHP_INI_ALL, OnUpdateBool, report_db_warnings, zend_ii_globals, ii_globals)
 	STD_PHP_INI_ENTRY("ingres.cursor_mode", "0", PHP_INI_ALL, OnUpdateLong, cursor_mode, zend_ii_globals, ii_globals)
 PHP_INI_END()
 /* }}} */
@@ -132,14 +132,18 @@ static int _close_statement(II_LINK *ii_link TSRMLS_DC)
 	if ( ii_link->procname != NULL )
 	{
 		free(ii_link->procname);
+		ii_link->procname = NULL;
+		
 	}
 	if ( ii_link->descriptor != NULL )
 	{
 		free(ii_link->descriptor);
+		ii_link->descriptor = NULL;
 	}
 	if ( ii_link->cursor_id != NULL )
 	{
 		free(ii_link->cursor_id);
+		ii_link->cursor_id = NULL;
 	}
 
 	ii_link->paramCount = 0;
@@ -718,7 +722,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			{
 				if ( php_ii_set_connect_options(options, ii_link, db TSRMLS_CC ) == II_FAIL )
 				{
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set options provided", IIG(num_persistent));
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set options provided");
 					RETURN_FALSE;
 				}	
 			}
@@ -761,7 +765,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 				if ( php_ii_set_environment_options(options, ii_link TSRMLS_CC) == II_FAIL )
 				{
 					efree(hashed_details);
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided", IIG(num_persistent));
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided");
 					RETURN_FALSE;
 				}	
 			}
@@ -814,12 +818,16 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 				ii_link->autocommit = 0;
 				ii_link->errorCode = 0;
 				ii_link->errorText = NULL;
+				ii_link->cursor_id = NULL;
+				ii_link->cursor_mode = -1;
+				ii_link->paramCount = 0;
+				ii_link->procname = NULL;
 
 				if ( argc == 4 ) /* set options */
 				{
 					if ( php_ii_set_connect_options(options, ii_link, db TSRMLS_CC ) == II_FAIL )
 					{
-						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set options provided", IIG(num_persistent));
+						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set options provided");
 						RETURN_FALSE;
 					}	
 				}
@@ -855,7 +863,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 					if ( php_ii_set_environment_options(options, ii_link TSRMLS_CC) == II_FAIL )
 					{
 						efree(hashed_details);
-						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided", IIG(num_persistent));
+						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided");
 						RETURN_FALSE;
 					}	
 				}
@@ -935,7 +943,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			if ( php_ii_set_connect_options(options, ii_link, db TSRMLS_CC) == II_FAIL )
 			{
 				efree(hashed_details);
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set options provided", IIG(num_persistent));
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set options provided");
 				RETURN_FALSE;
 			}	
 		}
@@ -977,7 +985,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			if ( php_ii_set_environment_options(options, ii_link TSRMLS_CC) == II_FAIL )
 			{
 				efree(hashed_details);
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided", IIG(num_persistent));
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided");
 				RETURN_FALSE;
 			}	
 		}
@@ -2256,6 +2264,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 									case 4:
 										value_long = (long) *((II_INT4 *) columnData[k - 1].dv_value);
 										break;
+#ifdef	IIAPI_VERSION_4
+									case 8:
+										value_long = (long) *((II_INT8 *) columnData[k - 1].dv_value);
+										break;
+#endif
 		
 									default:
 										php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Invalid size for IIAPI_INT_TYPE data (%d)", columnData[k - 1].dv_length);
@@ -3333,7 +3346,7 @@ PHP_FUNCTION(ingres_set_environment)
 
 	if ( php_ii_set_environment_options(options, ii_link TSRMLS_CC) == II_FAIL )
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided", IIG(num_persistent));
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided");
 		RETURN_FALSE;
 	}	
 
