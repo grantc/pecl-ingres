@@ -2409,7 +2409,6 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 				else
 				{
 					/* extend existing lob buffer by the size of the new segment */
-					printf ("extending %d\n",lob_len + lob_segment_len);
 					lob_data = erealloc (lob_data, lob_len + lob_segment_len + 16);
 				}
 
