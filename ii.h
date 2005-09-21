@@ -57,11 +57,6 @@ typedef struct _II_RESULT {
 	char			*cursor_id;
 } II_RESULT;
 
-typedef struct _II_LOGIN {
-	char *user;
-	char *password;
-	char *database; /* includes vnode if used */
-} II_LOGIN;
 
 #define II_FAIL 0
 #define II_OK 1

@@ -93,6 +93,9 @@ ZEND_BEGIN_MODULE_GLOBALS(ii)
 
 	II_PTR *envHandle; /* environment handle */
 
+	long blob_segment_length; /* size of memory to read when puting/fetching */
+								/* a blob */
+
 ZEND_END_MODULE_GLOBALS(ii)
 
 #define II_ASSOC (1<<0)

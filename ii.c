@@ -105,6 +105,7 @@ PHP_INI_BEGIN()
 	STD_PHP_INI_ENTRY("ingres.default_password", NULL, PHP_INI_ALL, OnUpdateString, default_password, zend_ii_globals, ii_globals)
 	STD_PHP_INI_BOOLEAN("ingres.report_db_warnings","1", PHP_INI_ALL, OnUpdateBool, report_db_warnings, zend_ii_globals, ii_globals)
 	STD_PHP_INI_ENTRY("ingres.cursor_mode", "0", PHP_INI_ALL, OnUpdateLong, cursor_mode, zend_ii_globals, ii_globals)
+	STD_PHP_INI_ENTRY("ingres.blob_segment_length", "4096", PHP_INI_ALL, OnUpdateLong, blob_segment_length, zend_ii_globals, ii_globals)
 PHP_INI_END()
 /* }}} */
 
@@ -2091,6 +2092,9 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 	long value_long = 0;
 	char *value_char_p;
 	int len, should_copy, correct_length;
+	int lob_len ;
+	short int lob_segment_len, found_lob;
+	char *lob_segment, *tmp_lob_data, *lob_ptr, *lob_data;
 
 	/* array initialization */
 	array_init(return_value);
@@ -2133,37 +2137,46 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 		}
 	}
 
-	/* going through all fields */
-	for (i = 1; i <= ii_link->fieldCount;)
-	{
-		j = 1;
+	found_lob=0;
 
-		/* as long as there are no long byte or long varchar fields,
-		   Ingres is able to fetch many fields at a time, so try to find
-		   these types and stop if they're found.
-		   variable j will get number of fields to fetch */
-		if ((ii_link->descriptor[i]).ds_dataType != IIAPI_LBYTE_TYPE &&
-			(ii_link->descriptor[i]).ds_dataType != IIAPI_LVCH_TYPE)
+	/* going through all fields */
+	for (i = 0; i < ii_link->fieldCount;)
+	{
+		j = 0;
+
+		if (!found_lob)
 		{
-			while (	(ii_link->descriptor[i + j - 1]).ds_dataType != IIAPI_LBYTE_TYPE &&
-					(ii_link->descriptor[i + j - 1]).ds_dataType != IIAPI_LVCH_TYPE && 
-					i + j <= ii_link->fieldCount)
+			/* as long as there are no long byte or long varchar fields, Ingres is able to fetch 
+			   many fields at a time, so try to find these types and stop if they're found. variable 
+			   j will get number of fields to fetch */
+			while (	(i + j) < ii_link->fieldCount ) 
 			{
-				j++;
+				if ((ii_link->descriptor[i+j]).ds_dataType != IIAPI_LBYTE_TYPE &&
+					(ii_link->descriptor[i+j]).ds_dataType != IIAPI_LVCH_TYPE)
+				{
+						j++;
+				}
+				else
+				{
+					/* break out of loop */
+					/* a lob needs to be processed separately */
+					found_lob = 1;
+					break;
+				}
 			}
 		}
 
-		/* allocate memory for j fields */
-		columnData = (IIAPI_DATAVALUE *) safe_emalloc(sizeof(IIAPI_DATAVALUE), j, 0);
-		for (k = 1; k <= j; k++)
+		if ( j > 0 ) 
 		{
-			columnData[k - 1].dv_value = (II_PTR) emalloc((ii_link->descriptor[i + k - 2]).ds_length);
-		}
+			/* process non LOB fields */
 
-		more = 1;				/* this is for multi segment LBYTE and LVCH elements */
+			/* allocate memory for j fields */
+			columnData = (IIAPI_DATAVALUE *) safe_emalloc(sizeof(IIAPI_DATAVALUE), j, 0);
+			for (k = 0; k < j; k++)
+			{
+				columnData[k].dv_value = (II_PTR) emalloc((ii_link->descriptor[i + k]).ds_length);
+			}
 
-		while (more)
-		{
 			getColParm.gc_genParm.gp_callback = NULL;
 			getColParm.gc_genParm.gp_closure = NULL;
 			getColParm.gc_rowCount = 1;
@@ -2177,199 +2190,264 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 			if (ii_success(&(getColParm.gc_genParm), ii_link TSRMLS_CC) != II_OK)
 			{
-				for (k = 1; k <= j; k++)
+				for (k = 0; k < j; k++)
 				{
-					efree(columnData[k - 1].dv_value);
+					efree(columnData[k].dv_value);
 				}
 				efree(columnData);
 				RETURN_FALSE;
 			}
 
-			more = getColParm.gc_moreSegments;
+			for (k = 0; k < j; k++)
+			{
+				if (columnData[k].dv_null)
+					{	/* NULL value ? */
 
-			if (more)
-			{			/* more segments of LBYTE or LVCH element to come */
+					if (result_type & II_NUM)
+					{
+						add_index_null(return_value, i + k);
+					}
+					if (result_type & II_ASSOC)
+					{
+						add_assoc_null(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC));
+					}
 
-				/* Multi segment LBYTE and LVCH elements not supported yet */
-				php_error_docref(NULL TSRMLS_CC, E_ERROR, "Ingres:  Multi segment LBYTE and LVCH elements not supported yet");
+				} else {	/* non NULL value */
+					correct_length = 0;
 
-			} else {
+					switch ((ii_link->descriptor[i + k]).ds_dataType)
+					{
 
-				for (k = 1; k <= j; k++)
-				{
-					if (columnData[k - 1].dv_null)
-						{	/* NULL value ? */
+						case IIAPI_DEC_TYPE:	/* decimal (fixed point number) */
+						case IIAPI_MNY_TYPE:	/* money */
+							/* convert to floating point number */
+							php_ii_convert_data ( IIAPI_FLT_TYPE, sizeof(II_FLOAT8), 53, ii_link, columnData, getColParm, i, k TSRMLS_CC );
+							/* NO break */
 
-						if (result_type & II_NUM)
-						{
-							add_index_null(return_value, i + k - 1);
-						}
-						if (result_type & II_ASSOC)
-						{
-							add_assoc_null(return_value, php_ii_field_name(ii_link, i + k - 1 TSRMLS_CC));
-						}
+						case IIAPI_FLT_TYPE:	/* floating point number */
+							switch (columnData[k].dv_length)
+							{
 
-					} else {	/* non NULL value */
-						correct_length = 0;
+								case 4:
+									value_double = (double) *((II_FLOAT4 *) columnData[k].dv_value);
+									break;
 
-						switch ((ii_link->descriptor[i + k - 2]).ds_dataType)
-						{
-	
-							case IIAPI_DEC_TYPE:	/* decimal (fixed point number) */
-							case IIAPI_MNY_TYPE:	/* money */
-								/* convert to floating point number */
-								php_ii_convert_data ( IIAPI_FLT_TYPE, sizeof(II_FLOAT8), 53, ii_link, columnData, getColParm, i, k TSRMLS_CC );
-								/* NO break */
-	
-							case IIAPI_FLT_TYPE:	/* floating point number */
-								switch (columnData[k - 1].dv_length)
-								{
+								case 8:
+									value_double = (double) *((II_FLOAT8 *) columnData[k].dv_value);
+									break;
 
-									case 4:
-										value_double = (double) *((II_FLOAT4 *) columnData[k - 1].dv_value);
-										break;
+								default:
+									php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Invalid size for IIAPI_FLT_TYPE data (%d)", columnData[k - 1].dv_length);
+									break;
+							}
 
-									case 8:
-										value_double = (double) *((II_FLOAT8 *) columnData[k - 1].dv_value);
-										break;
+							if (result_type & II_NUM)
+							{
+								add_index_double(return_value, i + k, value_double);
+							}
 
-									default:
-										php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Invalid size for IIAPI_FLT_TYPE data (%d)", columnData[k - 1].dv_length);
-										break;
-								}
+							if (result_type & II_ASSOC)
+							{
+								add_assoc_double(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC), value_double);
 
-								if (result_type & II_NUM)
-								{
-									add_index_double(return_value, i + k - 1, value_double);
-								}
+							}
+							break;
 
-								if (result_type & II_ASSOC)
-								{
-									add_assoc_double(return_value, php_ii_field_name(ii_link, i + k - 1 TSRMLS_CC), value_double);
-								}
-								break;
+						case IIAPI_INT_TYPE:	/* integer */
+							switch (columnData[k].dv_length)
+							{
 
-							case IIAPI_INT_TYPE:	/* integer */
-								switch (columnData[k - 1].dv_length)
-								{
+								case 1:
+									value_long = (long) *((II_INT1 *) columnData[k].dv_value);
+									break;
 
-									case 1:
-										value_long = (long) *((II_INT1 *) columnData[k - 1].dv_value);
-										break;
-
-									case 2:
-										value_long = (long) *((II_INT2 *) columnData[k - 1].dv_value);
-										break;
-			
-									case 4:
-										value_long = (long) *((II_INT4 *) columnData[k - 1].dv_value);
-										break;
-#ifdef	IIAPI_VERSION_4
-									case 8:
-										value_long = (long) *((II_INT8 *) columnData[k - 1].dv_value);
-										break;
-#endif
+								case 2:
+									value_long = (long) *((II_INT2 *) columnData[k].dv_value);
+									break;
 		
-									default:
-										php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Invalid size for IIAPI_INT_TYPE data (%d)", columnData[k - 1].dv_length);
-										break;
-								}
+								case 4:
+									value_long = (long) *((II_INT4 *) columnData[k].dv_value);
+									break;
+#ifdef	IIAPI_VERSION_4
+								case 8:
+									value_long = (long) *((II_INT4 *) columnData[k].dv_value);
+									break;
+#endif
+								default:
+									php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Invalid size for IIAPI_INT_TYPE data (%d)", columnData[k].dv_length);
+									break;
+							}
 
-								if (result_type & II_NUM)
-								{
-									add_index_long(return_value, i + k - 1, value_long);
-								}
-	
-								if (result_type & II_ASSOC)
-								{
-									add_assoc_long(return_value, php_ii_field_name(ii_link, i + k - 1 TSRMLS_CC), value_long);
-								}
-								break;
+							if (result_type & II_NUM)
+							{
+								add_index_long(return_value, i + k, value_long);
+							}
 
-							case IIAPI_TXT_TYPE:	/* variable length character string */
-							case IIAPI_VBYTE_TYPE:	/* variable length binary string */
+							if (result_type & II_ASSOC)
+							{
+								add_assoc_long(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC), value_long);
+							}
+							break;
+
+						case IIAPI_TXT_TYPE:	/* variable length character string */
+						case IIAPI_VBYTE_TYPE:	/* variable length binary string */
 #ifdef IIAPI_VERSION_3
-							case IIAPI_NVCH_TYPE:	/* variable length unicode character string */
-								/* Convert it to IIAPI_VCH_TYPE */
-								if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_NVCH_TYPE)
-								{
-									php_ii_convert_data ( IIAPI_CHA_TYPE, (columnData[k - 1]).dv_length, 0, ii_link, columnData, getColParm, i, k TSRMLS_CC );
-								}
-								/* let the next 'case' handle the conversion to a format usable by php */
+						case IIAPI_NVCH_TYPE:	/* variable length unicode character string */
+							/* Convert it to IIAPI_VCH_TYPE */
+							if ((ii_link->descriptor[i + k]).ds_dataType == IIAPI_NVCH_TYPE)
+							{
+								php_ii_convert_data ( IIAPI_CHA_TYPE, (columnData[k]).dv_length, 0, ii_link, columnData, getColParm, i, k TSRMLS_CC );
+							}
+							/* let the next 'case' handle the conversion to a format usable by php */
 #endif								
-							case IIAPI_VCH_TYPE:	/* variable length character string */
-								/* real length is stored in first 2 bytes of data, so adjust
-								   length variable and data pointer */
-								columnData[k - 1].dv_length = *((II_INT2 *) columnData[k - 1].dv_value);
-								columnData[k - 1].dv_value = (II_CHAR *)(columnData[k - 1]).dv_value + 2;
-								correct_length = 1;
-								/* NO break */
+						case IIAPI_VCH_TYPE:	/* variable length character string */
+							/* real length is stored in first 2 bytes of data, so adjust
+							   length variable and data pointer */
+							columnData[k].dv_length = *((II_INT2 *) columnData[k].dv_value);
+							columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value + 2;
+							correct_length = 1;
+							/* NO break */
 
-							case IIAPI_NCHA_TYPE:	/* fixed length unicode character string */	
-								if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_NCHA_TYPE)
-								{
-									php_ii_convert_data ( IIAPI_CHA_TYPE, (columnData[k - 1]).dv_length, 0, ii_link, columnData, getColParm, i, k TSRMLS_CC );
-								}
-							case IIAPI_BYTE_TYPE:	/* fixed length binary string */
-							case IIAPI_CHA_TYPE:	/* fixed length character string */
-							case IIAPI_CHR_TYPE:	/* fixed length character string */
-							case IIAPI_LOGKEY_TYPE:	/* value unique to database */
-							case IIAPI_TABKEY_TYPE:	/* value unique to table */
-							case IIAPI_DTE_TYPE:	/* date */
+						case IIAPI_NCHA_TYPE:	/* fixed length unicode character string */	
+							if ((ii_link->descriptor[i + k]).ds_dataType == IIAPI_NCHA_TYPE)
+							{
+								php_ii_convert_data ( IIAPI_CHA_TYPE, (columnData[k]).dv_length, 0, ii_link, columnData, getColParm, i, k TSRMLS_CC );
+							}
+						case IIAPI_BYTE_TYPE:	/* fixed length binary string */
+						case IIAPI_CHA_TYPE:	/* fixed length character string */
+						case IIAPI_CHR_TYPE:	/* fixed length character string */
+						case IIAPI_LOGKEY_TYPE:	/* value unique to database */
+						case IIAPI_TABKEY_TYPE:	/* value unique to table */
+						case IIAPI_DTE_TYPE:	/* date */
 
-								/* eventualy convert date to string */
-								if ((ii_link->descriptor[i + k - 2]).ds_dataType == IIAPI_DTE_TYPE)
-								{
-									php_ii_convert_data ( IIAPI_CHA_TYPE, 32, 0, ii_link, columnData, getColParm, i, k TSRMLS_CC );
-								}
-	
-								/* use php_addslashes if asked to */
-								if (PG(magic_quotes_runtime))
-								{
-									value_char_p = php_addslashes((char *) columnData[k - 1].dv_value, columnData[k - 1].dv_length, &len, 0 TSRMLS_CC);
-									should_copy = 0;
-								} else {
-									value_char_p = (char *) columnData[k - 1].dv_value;
-									len = columnData[k - 1].dv_length;
-									should_copy = 1;
-								}
+							/* eventualy convert date to string */
+							if ((ii_link->descriptor[i + k]).ds_dataType == IIAPI_DTE_TYPE)
+							{
+								php_ii_convert_data ( IIAPI_CHA_TYPE, 32, 0, ii_link, columnData, getColParm, i, k TSRMLS_CC );
+							}
 
-								if (result_type & II_NUM)
-								{
-									add_index_stringl(return_value, i + k - 1, value_char_p, len, should_copy);
-								}
+							/* use php_addslashes if asked to */
+							if (PG(magic_quotes_runtime))
+							{
+								value_char_p = php_addslashes((char *) columnData[k].dv_value, columnData[k].dv_length, &len, 0 TSRMLS_CC);
+								should_copy = 0;
+							} else {
+								value_char_p = (char *) columnData[k].dv_value;
+								len = columnData[k].dv_length;
+								should_copy = 1;
+							}
 
-								if (result_type & II_ASSOC)
-								{
-									add_assoc_stringl(return_value, php_ii_field_name(ii_link, i + k - 1 TSRMLS_CC), value_char_p, len, should_copy);
-								}
+							if (result_type & II_NUM)
+							{
+								add_index_stringl(return_value, i + k, value_char_p, len, should_copy);
+							}
 
-								/* eventualy restore data pointer state for
-							 	   variable length data types */
-								if (correct_length)
-								{
-									columnData[k - 1].dv_value = (II_CHAR *)(columnData[k - 1]).dv_value - 2;
-								}
-								break;
-			
-							default:
-								php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Invalid SQL data type in fetched field (%d -- length : %d)", (ii_link->descriptor[i + k - 2]).ds_dataType, columnData[k - 1].dv_length);
-								break;
-						}
+							if (result_type & II_ASSOC)
+							{
+								add_assoc_stringl(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC), value_char_p, len, should_copy);
+							}
+
+							/* eventualy restore data pointer state for
+							   variable length data types */
+							if (correct_length)
+							{
+								columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value - 2;
+							}
+							break;
+		
+						default:
+							php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Invalid SQL data type in fetched field (%d -- length : %d)", (ii_link->descriptor[i + k]).ds_dataType, columnData[k].dv_length);
+							break;
 					}
 				}
 			}
+
+			/* free the memory buffers */
+			for (k = 0; k < j; k++)
+			{
+				efree(columnData[k].dv_value);
+			}
+			efree(columnData);
 		}
 
-		/* free the memory buffers */
-		for (k = 1; k <= j; k++)
+		if (found_lob) 
 		{
-			efree(columnData[k - 1].dv_value);
-		}
-		efree(columnData);
 
+			/* alloc memory for the size of the segment we need */
+
+			columnData = (IIAPI_DATAVALUE *) safe_emalloc(sizeof(IIAPI_DATAVALUE), 1, 0);
+			lob_segment = (char *) emalloc (IIG(blob_segment_length));
+			lob_len = 0;
+		    do
+			{
+				getColParm.gc_genParm.gp_callback = NULL;
+				getColParm.gc_genParm.gp_closure = NULL;
+				getColParm.gc_rowCount = 1;
+				getColParm.gc_columnCount = 1; /* just the lob */
+				getColParm.gc_columnData = columnData;
+				getColParm.gc_columnData[0].dv_value = lob_segment;
+				getColParm.gc_stmtHandle = ii_link->stmtHandle;
+
+				IIapi_getColumns(&getColParm);
+				ii_sync(&(getColParm.gc_genParm));
+
+				if (ii_success(&(getColParm.gc_genParm), ii_link TSRMLS_CC) != II_OK)
+				{
+					efree(lob_segment);
+					efree(columnData);
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  An error occured whilst fetching a BLOB");
+					RETURN_FALSE;
+				}
+
+				memcpy( (char *)&lob_segment_len, lob_segment, 2 );
+
+
+				if ( lob_len == 0 )
+				{
+					lob_data = (char *) emalloc (lob_segment_len);
+				}
+				else
+				{
+					/* extend existing lob buffer by the size of the new segment */
+					printf ("extending %d\n",lob_len + lob_segment_len);
+					lob_data = erealloc (lob_data, lob_len + lob_segment_len + 16);
+				}
+
+				/* copy segement in to buffer. First two bytes contain the length of the segment. */
+
+				lob_segment += 2;
+				lob_ptr = lob_data + lob_len;
+				memcpy(lob_ptr, lob_segment, lob_segment_len);
+
+				/* move on dv_length and add to the total length of the lob fetched 
+				so far */
+				lob_segment -= 2;
+				lob_len += lob_segment_len;
+				lob_data[lob_len] = '\0';
+			
+			} 
+			while ( getColParm.gc_moreSegments );
+
+			if (result_type & II_NUM)
+			{
+				add_index_stringl(return_value, i + k, lob_data, lob_len, 1);
+			}
+
+			if (result_type & II_ASSOC)
+			{
+				add_assoc_stringl(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC), lob_data, lob_len, 1);
+			}
+
+		efree(lob_segment);
+		efree(columnData);
+		efree(lob_data);
+			
+		} 
+	
+			
 		/* increase field pointer by number of fetched fields */
-		i += j;
+		/* include any LOB data fetched */
+		i += j + found_lob;
 	}
 }
 /* }}} */
@@ -2992,6 +3070,12 @@ static short int php_ii_set_environment_options (zval **options, II_LINK *ii_lin
 			{
 					parameter_id = IIAPI_EP_FLOAT8_PRECISION;
 			}
+			else if ( strcmp("blob_segment_length", key) == 0 ) 
+			{
+					parameter_id = IIAPI_EP_MAX_SEGMENT_LEN;
+					convert_to_long_ex(data);
+					IIG(blob_segment_length) = Z_LVAL_PP(data);
+			}
 			else 
 			{
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unknown connection option '%s'",key );
@@ -3188,6 +3272,10 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, ch
 				ignore = TRUE;
 			}
 			else if ( strcmp("float8_precision", key) == 0 ) 
+			{
+				ignore = TRUE;
+			}
+			else if ( strcmp("blob_segment_length", key) == 0 ) 
 			{
 				ignore = TRUE;
 			}
