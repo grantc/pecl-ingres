@@ -2087,14 +2087,13 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 	IIAPI_GETQINFOPARM getQInfoParm;
 
 	int i, j, k;
-	int more;
 	double value_double = 0;
 	long value_long = 0;
 	char *value_char_p;
 	int len, should_copy, correct_length;
 	int lob_len ;
 	short int lob_segment_len, found_lob;
-	char *lob_segment, *tmp_lob_data, *lob_ptr, *lob_data;
+	char *lob_segment, *lob_ptr, *lob_data;
 
 	/* array initialization */
 	array_init(return_value);
@@ -2137,32 +2136,30 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 		}
 	}
 
-	found_lob=0;
-
 	/* going through all fields */
 	for (i = 0; i < ii_link->fieldCount;)
 	{
 		j = 0;
+		k = 0;
+		found_lob = 0;
 
-		if (!found_lob)
+		/* as long as there are no long byte or long varchar fields, Ingres is able to fetch 
+		   many fields at a time, so try to find these types and stop if they're found. variable 
+		   j will get number of fields to fetch */
+		while (	(i + j) < ii_link->fieldCount ) 
 		{
-			/* as long as there are no long byte or long varchar fields, Ingres is able to fetch 
-			   many fields at a time, so try to find these types and stop if they're found. variable 
-			   j will get number of fields to fetch */
-			while (	(i + j) < ii_link->fieldCount ) 
+			if ((ii_link->descriptor[i+j]).ds_dataType != IIAPI_LBYTE_TYPE &&
+				(ii_link->descriptor[i+j]).ds_dataType != IIAPI_LVCH_TYPE &&
+				(ii_link->descriptor[i+j]).ds_dataType != IIAPI_LNVCH_TYPE )
 			{
-				if ((ii_link->descriptor[i+j]).ds_dataType != IIAPI_LBYTE_TYPE &&
-					(ii_link->descriptor[i+j]).ds_dataType != IIAPI_LVCH_TYPE)
-				{
-						j++;
-				}
-				else
-				{
-					/* break out of loop */
-					/* a lob needs to be processed separately */
-					found_lob = 1;
-					break;
-				}
+				j++;
+			}
+			else
+			{
+				/* break out of loop */
+				/* a lob needs to be processed separately */
+				found_lob = 1;
+				break;
 			}
 		}
 
@@ -2427,19 +2424,33 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 			} 
 			while ( getColParm.gc_moreSegments );
 
-			if (result_type & II_NUM)
-			{
-				add_index_stringl(return_value, i + k, lob_data, lob_len, 1);
-			}
+			if (columnData[k].dv_null)
+			{	/* NULL value ? */
 
-			if (result_type & II_ASSOC)
+				if (result_type & II_NUM)
+				{
+					add_index_null(return_value, i + k);
+				}
+				if (result_type & II_ASSOC)
+				{
+					add_assoc_null(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC));
+				}
+			}
+			else
 			{
-				add_assoc_stringl(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC), lob_data, lob_len, 1);
+				if (result_type & II_NUM)
+				{
+					add_index_stringl(return_value, i + k, lob_data, lob_len, 1);
+				}
+
+				if (result_type & II_ASSOC)
+				{
+					add_assoc_stringl(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC), lob_data, lob_len, 1);
+				}
 			}
 
 		efree(lob_segment);
 		efree(columnData);
-		efree(lob_data);
 			
 		} 
 	
