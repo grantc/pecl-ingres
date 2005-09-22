@@ -2007,16 +2007,16 @@ static II_LONG php_ii_convert_data ( II_LONG destType, int destSize, int precisi
 
 	formatParm.fd_envHandle = IIG(envHandle);
 
-	formatParm.fd_srcDesc.ds_dataType = (ii_link->descriptor[field+column-2]).ds_dataType;
-	formatParm.fd_srcDesc.ds_nullable = (ii_link->descriptor[field+column-2]).ds_nullable;
-	formatParm.fd_srcDesc.ds_length = (ii_link->descriptor[field+column-2]).ds_length;
-	formatParm.fd_srcDesc.ds_precision = (ii_link->descriptor[field+column-2]).ds_precision;
-	formatParm.fd_srcDesc.ds_scale = (ii_link->descriptor[field+column-2]).ds_scale;
-	formatParm.fd_srcDesc.ds_columnType = (ii_link->descriptor[field+column-2]).ds_columnType;
-	formatParm.fd_srcDesc.ds_columnName = (ii_link->descriptor[field+column-2]).ds_columnName;
-	formatParm.fd_srcValue.dv_null = columnData[column-1].dv_null;
-	formatParm.fd_srcValue.dv_length = columnData[column-1].dv_length;
-	formatParm.fd_srcValue.dv_value = columnData[column-1].dv_value;
+	formatParm.fd_srcDesc.ds_dataType = (ii_link->descriptor[field+column]).ds_dataType;
+	formatParm.fd_srcDesc.ds_nullable = (ii_link->descriptor[field+column]).ds_nullable;
+	formatParm.fd_srcDesc.ds_length = (ii_link->descriptor[field+column]).ds_length;
+	formatParm.fd_srcDesc.ds_precision = (ii_link->descriptor[field+column]).ds_precision;
+	formatParm.fd_srcDesc.ds_scale = (ii_link->descriptor[field+column]).ds_scale;
+	formatParm.fd_srcDesc.ds_columnType = (ii_link->descriptor[field+column]).ds_columnType;
+	formatParm.fd_srcDesc.ds_columnName = (ii_link->descriptor[field+column]).ds_columnName;
+	formatParm.fd_srcValue.dv_null = columnData[column].dv_null;
+	formatParm.fd_srcValue.dv_length = columnData[column].dv_length;
+	formatParm.fd_srcValue.dv_value = columnData[column].dv_value;
 
 	formatParm.fd_dstDesc.ds_dataType = destType;
 	formatParm.fd_dstDesc.ds_nullable = FALSE;
@@ -2035,23 +2035,23 @@ static II_LONG php_ii_convert_data ( II_LONG destType, int destSize, int precisi
 	  return formatParm.fd_status;
 	}
 
-	columnData[column-1].dv_length = formatParm.fd_dstValue.dv_length;
-	columnData[column-1].dv_value = formatParm.fd_dstValue.dv_value;
+	columnData[column].dv_length = formatParm.fd_dstValue.dv_length;
+	columnData[column].dv_value = formatParm.fd_dstValue.dv_value;
 	efree(formatParm.fd_srcValue.dv_value);
 
 #else
 	IIAPI_CONVERTPARM convertParm;
 	
-	convertParm.cv_srcDesc.ds_dataType = (ii_link->descriptor[field+column-2]).ds_dataType;
-	convertParm.cv_srcDesc.ds_nullable = (ii_link->descriptor[field+column-2]).ds_nullable;
-	convertParm.cv_srcDesc.ds_length = (ii_link->descriptor[field+column-2]).ds_length;
-	convertParm.cv_srcDesc.ds_precision = (ii_link->descriptor[field+column-2]).ds_precision;
-	convertParm.cv_srcDesc.ds_scale = (ii_link->descriptor[field+column-2]).ds_scale;
-	convertParm.cv_srcDesc.ds_columnType = (ii_link->descriptor[field+column-2]).ds_columnType;
-	convertParm.cv_srcDesc.ds_columnName = (ii_link->descriptor[field+column-2]).ds_columnName;
-	convertParm.cv_srcValue.dv_null = columnData[column-1].dv_null;
-	convertParm.cv_srcValue.dv_length = columnData[column-1].dv_length;
-	convertParm.cv_srcValue.dv_value = columnData[column-1].dv_value;
+	convertParm.cv_srcDesc.ds_dataType = (ii_link->descriptor[field+column]).ds_dataType;
+	convertParm.cv_srcDesc.ds_nullable = (ii_link->descriptor[field+column]).ds_nullable;
+	convertParm.cv_srcDesc.ds_length = (ii_link->descriptor[field+column]).ds_length;
+	convertParm.cv_srcDesc.ds_precision = (ii_link->descriptor[field+column]).ds_precision;
+	convertParm.cv_srcDesc.ds_scale = (ii_link->descriptor[field+column]).ds_scale;
+	convertParm.cv_srcDesc.ds_columnType = (ii_link->descriptor[field+column]).ds_columnType;
+	convertParm.cv_srcDesc.ds_columnName = (ii_link->descriptor[field+column]).ds_columnName;
+	convertParm.cv_srcValue.dv_null = columnData[column].dv_null;
+	convertParm.cv_srcValue.dv_length = columnData[column].dv_length;
+	convertParm.cv_srcValue.dv_value = columnData[column].dv_value;
 	convertParm.cv_dstDesc.ds_dataType = destType;
 	convertParm.cv_dstDesc.ds_nullable = FALSE;
 	convertParm.cv_dstDesc.ds_length = destSize;
@@ -2069,8 +2069,8 @@ static II_LONG php_ii_convert_data ( II_LONG destType, int destSize, int precisi
 	  return convertParm.cv_status;
 	}
 
-	columnData[column-1].dv_length = convertParm.cv_dstValue.dv_length;
-	columnData[column-1].dv_value = convertParm.cv_dstValue.dv_value;
+	columnData[column].dv_length = convertParm.cv_dstValue.dv_length;
+	columnData[column].dv_value = convertParm.cv_dstValue.dv_value;
 	efree(convertParm.cv_srcValue.dv_value);
 #endif
 
