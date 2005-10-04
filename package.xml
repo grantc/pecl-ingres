@@ -15,9 +15,25 @@
 		</maintainer>
 	</maintainers>
 	<release>
-		<version>1.1.1</version>
-		<date>2005-08-27</date>
+		<version>1.2.0</version>
+		<date>2005-10-04</date>
 		<state>alpha</state>
+			<notes>
+				- Fixed memory allocation when handling null blobs [grantc 04-10-05]
+				- Fix php_ii_fetch() to allow the fetching of multiple blobs [grantc 22-09-05]
+				- Fix php_ii_convert_data() to address correct indicies [grantc 22-09-05]
+				- Added preliminary support for BLOB fetching [grantc 21-09-05]
+				- Fixed double memory free when working with results [grantc 21-09-05]
+				- Fix non-parameterized procedures so they run [grantc 09-09-05]
+				- Added support for ISO4 dates [grantc 07-09-05]
+				- Added support for specifying the scope of login credentials for remote connections [grantc 02-09-05]
+				- Added support for specifying the stucture of new tables and indexes [grantc 02-09-05]
+				- Added support for specifying the precision of Ingres floats [grantc 02-09-05]
+				- Added ingres_set_environment() [grantc 02-09-05]
+				- Fixed ingres_connect() to allow locale params to function without a cast [grantc 01-09-05]
+				- Extension now builds with GCC 4.x [grantc 29-08-05]
+				- Added parameter support to ingres_query(), uses '?' for param markers [grantc 23-08-05]
+			</notes>
 		<configureoptions>
 			<configureoption name="with-ingres" prompt="Ingres II_SYSTEM dir?" />
 		</configureoptions>
@@ -32,6 +48,7 @@
 				<file role="doc">README.html</file>
 				<file role="doc">TODO</file>
 				<file role="doc">CHANGELOG</file>
+				<file role="doc">CREDITS</file>
 				<dir name="tests" role="test">
 					<file>connection.inc</file>
 					<file>skipif.inc</file>
@@ -45,22 +62,39 @@
 					<file>test_008.phpt</file>
 					<file>test_009.phpt</file>
 					<file>test_010.phpt</file>
+					<file>test_011.phpt</file>
+					<file>test_012.phpt</file>
+					<file>test_013.phpt</file>
+					<file>test_014.phpt</file>
+					<file>test_015.phpt</file>
+					<file>test_016.phpt</file>
+					<file>test_017.phpt</file>
+					<file>test_018.phpt</file>
+					<file>test_019.phpt</file>
+					<file>test_020.phpt</file>
+					<file>test_021.phpt</file>
+					<file>test_022.phpt</file>
+					<file>test_023.phpt</file>
+					<file>test_024.phpt</file>
+					<file>test_025.phpt</file>
+					<file>test_026.phpt</file>
+					<file>test_027.phpt</file>
+					<file>test_028.phpt</file>
+					<file>test_029.phpt</file>
+					<file>test_030.phpt</file>
+					<file>test_031.phpt</file>
+					<file>test_032.phpt</file>
+					<file>test_033.phpt</file>
+					<file>test_034.phpt</file>
+					<file>test_035.phpt</file>
+					<file>test_036.phpt</file>
+					<file>test_037.phpt</file>
 				</dir>
 			</dir>
 		</filelist>
 	</release>
-	<changelog>
-		<release>
-			<version>1.1.1</version>
-			<date>2005-08-12</date>
-			<state>alpha</state>
-			<notes>
-				Parameterized queries with ingres_query() Uses '?' as a param marker.
-			</notes>
-		</release>
-	</changelog>
 </package>
 
 <!--
-vim:ts=4 sw=4
+vim:ts=4 sw=4 ff=unix
 -->
