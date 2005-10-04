@@ -272,19 +272,6 @@ difficult to implement without breaking backwards compatibility, either
 with versions of Ingres or with existing Ingres based PHP code.
 </P>
 
-<P>
-Since PHP is weakly typed (there are only 4 types that map to Ingres 
-types), conversion to Ingres types from PHP types needs to take place 
-when fetching data. The OpenAPI function IIapi_convertData() is used 
-to do this. However IIapi_convertData() is unable to observe certain 
-environmental parameters since setting parameter values via 
-IIapi_setConnectParm() affects all connections.  Ingres II 2.5 overcomes 
-this with the addition of an environment handle and a new function to 
-convert between different data types, IIapi_formatData(). To properly 
-support data conversion Ingres 2.0 can no longer be used, on the client.
-</P>
-
-<P>
 The current extension maintains a single statement handle. Whenever a
 query is executed via ingres_query() or ingres_prepare(), any existing
 statement is terminated/closed. For multiple resultsets to work, the

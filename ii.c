@@ -161,7 +161,7 @@ static int _rollback_transaction(II_LINK *ii_link  TSRMLS_DC)
 
 	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to close statement !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement !!");
 		return 1;
 	}
 
@@ -190,7 +190,7 @@ static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
 
 	if (ii_link->tranHandle && _rollback_transaction(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to rollback transaction !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to rollback transaction !!");
 	}
 
 	disconnParm.dc_genParm.gp_callback = NULL;
@@ -248,7 +248,7 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
 	
 	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to close statement !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement !!");
 		ai_error = 1;
 	}
 	
@@ -264,7 +264,7 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
 
 		if (ii_success(&(autoParm.ac_genParm), ii_link TSRMLS_CC) == II_FAIL)
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to disable autocommit");
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to disable autocommit");
 		}
 
 		ii_link->autocommit = 0;
@@ -273,7 +273,7 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
 
 	if (ii_link->tranHandle && _rollback_transaction(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to rollback transaction !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to rollback transaction !!");
 	}
 
 	/* Assume link is broken, close it, and mark it as broken with conn Handle NULL */
@@ -331,7 +331,48 @@ static int php_ii_get_default_link(INTERNAL_FUNCTION_PARAMETERS)
 /* {{{ static void php_ii_globals_init(zend_ii_globals *ii_globals) */
 static void php_ii_globals_init(zend_ii_globals *ii_globals)
 {
+	IIAPI_INITPARM initParm;
+
 	ii_globals->num_persistent = 0;
+
+	/* Ingres api initialization */
+	initParm.in_timeout = -1;				/* timeout in ms, -1 = no timeout */
+
+#if defined(IIAPI_VERSION_4) 
+    initParm.in_version = IIAPI_VERSION_4;
+#elif defined(IIAPI_VERSION_3)
+    initParm.in_version = IIAPI_VERSION_3;
+#elif defined(IIAPI_VERSION_2) 
+    initParm.in_version = IIAPI_VERSION_2;
+#else
+    initParm.in_version = IIAPI_VERSION_1;
+#endif
+
+	IIapi_initialize(&initParm);
+
+#ifdef IIAPI_VERSION_2
+	if ( initParm.in_envHandle != NULL )
+	{	
+		ii_globals->envHandle = initParm.in_envHandle; 
+	}
+#else
+	ii_globals->envHandle = NULL;
+#endif
+
+}
+/* }}} */
+
+/* {{{ static void php_ii_globals_shutdown(zend_ii_globals *ii_globals) */
+static void php_ii_globals_shutdown(zend_ii_globals *ii_globals)
+{
+#ifdef IIAPI_VERSION_2
+	IIAPI_RELENVPARM   relEnvParm;
+
+	printf("global shutdown\n");
+
+	relEnvParm.re_envHandle = ii_globals->envHandle;
+    IIapi_releaseEnv( &relEnvParm );
+#endif
 
 }
 /* }}} */
@@ -340,9 +381,8 @@ static void php_ii_globals_init(zend_ii_globals *ii_globals)
 */
 PHP_MINIT_FUNCTION(ii)
 {
-	IIAPI_INITPARM initParm;
-
-	ZEND_INIT_MODULE_GLOBALS(ii, php_ii_globals_init, NULL);
+	
+	ZEND_INIT_MODULE_GLOBALS(ii, php_ii_globals_init, php_ii_globals_shutdown);
 	REGISTER_INI_ENTRIES();
 
 	le_ii_link = zend_register_list_destructors_ex(php_close_ii_link, 	NULL, "ingres", module_number);
@@ -369,35 +409,7 @@ PHP_MINIT_FUNCTION(ii)
 	REGISTER_LONG_CONSTANT("INGRES_MONEY_LEADING",		II_MONEY_LEAD_SIGN,		CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("INGRES_MONEY_TRAILING",		II_MONEY_TRAIL_SIGN,	CONST_CS | CONST_PERSISTENT);
 
-	/* Ingres api initialization */
-	initParm.in_timeout = -1;				/* timeout in ms, -1 = no timeout */
-
-#if defined(IIAPI_VERSION_4) 
-    initParm.in_version = IIAPI_VERSION_4;
-#elif defined(IIAPI_VERSION_3)
-    initParm.in_version = IIAPI_VERSION_3;
-#elif defined(IIAPI_VERSION_2) 
-    initParm.in_version = IIAPI_VERSION_2;
-#else
-    initParm.in_version = IIAPI_VERSION_1;
-#endif
-
-	IIapi_initialize(&initParm);
-	if (initParm.in_status == IIAPI_ST_SUCCESS)
-	{
-
-#ifdef IIAPI_VERSION_2
-		if ( initParm.in_envHandle != NULL )
-		{	
-			IIG(envHandle) = initParm.in_envHandle; 
-		}
-#else
-		IIG(envHandle) = NULL;
-#endif
-		return SUCCESS;
-	} else {
-		return FAILURE;
-	}
+	return SUCCESS;
 } 
 /* }}} */
 
@@ -458,6 +470,10 @@ PHP_MINFO_FUNCTION(ii)
 
 	php_info_print_table_start();
 	php_info_print_table_header(2, "Ingres Support", "enabled");
+	php_info_print_table_row(2, "Ingres Extension Version", II_VERSION);
+	php_info_print_table_row(2, "Revision", "$Revision$");
+	sprintf(buf, "%ld", IIAPI_VERSION );
+	php_info_print_table_row(2, "Ingres OpenAPI Version", buf);
 	sprintf(buf, "%ld", IIG(num_persistent));
 	php_info_print_table_row(2, "Active Persistent Links", buf);
 	sprintf(buf, "%ld", IIG(num_links));
@@ -486,7 +502,7 @@ static int ii_sync(IIAPI_GENPARM *genParm)
 	if (waitParm.wt_status != IIAPI_ST_SUCCESS)
 	{
 		TSRMLS_FETCH();
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unexpected failure of IIapi_wait()");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unexpected failure of IIapi_wait()");
 		return 0;
 	}
 	return 1;
@@ -511,7 +527,7 @@ static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC)
 		default:
 			if (genParm->gp_errorHandle == NULL)
 			{	/* no error message available */
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Server or API error - no error message available");
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Server or API error - no error message available");
 			} else {
                 error_info=(IIAPI_GETEINFOPARM *) emalloc(sizeof(IIAPI_GETEINFOPARM));
 				error_info->ge_errorHandle = genParm->gp_errorHandle;
@@ -670,7 +686,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 	   and go for a non-persistent link */
 	if (persistent && !IIG(allow_persistent))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Persistent links disabled !");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Persistent links disabled !");
 		persistent = 0;
 	}
 
@@ -685,13 +701,13 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
 			if (IIG(max_links) != -1 && IIG(num_links) >= IIG(max_links))
 			{
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Too many open links (%d)", IIG(num_links));
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Too many open links (%d)", IIG(num_links));
 				efree(hashed_details);
 				RETURN_FALSE;
 			}
 			if (IIG(max_persistent) != -1 && IIG(num_persistent) >= IIG(max_persistent))
 			{
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Too many open persistent links (%d)", IIG(num_persistent));
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Too many open persistent links (%d)", IIG(num_persistent));
 				efree(hashed_details);
 				RETURN_FALSE;
 			}
@@ -753,7 +769,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			{
 				free(ii_link);
 				efree(hashed_details);
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to connect to database (%s)", db);
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to connect to database (%s)", db);
 				RETURN_FALSE;
 			}
 
@@ -776,7 +792,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			new_le.ptr = ii_link;
 			if (zend_hash_update(&EG(persistent_list), hashed_details, hashed_details_length + 1, (void *) &new_le, sizeof(list_entry), NULL) == FAILURE)
 			{
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to hash (%s)", hashed_details);
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to hash (%s)", hashed_details);
 				free(ii_link);
 				efree(hashed_details);
 				RETURN_FALSE;
@@ -801,7 +817,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			/* Have to reconnect if cleaning function has flagged link as broken */
 			if (ii_link->connHandle == NULL)
 			{
-				php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres:  Broken persistent link (%s),reconnect", db);
+				php_error_docref(NULL TSRMLS_CC, E_WARNING,"Broken persistent link (%s),reconnect", db);
 
 				ii_link->envHandle = IIG(envHandle);
 				if ( ii_link->envHandle != NULL )
@@ -851,7 +867,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 				if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL)
 				{
 					efree(hashed_details);
-					php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres:  Unable to connect to database (%s)", db);
+					php_error_docref(NULL TSRMLS_CC, E_WARNING,"Unable to connect to database (%s)", db);
 					RETURN_FALSE;
 				}
 
@@ -908,7 +924,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		}
 		if (IIG(max_links) != -1 && IIG(num_links) >= IIG(max_links))
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Too many open links (%d)", IIG(num_links));
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Too many open links (%d)", IIG(num_links));
 			efree(hashed_details);
 			RETURN_FALSE;
 		}
@@ -973,7 +989,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL)
 		{
 			efree(hashed_details);
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to connect to database (%s)", db);
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to connect to database (%s)", db);
 			RETURN_FALSE;
 		}
 
@@ -1000,7 +1016,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		Z_TYPE(new_index_ptr) = le_index_ptr;
 		if (zend_hash_update(&EG(regular_list), hashed_details, hashed_details_length + 1, (void *) &new_index_ptr, sizeof(list_entry), NULL) == FAILURE)
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to hash (%s)", hashed_details);
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to hash (%s)", hashed_details);
 			free(ii_link);
 			efree(hashed_details);
 			RETURN_FALSE;
@@ -1013,7 +1029,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 } 
 /* }}} */
 
-/* {{{ proto resource ingres_connect([string database [, string username [, string password]]])
+/* {{{ proto resource ingres_connect([string database [, string username [, string password [, options ]]]])
    Open a connection to an Ingres database the syntax of database is [node_id::]dbname[/svr_class] */
 PHP_FUNCTION(ingres_connect)
 {
@@ -1021,7 +1037,7 @@ PHP_FUNCTION(ingres_connect)
 }
 /* }}} */
 
-/* {{{ proto resource ingres_pconnect([string database [, string username [, string password]]])
+/* {{{ proto resource ingres_pconnect([string database [, string username [, string password [, options ]]]])
    Open a persistent connection to an Ingres database the syntax of database is [node_id::]dbname[/svr_class] */
 PHP_FUNCTION(ingres_pconnect)
 {
@@ -1134,7 +1150,7 @@ PHP_FUNCTION(ingres_query)
 	/* if there's already an active statement, close it */
 	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to close statement !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement !!");
 		RETURN_FALSE;
 	}
 
@@ -1363,7 +1379,7 @@ PHP_FUNCTION(ingres_prepare)
 	/* if there's already an active statement, close it */
 	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to close statement !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement !!");
 		RETURN_FALSE;
 	}
 
@@ -1637,7 +1653,7 @@ static void  php_ii_gen_cursor_id(II_LINK *ii_link TSRMLS_DC)
 /* }}} */
 
 /* {{{ proto string ingres_cursor(resource link)
-   gets a cursor name for a given result resource */
+   Gets a cursor name for a given link resource */
 PHP_FUNCTION(ingres_cursor)
 {
 	zval **link; 
@@ -1818,7 +1834,7 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type)
 				fun_name = "foobar";
 				break;
 		}
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  %s() called with wrong index (%d)", fun_name, index);
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s() called with wrong index (%d)", fun_name, index);
 		RETURN_FALSE;
 	}
 
@@ -1890,7 +1906,7 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type)
 #endif
 		
 				default:
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unknown Ingres data type");
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown Ingres data type");
 					RETURN_FALSE;
 					break;
 			}
@@ -1933,7 +1949,7 @@ static char *php_ii_field_name(II_LINK *ii_link, int index TSRMLS_DC)
 	
 	if (index < 1 || index > ii_link->fieldCount)
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  php_ii_field_name() called with wrong index (%d)", index);
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "php_ii_field_name() called with wrong index (%d)", index);
 		return NULL;
 	}
 
@@ -2234,7 +2250,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 									break;
 
 								default:
-									php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Invalid size for IIAPI_FLT_TYPE data (%d)", columnData[k - 1].dv_length);
+									php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid size for IIAPI_FLT_TYPE data (%d)", columnData[k - 1].dv_length);
 									break;
 							}
 
@@ -2271,7 +2287,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 									break;
 #endif
 								default:
-									php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Invalid size for IIAPI_INT_TYPE data (%d)", columnData[k].dv_length);
+									php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid size for IIAPI_INT_TYPE data (%d)", columnData[k].dv_length);
 									break;
 							}
 
@@ -2353,7 +2369,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 							break;
 		
 						default:
-							php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Invalid SQL data type in fetched field (%d -- length : %d)", (ii_link->descriptor[i + k]).ds_dataType, columnData[k].dv_length);
+							php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid SQL data type in fetched field (%d -- length : %d)", (ii_link->descriptor[i + k]).ds_dataType, columnData[k].dv_length);
 							break;
 					}
 				}
@@ -2392,16 +2408,23 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 				{
 					efree(lob_segment);
 					efree(columnData);
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  An error occured whilst fetching a BLOB");
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured whilst fetching a BLOB");
 					RETURN_FALSE;
 				}
 
+				if (columnData[k].dv_null)
+				{
+					break;
+				}
+
+				/* length of the segment fetched is in the first 2 bytes of
+				   lob_segment */
 				memcpy( (char *)&lob_segment_len, lob_segment, 2 );
 
 
 				if ( lob_len == 0 )
 				{
-					lob_data = (char *) emalloc (lob_segment_len);
+					lob_data = (char *) emalloc (lob_segment_len + 1);
 				}
 				else
 				{
@@ -2449,8 +2472,12 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 				}
 			}
 
-		efree(lob_segment);
-		efree(columnData);
+			efree(lob_segment);
+			efree(columnData);
+			if (!columnData[k].dv_null)
+			{
+				efree(lob_data);
+			}
 			
 		} 
 	
@@ -2650,7 +2677,7 @@ PHP_FUNCTION(ingres_commit)
 
 	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to close statement !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement !!");
 		RETURN_FALSE;
 	}
 
@@ -3130,12 +3157,12 @@ static short int php_ii_set_environment_options (zval **options, II_LINK *ii_lin
 			{
 				if ( Z_TYPE_PP(data) == IS_STRING )
 				{
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
 					return II_FAIL;
 				}
 				else
 				{
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  failed to set option, %s, with value, %ld", key, Z_LVAL_PP(data));
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "failed to set option, %s, with value, %ld. Error code %d.", key, Z_LVAL_PP(data), setEnvPrmParm.se_status );
 					return II_FAIL;
 				}
 			}
@@ -3147,7 +3174,7 @@ static short int php_ii_set_environment_options (zval **options, II_LINK *ii_lin
 
 	return II_OK;
 #else
-	php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  setting environment options requires Ingres II 2.5 or newer", key, Z_LVAL_PP(data));
+	php_error_docref(NULL TSRMLS_CC, E_WARNING, "setting environment options requires Ingres II 2.5 or newer", key, Z_LVAL_PP(data));
 	return II_FAIL;
 #endif
 
@@ -3193,7 +3220,7 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, ch
 
 	if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL)
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to connect to database (%s), to setup options", database);
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to connect to database (%s), to setup options", database);
 		return II_FAIL;
 	}
 
@@ -3207,7 +3234,7 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, ch
 
 	if (!ii_sync(&(disconnParm.dc_genParm)) || ii_success(&(disconnParm.dc_genParm), ii_link TSRMLS_CC) == II_FAIL)
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  Unable to disconnect during setup of options");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to disconnect during setup of options");
 		return II_FAIL;
 	}
 
@@ -3341,12 +3368,12 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, ch
 			{
 				if ( Z_TYPE_PP(data) == IS_STRING )
 				{
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
 					return II_FAIL;
 				}
 				else
 				{
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres:  failed to set option, %s, with value, %ld", key, Z_LVAL_PP(data));
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "failed to set option, %s, with value, %ld", key, Z_LVAL_PP(data));
 					return II_FAIL;
 				}
 			}
