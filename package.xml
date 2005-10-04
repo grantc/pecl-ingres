@@ -1,100 +1,112 @@
-<?xml version="1.0" encoding="ISO-8859-1" ?>
-<package version="1.0">
-	<name>ingres</name>
-	<summary>Extension for CA's Ingres database.</summary>
-	<description>
-		 This extension supports Computer Associates's Ingres Relational Database.
-	</description>
-	<license>PHP</license>
-	<maintainers>
-		<maintainer>
-			<user>grant</user>
-			<name>Grant Croker</name>
-			<email>grantc@php.net</email>
-			<role>lead</role>
-		</maintainer>
-	</maintainers>
-	<release>
-		<version>1.2.0</version>
-		<date>2005-10-04</date>
-		<state>alpha</state>
-			<notes>
-				- Fixed memory allocation when handling null blobs [grantc 04-10-05]
-				- Fix php_ii_fetch() to allow the fetching of multiple blobs [grantc 22-09-05]
-				- Fix php_ii_convert_data() to address correct indicies [grantc 22-09-05]
-				- Added preliminary support for BLOB fetching [grantc 21-09-05]
-				- Fixed double memory free when working with results [grantc 21-09-05]
-				- Fix non-parameterized procedures so they run [grantc 09-09-05]
-				- Added support for ISO4 dates [grantc 07-09-05]
-				- Added support for specifying the scope of login credentials for remote connections [grantc 02-09-05]
-				- Added support for specifying the stucture of new tables and indexes [grantc 02-09-05]
-				- Added support for specifying the precision of Ingres floats [grantc 02-09-05]
-				- Added ingres_set_environment() [grantc 02-09-05]
-				- Fixed ingres_connect() to allow locale params to function without a cast [grantc 01-09-05]
-				- Extension now builds with GCC 4.x [grantc 29-08-05]
-				- Added parameter support to ingres_query(), uses '?' for param markers [grantc 23-08-05]
-			</notes>
-		<configureoptions>
-			<configureoption name="with-ingres" prompt="Ingres II_SYSTEM dir?" />
-		</configureoptions>
-		<filelist>
-			<dir name="/" baseinstalldir="ingres">
-				<file role="src">ii.c</file>
-				<file role="src">ii.h</file>
-				<file role="src">php_ii.h</file>
-				<file role="src">config.m4</file>
-				<file role="src">config.w32</file>
-				<file role="doc">README</file>
-				<file role="doc">README.html</file>
-				<file role="doc">TODO</file>
-				<file role="doc">CHANGELOG</file>
-				<file role="doc">CREDITS</file>
-				<dir name="tests" role="test">
-					<file>connection.inc</file>
-					<file>skipif.inc</file>
-					<file>test_001.phpt</file>
-					<file>test_002.phpt</file>
-					<file>test_003.phpt</file>
-					<file>test_004.phpt</file>
-					<file>test_005.phpt</file>
-					<file>test_006.phpt</file>
-					<file>test_007.phpt</file>
-					<file>test_008.phpt</file>
-					<file>test_009.phpt</file>
-					<file>test_010.phpt</file>
-					<file>test_011.phpt</file>
-					<file>test_012.phpt</file>
-					<file>test_013.phpt</file>
-					<file>test_014.phpt</file>
-					<file>test_015.phpt</file>
-					<file>test_016.phpt</file>
-					<file>test_017.phpt</file>
-					<file>test_018.phpt</file>
-					<file>test_019.phpt</file>
-					<file>test_020.phpt</file>
-					<file>test_021.phpt</file>
-					<file>test_022.phpt</file>
-					<file>test_023.phpt</file>
-					<file>test_024.phpt</file>
-					<file>test_025.phpt</file>
-					<file>test_026.phpt</file>
-					<file>test_027.phpt</file>
-					<file>test_028.phpt</file>
-					<file>test_029.phpt</file>
-					<file>test_030.phpt</file>
-					<file>test_031.phpt</file>
-					<file>test_032.phpt</file>
-					<file>test_033.phpt</file>
-					<file>test_034.phpt</file>
-					<file>test_035.phpt</file>
-					<file>test_036.phpt</file>
-					<file>test_037.phpt</file>
-				</dir>
-			</dir>
-		</filelist>
-	</release>
+<?xml version="1.0" encoding="UTF-8"?>
+<package packagerversion="1.4.1" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0
+http://pear.php.net/dtd/tasks-1.0.xsd
+http://pear.php.net/dtd/package-2.0
+http://pear.php.net/dtd/package-2.0.xsd">
+ <name>ingres</name>
+ <channel>pecl.php.net</channel>
+ <summary>Extension for CA&apos;s Ingres database.</summary>
+ <description>This extension supports Computer Associates&apos;s Ingres Relational Database.
+ </description>
+ <lead>
+  <name>Grant Croker</name>
+  <user>grant</user>
+  <email>grantc@php.net</email>
+  <active>yes</active>
+ </lead>
+ <date>2005-10-04</date>
+ <time>17:26:45</time>
+ <version>
+  <release>1.2.0</release>
+  <api>1.2.0</api>
+ </version>
+ <stability>
+  <release>alpha</release>
+  <api>alpha</api>
+ </stability>
+ <license uri="http://www.php.net/license">PHP</license>
+ <notes>- Fixed memory allocation when handling null blobs [grantc 04-10-05]
+- Fix php_ii_fetch() to allow the fetching of multiple blobs [grantc 22-09-05]
+- Fix php_ii_convert_data() to address correct indicies [grantc 22-09-05]
+- Added preliminary support for BLOB fetching [grantc 21-09-05]
+- Fixed double memory free when working with results [grantc 21-09-05]
+- Fix non-parameterized procedures so they run [grantc 09-09-05]
+- Added support for ISO4 dates [grantc 07-09-05]
+- Added support for specifying the scope of login credentials for remote connections [grantc 02-09-05]
+- Added support for specifying the stucture of new tables and indexes [grantc 02-09-05]
+- Added support for specifying the precision of Ingres floats [grantc 02-09-05]
+- Added ingres_set_environment() [grantc 02-09-05]
+- Fixed ingres_connect() to allow locale params to function without a cast [grantc 01-09-05]
+- Extension now builds with GCC 4.x [grantc 29-08-05]
+- Added parameter support to ingres_query(), uses &apos;?&apos; for param markers [grantc 23-08-05]
+ </notes>
+ <contents>
+  <dir name="/">
+   <dir name="tests">
+    <file baseinstalldir="ingres" name="connection.inc" role="test" />
+    <file baseinstalldir="ingres" name="skipif.inc" role="test" />
+    <file baseinstalldir="ingres" name="test_001.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_002.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_003.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_004.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_005.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_006.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_007.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_008.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_009.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_010.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_011.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_012.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_013.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_014.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_015.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_016.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_017.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_018.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_019.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_020.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_021.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_022.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_023.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_024.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_025.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_026.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_027.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_028.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_029.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_030.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_031.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_032.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_033.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_034.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_035.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_036.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_037.phpt" role="test" />
+   </dir> <!-- //tests -->
+   <file baseinstalldir="ingres" name="CHANGELOG" role="doc" />
+   <file baseinstalldir="ingres" name="config.m4" role="src" />
+   <file baseinstalldir="ingres" name="config.w32" role="src" />
+   <file baseinstalldir="ingres" name="CREDITS" role="doc" />
+   <file baseinstalldir="ingres" name="ii.c" role="src" />
+   <file baseinstalldir="ingres" name="ii.h" role="src" />
+   <file baseinstalldir="ingres" name="php_ii.h" role="src" />
+   <file baseinstalldir="ingres" name="README" role="doc" />
+   <file baseinstalldir="ingres" name="README.html" role="doc" />
+   <file baseinstalldir="ingres" name="TODO" role="doc" />
+  </dir> <!-- / -->
+ </contents>
+ <dependencies>
+  <required>
+   <php>
+    <min>4.0.0</min>
+   </php>
+   <pearinstaller>
+    <min>1.4.0b1</min>
+   </pearinstaller>
+  </required>
+ </dependencies>
+ <providesextension>ingres</providesextension>
+ <extsrcrelease>
+  <configureoption name="with-ingres" prompt="Ingres II_SYSTEM dir?" />
+ </extsrcrelease>
 </package>
-
-<!--
-vim:ts=4 sw=4 ff=unix
--->
