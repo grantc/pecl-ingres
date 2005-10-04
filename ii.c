@@ -161,7 +161,7 @@ static int _rollback_transaction(II_LINK *ii_link  TSRMLS_DC)
 
 	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement");
 		return 1;
 	}
 
@@ -190,7 +190,7 @@ static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
 
 	if (ii_link->tranHandle && _rollback_transaction(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to rollback transaction !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to rollback transaction");
 	}
 
 	disconnParm.dc_genParm.gp_callback = NULL;
@@ -248,7 +248,7 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
 	
 	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement");
 		ai_error = 1;
 	}
 	
@@ -273,7 +273,7 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
 
 	if (ii_link->tranHandle && _rollback_transaction(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to rollback transaction !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to rollback transaction");
 	}
 
 	/* Assume link is broken, close it, and mark it as broken with conn Handle NULL */
@@ -638,7 +638,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 							break;
 					}
 
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: expected an array of connect options but got %s instead.", z_type );
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Expected an array of connect options but got %s instead.", z_type );
 					efree(z_type);
 					RETURN_FALSE;
 				}
@@ -666,7 +666,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
         dblen = strlen(db);
 		if ( dblen == 0 )
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: No default database available to connect to" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "No default database available to connect to" );
 			RETURN_FALSE;
 		}
 
@@ -739,7 +739,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			{
 				if ( php_ii_set_connect_options(options, ii_link, db TSRMLS_CC ) == II_FAIL )
 				{
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set options provided");
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to set options provided");
 					RETURN_FALSE;
 				}	
 			}
@@ -782,7 +782,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 				if ( php_ii_set_environment_options(options, ii_link TSRMLS_CC) == II_FAIL )
 				{
 					efree(hashed_details);
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided");
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to set environment options provided");
 					RETURN_FALSE;
 				}	
 			}
@@ -844,7 +844,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 				{
 					if ( php_ii_set_connect_options(options, ii_link, db TSRMLS_CC ) == II_FAIL )
 					{
-						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set options provided");
+						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to set options provided");
 						RETURN_FALSE;
 					}	
 				}
@@ -880,7 +880,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 					if ( php_ii_set_environment_options(options, ii_link TSRMLS_CC) == II_FAIL )
 					{
 						efree(hashed_details);
-						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided");
+						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to set environment options provided");
 						RETURN_FALSE;
 					}	
 				}
@@ -960,7 +960,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			if ( php_ii_set_connect_options(options, ii_link, db TSRMLS_CC) == II_FAIL )
 			{
 				efree(hashed_details);
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set options provided");
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to set options provided");
 				RETURN_FALSE;
 			}	
 		}
@@ -1002,7 +1002,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			if ( php_ii_set_environment_options(options, ii_link TSRMLS_CC) == II_FAIL )
 			{
 				efree(hashed_details);
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided");
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to set environment options provided");
 				RETURN_FALSE;
 			}	
 		}
@@ -1059,7 +1059,7 @@ PHP_FUNCTION(ingres_close)
 			link_id = IIG(default_link);
 			if (link_id == -1)
 			{
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 				RETURN_FALSE;
 			}
 
@@ -1140,7 +1140,7 @@ PHP_FUNCTION(ingres_query)
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}
 	}
@@ -1150,7 +1150,7 @@ PHP_FUNCTION(ingres_query)
 	/* if there's already an active statement, close it */
 	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement");
 		RETURN_FALSE;
 	}
 
@@ -1164,7 +1164,7 @@ PHP_FUNCTION(ingres_query)
 	{
 		if ((argc != 3) || (Z_TYPE_PP(queryParams) != IS_ARRAY))
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: Expecting a parameter array but did not get one" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Expecting a parameter array but did not get one" );
 			RETURN_FALSE;
 		}
 
@@ -1172,7 +1172,7 @@ PHP_FUNCTION(ingres_query)
 
 		if ((elementCount = zend_hash_num_elements(arr_hash)) != ii_link->paramCount )
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: incorrect number of parameters passed, expected %d got %d",ii_link->paramCount, elementCount );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Incorrect number of parameters passed, expected %d got %d",ii_link->paramCount, elementCount );
 			RETURN_FALSE;
 		}
 		zend_hash_internal_pointer_reset(Z_ARRVAL_PP(queryParams));
@@ -1238,7 +1238,7 @@ PHP_FUNCTION(ingres_query)
 	{
 		if ( php_ii_bind_params (INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_link, queryParams) == II_FAIL)
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error binding parameters");
+			php_error_docref(NULL TSRMLS_CC, E_WARNING,"Error binding parameters");
 			RETURN_FALSE;
 		}
 	}
@@ -1351,7 +1351,7 @@ PHP_FUNCTION(ingres_prepare)
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}
 
@@ -1379,7 +1379,7 @@ PHP_FUNCTION(ingres_prepare)
 	/* if there's already an active statement, close it */
 	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement");
 		RETURN_FALSE;
 	}
 
@@ -1400,7 +1400,7 @@ PHP_FUNCTION(ingres_prepare)
 		php_ii_gen_cursor_id(ii_link TSRMLS_CC);
 		cursor_id_len = strlen(ii_link->cursor_id);
 		preparedStatement=ecalloc(queryLen + 15 + cursor_id_len, 1);
-		sprintf (preparedStatement,"prepare %s from %s\0", ii_link->cursor_id, statement);
+		sprintf (preparedStatement,"Prepare %s from %s\0", ii_link->cursor_id, statement);
 		statement = preparedStatement;
 
 		queryParm.qy_genParm.gp_callback = NULL;
@@ -1470,7 +1470,7 @@ PHP_FUNCTION (ingres_execute)
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}
 	}
@@ -1481,13 +1481,13 @@ PHP_FUNCTION (ingres_execute)
 	{
 		if (Z_TYPE_PP(queryParams) != IS_ARRAY )
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: Expecting a parameter array but did not get one" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Expecting a parameter array but did not get one" );
 			RETURN_FALSE;
 		}
 
 		if ((elementCount = zend_hash_num_elements(Z_ARRVAL_PP(queryParams))) != ii_link->paramCount )
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: incorrect number of parameters passed, expected %d got %d",ii_link->paramCount, elementCount );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Incorrect number of parameters passed, expected %d got %d",ii_link->paramCount, elementCount );
 			RETURN_FALSE;
 		}
 		zend_hash_internal_pointer_reset(Z_ARRVAL_PP(queryParams));
@@ -1507,7 +1507,7 @@ PHP_FUNCTION (ingres_execute)
 				sprintf (statement,"%s for readonly", ii_link->cursor_id );
 				break;
 			default:
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: incorrect number of parameters passed, expected %d got %d",ii_link->paramCount, elementCount );
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Incorrect number of parameters passed, expected %d got %d",ii_link->paramCount, elementCount );
 				efree(statement);
 				RETURN_FALSE;
 		}
@@ -1570,7 +1570,7 @@ PHP_FUNCTION (ingres_execute)
 	{
 		if ( php_ii_bind_params (INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_link, queryParams) == II_FAIL)
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error binding parameters");
+			php_error_docref(NULL TSRMLS_CC, E_WARNING,"Error binding parameters");
 			RETURN_FALSE;
 		}
 	} else {
@@ -1672,7 +1672,7 @@ PHP_FUNCTION(ingres_cursor)
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}
 	}
@@ -1707,7 +1707,7 @@ PHP_FUNCTION(ingres_num_rows)
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}
 	}
@@ -1757,7 +1757,7 @@ PHP_FUNCTION(ingres_num_fields)
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}
 	}
@@ -1791,7 +1791,7 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type)
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}
 	}
@@ -2517,7 +2517,7 @@ PHP_FUNCTION(ingres_fetch_array)
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}
 
@@ -2550,7 +2550,7 @@ PHP_FUNCTION(ingres_fetch_row)
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}
 
@@ -2561,7 +2561,7 @@ PHP_FUNCTION(ingres_fetch_row)
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}
 
@@ -2598,7 +2598,7 @@ PHP_FUNCTION(ingres_fetch_object)
 		link_id = php_ii_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
 		if ( link_id == -1 ) /* There was a problem in php_ii_get_default_link */
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}
 	}
@@ -2668,7 +2668,7 @@ PHP_FUNCTION(ingres_commit)
 		link_id = IIG(default_link);
 		if (link_id == -1)
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}
 	}
@@ -2677,7 +2677,7 @@ PHP_FUNCTION(ingres_commit)
 
 	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement !!");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement");
 		RETURN_FALSE;
 	}
 
@@ -2719,7 +2719,7 @@ PHP_FUNCTION(ingres_autocommit)
 		link_id = IIG(default_link);
 		if (link_id == -1)
 	{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: An error occured getting the default link" );
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}
 
@@ -3115,13 +3115,13 @@ static short int php_ii_set_environment_options (zval **options, II_LINK *ii_lin
 			}
 			else 
 			{
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unknown connection option '%s'",key );
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown connection option '%s'",key );
 					return II_FAIL;
 			}
 		}
 		else
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unexpected index in connection options array.");
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unexpected index in connection options array.");
 			return II_FAIL;
 		}
 
@@ -3147,7 +3147,7 @@ static short int php_ii_set_environment_options (zval **options, II_LINK *ii_lin
 					setEnvPrmParm.se_paramValue = (II_PTR)&temp_long;
 					break;
 				default:
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unknown option type, %l, in connection options", Z_TYPE_PP(data));
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown option type, %l, in connection options", Z_TYPE_PP(data));
 					return II_FAIL;
 			}
 
@@ -3157,12 +3157,12 @@ static short int php_ii_set_environment_options (zval **options, II_LINK *ii_lin
 			{
 				if ( Z_TYPE_PP(data) == IS_STRING )
 				{
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
 					return II_FAIL;
 				}
 				else
 				{
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "failed to set option, %s, with value, %ld. Error code %d.", key, Z_LVAL_PP(data), setEnvPrmParm.se_status );
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %ld. Error code %d.", key, Z_LVAL_PP(data), setEnvPrmParm.se_status );
 					return II_FAIL;
 				}
 			}
@@ -3174,7 +3174,7 @@ static short int php_ii_set_environment_options (zval **options, II_LINK *ii_lin
 
 	return II_OK;
 #else
-	php_error_docref(NULL TSRMLS_CC, E_WARNING, "setting environment options requires Ingres II 2.5 or newer", key, Z_LVAL_PP(data));
+	php_error_docref(NULL TSRMLS_CC, E_WARNING, "Setting environment options requires Ingres II 2.5 or newer", key, Z_LVAL_PP(data));
 	return II_FAIL;
 #endif
 
@@ -3319,13 +3319,13 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, ch
 
 			else 
 			{
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unknown connection option '%s'",key );
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown connection option '%s'",key );
 					return II_FAIL;
 			}
 		}
 		else
 		{
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unexpected index in connection options array.");
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unexpected index in connection options array.");
 			return II_FAIL;
 		}
 
@@ -3358,7 +3358,7 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, ch
 					setConPrmParm.sc_paramValue = (II_PTR)&temp_long;
 					break;
 				default:
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unknown option type, %l, in connection options", Z_TYPE_PP(data));
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown option type, %l, in connection options", Z_TYPE_PP(data));
 					return II_FAIL;
 			}
 
@@ -3368,12 +3368,12 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, ch
 			{
 				if ( Z_TYPE_PP(data) == IS_STRING )
 				{
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
 					return II_FAIL;
 				}
 				else
 				{
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "failed to set option, %s, with value, %ld", key, Z_LVAL_PP(data));
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %ld", key, Z_LVAL_PP(data));
 					return II_FAIL;
 				}
 			}
@@ -3471,7 +3471,7 @@ PHP_FUNCTION(ingres_set_environment)
 
 	if ( php_ii_set_environment_options(options, ii_link TSRMLS_CC) == II_FAIL )
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: unable to set environment options provided");
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to set environment options provided");
 		RETURN_FALSE;
 	}	
 
@@ -3562,7 +3562,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 
 			if ((ii_link->procname != NULL) && (zend_hash_get_current_key_ex(arr_hash, &key, &key_len, &index, 0, &pointer) == FAILURE))
 			{
-				php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error getting parameter key");
+				php_error_docref(NULL TSRMLS_CC, E_WARNING,"Error getting parameter key");
 				efree(descriptorInfo);
 				ii_link->errorCode = -1; /* PHP error */
 				return II_FAIL;
@@ -3641,7 +3641,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 					}
 					break;
 				default:
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: a parameter has been passed of unknown type" );
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "A parameter has been passed of unknown type" );
 					if ( ii_link->procname == NULL )
 					efree(descriptorInfo);
 					return II_FAIL;
@@ -3691,7 +3691,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 
 			if (zend_hash_get_current_data_ex(arr_hash, (void **) &val, &pointer) == FAILURE)
 			{
-				php_error_docref(NULL TSRMLS_CC, E_WARNING,"Ingres: Error getting parameter from array");
+				php_error_docref(NULL TSRMLS_CC, E_WARNING,"Error getting parameter from array");
 				efree(columnData);
 				efree(descriptorInfo);
 				return II_FAIL;
@@ -3725,7 +3725,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 					putParmParm.pp_parmData[param].dv_value = Z_STRVAL_PP(val);
 					break;
 				default:
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres: error putting a parameter of unknown type" );
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Error putting a parameter of unknown type" );
 					return II_FAIL;
 					break;
 			}
