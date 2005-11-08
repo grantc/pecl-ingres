@@ -5,8 +5,8 @@ http://pear.php.net/dtd/package-2.0
 http://pear.php.net/dtd/package-2.0.xsd">
  <name>ingres</name>
  <channel>pecl.php.net</channel>
- <summary>Extension for CA&apos;s Ingres database.</summary>
- <description>This extension supports Computer Associates&apos;s Ingres Relational Database.
+ <summary>Extension for the Ingres Relational Database System.</summary>
+ <description>This extension supports the Ingres Relational Database System.
  </description>
  <lead>
   <name>Grant Croker</name>
