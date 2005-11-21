@@ -95,13 +95,14 @@ ZEND_BEGIN_MODULE_GLOBALS(ii)
 
 	long blob_segment_length; /* size of memory to read when puting/fetching */
 								/* a blob */
+	long trace_connect; /* enable / disable tracing of php_ii_do_connect */
 
 ZEND_END_MODULE_GLOBALS(ii)
 
 #define II_ASSOC (1<<0)
 #define II_NUM   (1<<1)
 #define II_BOTH  (II_ASSOC|II_NUM)
-#define II_VERSION "1.2.0"
+#define II_VERSION "1.2.1"
 
 #define II_CURSOR_UPDATE 0    /* default */
 #define II_CURSOR_READONLY 1

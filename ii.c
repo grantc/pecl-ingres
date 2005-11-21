@@ -95,6 +95,10 @@ zend_module_entry ingres_module_entry = {
 ZEND_GET_MODULE(ingres)
 #endif
 
+#ifndef ZEND_ENGINE_2
+#	define OnUpdateLong OnUpdateInt
+#endif
+
 /* {{{ php.ini entries */
 PHP_INI_BEGIN()
 	STD_PHP_INI_BOOLEAN("ingres.allow_persistent", "1", PHP_INI_SYSTEM,	OnUpdateLong, allow_persistent, zend_ii_globals, ii_globals)
@@ -106,6 +110,7 @@ PHP_INI_BEGIN()
 	STD_PHP_INI_BOOLEAN("ingres.report_db_warnings","1", PHP_INI_ALL, OnUpdateBool, report_db_warnings, zend_ii_globals, ii_globals)
 	STD_PHP_INI_ENTRY("ingres.cursor_mode", "0", PHP_INI_ALL, OnUpdateLong, cursor_mode, zend_ii_globals, ii_globals)
 	STD_PHP_INI_ENTRY("ingres.blob_segment_length", "4096", PHP_INI_ALL, OnUpdateLong, blob_segment_length, zend_ii_globals, ii_globals)
+	STD_PHP_INI_BOOLEAN("ingres.trace_connect", "0", PHP_INI_ALL, OnUpdateLong, trace_connect, zend_ii_globals, ii_globals)
 PHP_INI_END()
 /* }}} */
 
@@ -573,11 +578,19 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 	II_PTR	envHandle = (II_PTR)NULL;
 	char *z_type;
 
+	if (IIG(trace_connect)) {
+		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Enter php_ii_do_connect");
+	}
+
 	/* Setting db, user and pass according to sql_safe_mode, parameters and/or default values */
 	argc = ZEND_NUM_ARGS();
 
 	if (PG(sql_safe_mode))
 	{	/* sql_safe_mode */
+
+		if (IIG(trace_connect)) {
+			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "SQL safe mode in effect");
+		}
 
 		if (argc > 0)
 		{
@@ -592,6 +605,9 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		sprintf(hashed_details, "Ingres__%s_", user);
 
 	} else {					/* non-sql_safe_mode */
+		if (IIG(trace_connect)) {
+			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "SQL safe mode not in effect");
+		}
 		db = IIG(default_database);
 		user = IIG(default_user);
 		pass = IIG(default_password);
@@ -669,6 +685,9 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "No default database available to connect to" );
 			RETURN_FALSE;
 		}
+		if (IIG(trace_connect)) {
+			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Connecting to %s as %s", db, user);
+		}
 
 		hashed_details_length =	sizeof("ingres___") - 1 + 
 								strlen(SAFE_STRING(db)) +
@@ -694,10 +713,19 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 	{
 		list_entry *le;
 
+		if (IIG(trace_connect)) {
+			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Enter persistent connection");
+		}
+
 		/* is this link already in the persistent list ? */
 		if (zend_hash_find(&EG(persistent_list), hashed_details, hashed_details_length + 1, (void **) &le) == FAILURE)
 		{ /* no, new persistent connection */
+
 			list_entry new_le;
+
+			if (IIG(trace_connect)) {
+				php_error_docref(NULL TSRMLS_CC, E_NOTICE, "creating new persistent connection");
+			}
 
 			if (IIG(max_links) != -1 && IIG(num_links) >= IIG(max_links))
 			{
@@ -763,6 +791,10 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			
 			connParm.co_tranHandle = NULL;
 
+			if (IIG(trace_connect)) {
+				php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Start IIapi_connect()");
+			}
+
 			IIapi_connect(&connParm);
 
 			if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL)
@@ -771,6 +803,9 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 				efree(hashed_details);
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to connect to database (%s)", db);
 				RETURN_FALSE;
+			}
+			if (IIG(trace_connect)) {
+				php_error_docref(NULL TSRMLS_CC, E_NOTICE, "End IIapi_connect()");
 			}
 
 			ii_link->connHandle = connParm.co_connHandle;
@@ -801,6 +836,10 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			IIG(num_links)++;
 
 		} else { /* already open persistent connection */
+
+			if (IIG(trace_connect)) {
+				php_error_docref(NULL TSRMLS_CC, E_NOTICE, "using existing persistent connection");
+			}
 
 			if (Z_TYPE_P(le) != le_ii_plink)
 			{
@@ -861,7 +900,11 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 				connParm.co_timeout = -1; /* no timeout */
 				connParm.co_tranHandle = NULL;
 				connParm.co_type = IIAPI_CT_SQL;
-				
+
+				if (IIG(trace_connect)) {
+					php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Start IIapi_connect()");
+				}
+
 				IIapi_connect(&connParm);
 
 				if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL)
@@ -869,6 +912,10 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 					efree(hashed_details);
 					php_error_docref(NULL TSRMLS_CC, E_WARNING,"Unable to connect to database (%s)", db);
 					RETURN_FALSE;
+				}
+
+				if (IIG(trace_connect)) {
+					php_error_docref(NULL TSRMLS_CC, E_NOTICE, "End IIapi_connect()");
 				}
 
 				ii_link->connHandle = connParm.co_connHandle;
@@ -889,14 +936,24 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		
 		ZEND_REGISTER_RESOURCE(return_value, ii_link, le_ii_plink);
 
+		if (IIG(trace_connect)) {
+			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Exit persistent connection");
+		}
+
 	} else { /* non persistent */
+
 		list_entry *index_ptr, new_index_ptr;
+
+		if (IIG(trace_connect)) {
+			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Enter non-persistent connection");
+		}
 
 		/* first we check the hash for the hashed_details key.  if it exists,
 		 * it should point us to the right offset where the actual link sits.
 		 * if it doesn't, open a new link, add it to the resource list,
 		 * and add a pointer to it with hashed_details as the key.
 		 */
+
 		if (zend_hash_find(&EG(regular_list), hashed_details, hashed_details_length + 1, (void **) &index_ptr) == SUCCESS)
 		{
 			int type;
@@ -984,6 +1041,10 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
 		connParm.co_tranHandle = NULL;
 
+		if (IIG(trace_connect)) {
+				php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Start IIapi_connect()");
+		}
+
 		IIapi_connect(&connParm);
 
 		if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), ii_link TSRMLS_CC) == II_FAIL)
@@ -991,6 +1052,10 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			efree(hashed_details);
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to connect to database (%s)", db);
 			RETURN_FALSE;
+		}
+
+		if (IIG(trace_connect)) {
+			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "End IIapi_connect()");
 		}
 
 		ii_link->connHandle = connParm.co_connHandle;		
@@ -1007,7 +1072,6 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			}	
 		}
 
-		
 		/* add it to the list */
 		ZEND_REGISTER_RESOURCE(return_value, ii_link, le_ii_link);
 
@@ -1022,10 +1086,18 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			RETURN_FALSE;
 		}
 		IIG(num_links)++;
+
+		if (IIG(trace_connect)) {
+			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Exit non-persistent connection");
+		}
 	}
 
 	efree(hashed_details);
 	php_ii_set_default_link(Z_LVAL_P(return_value) TSRMLS_CC);
+
+	if (IIG(trace_connect)) {
+		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Exit php_ii_do_connect");
+	}
 } 
 /* }}} */
 

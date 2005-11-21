@@ -14,31 +14,20 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grantc@php.net</email>
   <active>yes</active>
  </lead>
- <date>2005-10-04</date>
+ <date>2005-11-21</date>
  <time>17:26:45</time>
  <version>
-  <release>1.2.0</release>
-  <api>1.2.0</api>
+  <release>1.2.1</release>
+  <api>1.2.1</api>
  </version>
  <stability>
   <release>alpha</release>
   <api>alpha</api>
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
- <notes>- Fixed memory allocation when handling null blobs [grantc 04-10-05]
-- Fix php_ii_fetch() to allow the fetching of multiple blobs [grantc 22-09-05]
-- Fix php_ii_convert_data() to address correct indicies [grantc 22-09-05]
-- Added preliminary support for BLOB fetching [grantc 21-09-05]
-- Fixed double memory free when working with results [grantc 21-09-05]
-- Fix non-parameterized procedures so they run [grantc 09-09-05]
-- Added support for ISO4 dates [grantc 07-09-05]
-- Added support for specifying the scope of login credentials for remote connections [grantc 02-09-05]
-- Added support for specifying the stucture of new tables and indexes [grantc 02-09-05]
-- Added support for specifying the precision of Ingres floats [grantc 02-09-05]
-- Added ingres_set_environment() [grantc 02-09-05]
-- Fixed ingres_connect() to allow locale params to function without a cast [grantc 01-09-05]
-- Extension now builds with GCC 4.x [grantc 29-08-05]
-- Added parameter support to ingres_query(), uses &apos;?&apos; for param markers [grantc 23-08-05]
+ <notes>This release includes tracing support for connections that appear to hang. Either add ingres.trace_connect=1 to your php.ini or call ini_set("ingres.trace_connect",1) within your script to enable. Trace statements appear as E_NOTICE messages.
+- Added connection tracing [grantc 21-11-05]
+- Builds against PHP 4.4 [grantc 21-11-05]
  </notes>
  <contents>
   <dir name="/">
@@ -98,7 +87,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <dependencies>
   <required>
    <php>
-    <min>4.0.0</min>
+    <min>4.3.0</min>
    </php>
    <pearinstaller>
     <min>1.4.0b1</min>

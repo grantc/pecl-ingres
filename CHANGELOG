@@ -1,4 +1,8 @@
-CVS
+version 1.2.1
+- Added connection tracing [grantc 21-11-05]
+- Builds against PHP 4.4 [grantc 21-11-05]
+
+version 1.2
 - Fixed memory allocation when handling null blobs [grantc 04-10-05]
 - Fix php_ii_fetch() to allow the fetching of multiple blobs [grantc 22-09-05]
 - Fix php_ii_convert_data() to address correct indicies [grantc 22-09-05]
