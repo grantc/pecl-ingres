@@ -1172,7 +1172,7 @@ PHP_FUNCTION(ingres_close)
 }
 /* }}} */
 
-/* {{{ proto bool ingres_query(string query [, resource link] [, array queryParams] ) */
+/* {{{ proto bool ingres_query(string query [, resource link] [, array queryParams] [, array paramtypes] ) */
 /* Send a SQL query to Ingres */
 /* This should go into the documentation */
 /* Unsupported query types:
@@ -1189,7 +1189,7 @@ PHP_FUNCTION(ingres_close)
    (look for dedicated functions instead) */
 PHP_FUNCTION(ingres_query)
 {
-	zval **query, **link, **queryParams;
+	zval **query, **link, **queryParams, **paramtypes=NULL;
 	int argc;
 	int link_id = -1;
 	II_LINK *ii_link;
@@ -1202,7 +1202,7 @@ PHP_FUNCTION(ingres_query)
 	char *statement;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc < 1 || argc > 3 || zend_get_parameters_ex(argc, &query, &link, &queryParams) == FAILURE)
+	if (argc < 1 || argc > 4 || zend_get_parameters_ex(argc, &query, &link, &queryParams, &paramtypes) == FAILURE)
 	{
 		WRONG_PARAM_COUNT;
 	}
@@ -1234,7 +1234,7 @@ PHP_FUNCTION(ingres_query)
 
 	if ( ii_link->paramCount > 0 )
 	{
-		if ((argc != 3) || (Z_TYPE_PP(queryParams) != IS_ARRAY))
+		if ((argc < 3) || (Z_TYPE_PP(queryParams) != IS_ARRAY))
 		{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Expecting a parameter array but did not get one" );
 			RETURN_FALSE;
@@ -1247,7 +1247,23 @@ PHP_FUNCTION(ingres_query)
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Incorrect number of parameters passed, expected %d got %d",ii_link->paramCount, elementCount );
 			RETURN_FALSE;
 		}
+		
 		zend_hash_internal_pointer_reset(Z_ARRVAL_PP(queryParams));
+
+		
+		/* if we have been provided with type hints for parameters check to see the number of params */
+		/* passed matches the number of type hints recieved */
+		if ( argc >= 4 && ( Z_TYPE_PP(paramtypes) != IS_STRING ) )
+		{
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Expecting a string list of parameter types but did not recieve one. " );
+			RETURN_FALSE;
+		}
+
+		if ((argc < 4 ) && (Z_STRLEN_PP(paramtypes) != ii_link->paramCount ))
+		{
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Incorrrect number of parameter types recieved, expected %d got %d", ii_link->paramCount, Z_STRLEN_PP(paramtypes) );
+			RETURN_FALSE;
+		}
 	}
 
 	/* check to see if this is a procedure or not
@@ -1308,71 +1324,13 @@ PHP_FUNCTION(ingres_query)
 
 	if ( ii_link->paramCount > 0  ||  ii_link->procname != NULL )
 	{
-		if ( php_ii_bind_params (INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_link, queryParams) == II_FAIL)
+		if ( php_ii_bind_params (INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_link, queryParams, paramtypes) == II_FAIL)
 		{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING,"Error binding parameters");
 			RETURN_FALSE;
 		}
 	}
 				
-	/* if we are executing a procedure supply the procedure name and execute */
-
-/*	if ( ii_link->procname != NULL )
-	{
-		descriptorInfo = (IIAPI_DESCRIPTOR *)ecalloc(sizeof(IIAPI_DESCRIPTOR),1);
-		setDescrParm.sd_genParm.gp_callback = NULL;
-		setDescrParm.sd_genParm.gp_closure = NULL;
-		setDescrParm.sd_stmtHandle = ii_link->stmtHandle;
-		setDescrParm.sd_descriptorCount = ii_link->paramCount + 1; 
-		setDescrParm.sd_descriptor = descriptorInfo;
-
-		setDescrParm.sd_descriptor[0].ds_dataType = IIAPI_CHA_TYPE;
-	    setDescrParm.sd_descriptor[0].ds_length = strlen(ii_link->procname);
-		setDescrParm.sd_descriptor[0].ds_nullable = FALSE;
-		setDescrParm.sd_descriptor[0].ds_precision = 0;
-		setDescrParm.sd_descriptor[0].ds_scale = 0;
-		setDescrParm.sd_descriptor[0].ds_columnType = IIAPI_COL_SVCPARM;
-		setDescrParm.sd_descriptor[0].ds_columnName = NULL;
-
-		IIapi_setDescriptor( &setDescrParm );
-
-		ii_sync(&(setDescrParm.sd_genParm));
-
-		if (ii_success(&(setDescrParm.sd_genParm), ii_link TSRMLS_CC) == II_FAIL)
-		{
-			efree(descriptorInfo);
-			RETURN_FALSE;
-		} 
-
-		columnData = (IIAPI_DATAVALUE *)ecalloc(sizeof(IIAPI_DATAVALUE),1);
-		putParmParm.pp_genParm.gp_callback = NULL;
-		putParmParm.pp_genParm.gp_closure = NULL;
-		putParmParm.pp_stmtHandle = ii_link->stmtHandle;
-		putParmParm.pp_parmCount = setDescrParm.sd_descriptorCount;
-		putParmParm.pp_parmData =  columnData;
-		putParmParm.pp_moreSegments = 0;
-
-		putParmParm.pp_parmData[0].dv_null = FALSE;
-		putParmParm.pp_parmData[0].dv_length = strlen( ii_link->procname );
-	    putParmParm.pp_parmData[0].dv_value = ii_link->procname;
-
-		IIapi_putParms( &putParmParm );
-
-		ii_sync(&(putParmParm.pp_genParm));
-
-		if (ii_success(&(putParmParm.pp_genParm), ii_link TSRMLS_CC) == II_FAIL)
-		{
-			efree(descriptorInfo);
-			efree(columnData);
-			RETURN_FALSE;
-		} 
-
-		efree(descriptorInfo);
-		efree(columnData);
-
-	}
-	*/
-
 	/* get description of results */
 	getDescrParm.gd_genParm.gp_callback = NULL;
 	getDescrParm.gd_genParm.gp_closure  = NULL;
@@ -1515,12 +1473,12 @@ PHP_FUNCTION(ingres_prepare)
 }
 /* }}} */
 
-/* {{{ proto int ingres_execute([array params [, resource link ]]) 
+/* {{{ proto int ingres_execute([array params,[string paramtypes [, resource link ]]]) 
    execute a query prepared by ingres_prepare() */
 PHP_FUNCTION (ingres_execute)
 {
 
-	zval **link, **queryParams;
+	zval **link, **queryParams, **paramtypes;
 	int argc;
 	int link_id = -1;
 	II_LINK *ii_link;
@@ -1532,7 +1490,7 @@ PHP_FUNCTION (ingres_execute)
 	char *statement;
 
 	argc = ZEND_NUM_ARGS();
-	if (argc > 2 || zend_get_parameters_ex(argc, &queryParams, &link) == FAILURE)
+	if (argc > 3 || zend_get_parameters_ex(argc, &queryParams, &paramtypes, &link) == FAILURE)
 	{
 		WRONG_PARAM_COUNT;
 	}
@@ -1640,7 +1598,7 @@ PHP_FUNCTION (ingres_execute)
 
 	if ( ii_link->paramCount > 0 )
 	{
-		if ( php_ii_bind_params (INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_link, queryParams) == II_FAIL)
+		if ( php_ii_bind_params (INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_link, queryParams, paramtypes) == II_FAIL)
 		{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING,"Error binding parameters");
 			RETURN_FALSE;
@@ -3518,7 +3476,8 @@ static char *php_ii_convert_param_markers (char *statement TSRMLS_DC)
 	}
 	*tmp_p = '\0'; /* terminate the new query */
 
-	statement = tmp_statement;
+	sprintf (statement,"%s", tmp_statement);
+	efree(tmp_statement);
 	return statement;
 }
 /* }}} */
@@ -3552,7 +3511,7 @@ PHP_FUNCTION(ingres_set_environment)
 
 /* {{{ static short php_ii_bind_params (II_LINK *ii_link, zval **queryParams) */
 /* Binds and sends data for parameters passed via queryParams */
-static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, zval **queryParams)
+static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, zval **queryParams, zval **paramtypes)
 {
 
 	zval **val;
@@ -3568,9 +3527,12 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 	
 	double tmp_double;
 	long tmp_long;
+	char *tmp_string;
 	char *key;
 	int key_len;
 	long index;
+	short with_procedure = 0;
+	char *types;
 
     if ( ii_link->paramCount > 0 )
 	{
@@ -3590,6 +3552,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 	{
 		/* bump descriptorCount to allow for procedure name */
 		setDescrParm.sd_descriptorCount = ii_link->paramCount + 1;
+		with_procedure = 1;
 	}
 	else
 	{
@@ -3606,6 +3569,14 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 	else
 	{
 		columnType = IIAPI_COL_PROCPARM;
+	}
+
+	/* extract the paramtypes */
+
+	if ( paramtypes != NULL )
+	{
+		types = emalloc(Z_STRLEN_PP(paramtypes));
+		memcpy(types,Z_STRVAL_PP(paramtypes),Z_STRLEN_PP(paramtypes));
 	}
 
 	for ( param=0; param < setDescrParm.sd_descriptorCount; param++ )
@@ -3640,89 +3611,248 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 				return II_FAIL;
 			}
 
-			/* Process each parameter into our descriptor buffer */
-			switch (Z_TYPE_PP(val))
+			if ( Z_TYPE_PP(paramtypes) == IS_STRING )
 			{
-				case IS_LONG:
-					/* TODO: does not handle int8 yet */
-					convert_to_long_ex(val);
-					setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_INT_TYPE;
-					setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
-					setDescrParm.sd_descriptor[param].ds_length = sizeof(Z_LVAL_PP(val));
-					setDescrParm.sd_descriptor[param].ds_precision = 0;
-					setDescrParm.sd_descriptor[param].ds_scale = 0;
-					setDescrParm.sd_descriptor[param].ds_columnType = columnType;
-					if ( ii_link->procname == NULL )
-					{
-						setDescrParm.sd_descriptor[param].ds_columnName = NULL;
-					}
-					else
-					{
-						setDescrParm.sd_descriptor[param].ds_columnName = key;
-					}
-					break;
-				case IS_DOUBLE:
-					convert_to_double_ex(val);
-					setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_FLT_TYPE;
-					setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
-					setDescrParm.sd_descriptor[param].ds_length = sizeof(Z_DVAL_PP(val));
-					setDescrParm.sd_descriptor[param].ds_precision = 0;
-					setDescrParm.sd_descriptor[param].ds_scale = 0;
-					setDescrParm.sd_descriptor[param].ds_columnType = columnType;
-					if ( ii_link->procname == NULL )
-					{
-						setDescrParm.sd_descriptor[param].ds_columnName = NULL;
-					}
-					else
-					{
-						setDescrParm.sd_descriptor[param].ds_columnName = key;
-					}
-					break;
-				case IS_STRING:
-					convert_to_string_ex(val);
-					setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
-					setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
-					setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
-					setDescrParm.sd_descriptor[param].ds_precision = 0;
-					setDescrParm.sd_descriptor[param].ds_scale = 0;
-					setDescrParm.sd_descriptor[param].ds_columnType = columnType;
-					if ( ii_link->procname == NULL )
-					{
-						setDescrParm.sd_descriptor[param].ds_columnName = NULL;
-					}
-					else
-					{
-						setDescrParm.sd_descriptor[param].ds_columnName = key;
-					}
-					break;
-				case IS_NULL:
-					convert_to_string_ex(val);
-					setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
-					setDescrParm.sd_descriptor[param].ds_nullable = TRUE;
-					setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
-					setDescrParm.sd_descriptor[param].ds_precision = 0;
-					setDescrParm.sd_descriptor[param].ds_scale = 0;
-					setDescrParm.sd_descriptor[param].ds_columnType = columnType;
-					if ( ii_link->procname == NULL )
-					{
-						setDescrParm.sd_descriptor[param].ds_columnName = NULL;
-					}
-					else
-					{
-						setDescrParm.sd_descriptor[param].ds_columnName = key;
-					}
-					break;
-				default:
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "A parameter has been passed of unknown type" );
-					if ( ii_link->procname == NULL )
-					efree(descriptorInfo);
-					return II_FAIL;
+				/* bind parameters using the types indicated */
+
+				switch (types[param - with_procedure])
+				{
+					case 'B': /* long byte */
+						break;
+					case 'b': /* byte */
+					case 'c': /* char */
+					case 'd': /* date */
+					case 't': /* text */
+						convert_to_string_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					case 'D': /* decimal */
+						convert_to_double_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_DEC_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = sizeof(Z_DVAL_PP(val));
+						setDescrParm.sd_descriptor[param].ds_precision = 31;
+						setDescrParm.sd_descriptor[param].ds_scale = 15;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					case 'f': /* float */
+						convert_to_double_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_FLT_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = sizeof(Z_DVAL_PP(val));
+						setDescrParm.sd_descriptor[param].ds_precision = 31;
+						setDescrParm.sd_descriptor[param].ds_scale = 15;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+						convert_to_string_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_TXT_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					case 'T': /* long text */
+					case 'V': /* long varchar */
+						break;
+					case 'i': /* integer */
+						convert_to_long_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_INT_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = sizeof(Z_LVAL_PP(val));
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					case 'n': /* nchar NFC/NFD UTF-16*/
+						convert_to_string_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_NCHA_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					case 'N': /* nvarchar NFC/NFD UTF-16*/ 
+						convert_to_string_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_NVCH_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val) + 2;
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					case 'v': /* varchar */ 
+						convert_to_string_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_VCH_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val) + 2;
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					default:
+						break;
+				}
+			}
+			else
+			{
+				/* bind parameters based on what PHP thinks it has */
+
+				/* Process each parameter into our descriptor buffer */
+				switch (Z_TYPE_PP(val))
+				{
+					case IS_LONG:
+						/* TODO: does not handle int8 yet */
+						convert_to_long_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_INT_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = sizeof(Z_LVAL_PP(val));
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					case IS_DOUBLE:
+						convert_to_double_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_FLT_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = sizeof(Z_DVAL_PP(val));
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					case IS_STRING:
+						convert_to_string_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					case IS_NULL:
+						convert_to_string_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = TRUE;
+						setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					default:
+						php_error_docref(NULL TSRMLS_CC, E_WARNING, "A parameter has been passed of unknown type" );
+						if ( ii_link->procname == NULL )
+						efree(descriptorInfo);
+						return II_FAIL;
+				}
 			}
 
 			if (((ii_link->procname != NULL) && (param > 0)) || (ii_link->procname == NULL))
 			{
 				zend_hash_move_forward_ex(arr_hash, &pointer);
 			}
+			
 		}
 
 	} /* param=0; param < setDescrParm.sd_descriptorCount; param++ */
@@ -3787,11 +3917,43 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 					break;
 				case IS_STRING:
 					convert_to_string_ex(val);
+					if ( paramtypes != NULL ) 
+					{
+						switch (types[param - with_procedure] )
+						{
+							case 'N': /* NVARCHAR */
+								/* copy the data to a new buffer then set the size  */
+								/* of the string at the begining of the buffer */
+								tmp_string = emalloc(Z_STRLEN_PP(val) + 2);
+								memcpy(tmp_string + 2, Z_STRVAL_PP(val), Z_STRLEN_PP(val));
+								/* set the 1st 2 bytes as the length of the string */
+								*((II_INT2*)(tmp_string)) = Z_STRLEN_PP(val)/2 ; 
+								putParmParm.pp_parmData[param].dv_value = tmp_string;
+								putParmParm.pp_parmData[param].dv_length = Z_STRLEN_PP(val) + 2; 
+								break;
+							case 'v': /* VARCHAR */
+								/* copy the data to a new buffer then set the size  */
+								/* of the string at the begining of the buffer */
+								tmp_string = emalloc(Z_STRLEN_PP(val) + 2);
+								memcpy(tmp_string + 2, Z_STRVAL_PP(val), Z_STRLEN_PP(val));
+								/* set the 1st 2 bytes as the length of the string */
+								*((II_INT2*)(tmp_string)) = Z_STRLEN_PP(val) ; 
+								putParmParm.pp_parmData[param].dv_value = tmp_string;
+								putParmParm.pp_parmData[param].dv_length = Z_STRLEN_PP(val) + 2; 
+								break;
+							default: /* everything else */
+								putParmParm.pp_parmData[param].dv_value = Z_STRVAL_PP(val);
+								putParmParm.pp_parmData[param].dv_length = Z_STRLEN_PP(val); 
+								break;
+						}
+					}
+					else
+					{
+						putParmParm.pp_parmData[param].dv_value = Z_STRVAL_PP(val);
+					}
 					putParmParm.pp_parmData[param].dv_null = FALSE;
-					putParmParm.pp_parmData[param].dv_length = Z_STRLEN_PP(val); 
-					putParmParm.pp_parmData[param].dv_value = Z_STRVAL_PP(val);
 					break;
-				case IS_NULL: /* need to check this */
+				case IS_NULL: /* TODO need to check this */
 					putParmParm.pp_parmData[param].dv_null = TRUE;
 					putParmParm.pp_parmData[param].dv_length = Z_STRLEN_PP(val); 
 					putParmParm.pp_parmData[param].dv_value = Z_STRVAL_PP(val);
@@ -3819,11 +3981,29 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 	{
 		efree(descriptorInfo);
 		efree(columnData);
+		if ( paramtypes != NULL )
+		{
+			efree (types);
+		    if ( tmp_string != NULL)
+			{
+				efree (tmp_string);
+			}
+		}
+
 		return II_FAIL;
 	}
 
 	efree(descriptorInfo);
 	efree(columnData);
+
+	if ( paramtypes != NULL )
+	{
+		efree (types);
+		if ( tmp_string != NULL)
+		{
+			efree (tmp_string);
+		}
+	}
 
 	return II_OK;
 }

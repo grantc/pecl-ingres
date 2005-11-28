@@ -102,7 +102,7 @@ static void php_ii_gen_cursor_id(II_LINK *ii_link TSRMLS_DC);
 static char *php_ii_check_procedure(char *statement, II_LINK *ii_link TSRMLS_DC);
 static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, char *database TSRMLS_DC);
 static char * php_ii_convert_param_markers ( char *statement TSRMLS_DC);
-static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, zval **queryParams);
+static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, zval **queryParams, zval **paramtypes);
 static II_LONG php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_LINK *ii_link, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC );
 static short int php_ii_set_environment_options (zval **options, II_LINK *ii_link TSRMLS_DC);
 
