@@ -1,6 +1,7 @@
 CVS
 - Added support for parameter typing to match PHP data to Ingres types [grantc 28-11-05]
 - Added preliminary UTF-16 support [grantc 28-11-05] 
+- Added global to configure connection timeout [grantc 15-12-05]
 
 version 1.2.1
 - Added connection tracing [grantc 21-11-05]

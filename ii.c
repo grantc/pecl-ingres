@@ -111,6 +111,7 @@ PHP_INI_BEGIN()
 	STD_PHP_INI_ENTRY("ingres.cursor_mode", "0", PHP_INI_ALL, OnUpdateLong, cursor_mode, zend_ii_globals, ii_globals)
 	STD_PHP_INI_ENTRY("ingres.blob_segment_length", "4096", PHP_INI_ALL, OnUpdateLong, blob_segment_length, zend_ii_globals, ii_globals)
 	STD_PHP_INI_BOOLEAN("ingres.trace_connect", "0", PHP_INI_ALL, OnUpdateLong, trace_connect, zend_ii_globals, ii_globals)
+	STD_PHP_INI_ENTRY("ingres.timeout", "-1", PHP_INI_ALL, OnUpdateLong, connect_timeout, zend_ii_globals, ii_globals)
 PHP_INI_END()
 /* }}} */
 
@@ -341,7 +342,8 @@ static void php_ii_globals_init(zend_ii_globals *ii_globals)
 	ii_globals->num_persistent = 0;
 
 	/* Ingres api initialization */
-	initParm.in_timeout = -1;				/* timeout in ms, -1 = no timeout */
+	/* timeout in ms, -1, (default) = no timeout */
+	initParm.in_timeout = ii_globals->connect_timeout;				
 
 #if defined(IIAPI_VERSION_4) 
     initParm.in_version = IIAPI_VERSION_4;

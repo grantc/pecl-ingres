@@ -14,20 +14,21 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grantc@php.net</email>
   <active>yes</active>
  </lead>
- <date>2005-11-21</date>
+ <date>2005-12-15</date>
  <time>17:26:45</time>
  <version>
-  <release>1.2.1</release>
-  <api>1.2.1</api>
+  <release>1.3.0</release>
+  <api>1.3.0</api>
  </version>
  <stability>
   <release>alpha</release>
   <api>alpha</api>
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
- <notes>This release includes tracing support for connections that appear to hang. Either add ingres.trace_connect=1 to your php.ini or call ini_set("ingres.trace_connect",1) within your script to enable. Trace statements appear as E_NOTICE messages.
-- Added connection tracing [grantc 21-11-05]
-- Builds against PHP 4.4 [grantc 21-11-05]
+ <notes>This release adds connection timeout. Either add ingres.timeout=&lt;ome value in ms&gt; to your php.ini or call ini_set("ingres.timeout",&lt;some value in ms&gt;) within your script. A value of -1 implies no timeout.
+- Added support for parameter typing to match PHP data to Ingres types [grantc 28-11-05]
+- Added preliminary UTF-16 support [grantc 28-11-05] 
+- Added global to configure connection timeout [grantc 15-12-05]
  </notes>
  <contents>
   <dir name="/">
