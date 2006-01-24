@@ -681,11 +681,14 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 		}
 		
 		/* Perform Sanity Check. If no database has been set then we have a problem */
-        dblen = strlen(db);
-		if ( dblen == 0 )
-		{
+		if ( db != NULL ) {
+			dblen = strlen(db);
+		} else {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "No default database available to connect to" );
 			RETURN_FALSE;
+		}
+		if ( dblen == 0 )
+		{
 		}
 		if (IIG(trace_connect)) {
 			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Connecting to %s as %s", db, user);
