@@ -375,8 +375,6 @@ static void php_ii_globals_shutdown(zend_ii_globals *ii_globals)
 #ifdef IIAPI_VERSION_2
 	IIAPI_RELENVPARM   relEnvParm;
 
-	printf("global shutdown\n");
-
 	relEnvParm.re_envHandle = ii_globals->envHandle;
     IIapi_releaseEnv( &relEnvParm );
 #endif
@@ -424,16 +422,7 @@ PHP_MINIT_FUNCTION(ii)
 PHP_MSHUTDOWN_FUNCTION(ii)
 {
 	IIAPI_TERMPARM termParm;
-#ifdef IIAPI_VERSION_2
-	IIAPI_RELENVPARM   relEnvParm;
-#endif
-
 	UNREGISTER_INI_ENTRIES();
-
-#ifdef IIAPI_VERSION_2
-	relEnvParm.re_envHandle = IIG(envHandle);
-    IIapi_releaseEnv( &relEnvParm );
-#endif
 
 	/* Ingres api termination */
 	IIapi_terminate(&termParm);
