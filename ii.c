@@ -2243,11 +2243,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 					if (result_type & II_NUM)
 					{
-						add_index_null(return_value, i + k + 1);
+						add_index_null(return_value, i + k + IIG(array_index_start));
 					}
 					if (result_type & II_ASSOC)
 					{
-						add_assoc_null(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC));
+						add_assoc_null(return_value, php_ii_field_name(ii_link, i + k + IIG(array_index_start) TSRMLS_CC));
 					}
 
 				} else {	/* non NULL value */
@@ -2281,12 +2281,12 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 							if (result_type & II_NUM)
 							{
-								add_index_double(return_value, i + k + 1, value_double);
+								add_index_double(return_value, i + k + IIG(array_index_start), value_double);
 							}
 
 							if (result_type & II_ASSOC)
 							{
-								add_assoc_double(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC), value_double);
+								add_assoc_double(return_value, php_ii_field_name(ii_link, i + k + IIG(array_index_start) TSRMLS_CC), value_double);
 
 							}
 							break;
@@ -2318,12 +2318,12 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 							if (result_type & II_NUM)
 							{
-								add_index_long(return_value, i + k + 1, value_long);
+								add_index_long(return_value, i + k + IIG(array_index_start), value_long);
 							}
 
 							if (result_type & II_ASSOC)
 							{
-								add_assoc_long(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC), value_long);
+								add_assoc_long(return_value, php_ii_field_name(ii_link, i + k + IIG(array_index_start) TSRMLS_CC), value_long);
 							}
 							break;
 
@@ -2377,12 +2377,12 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 							if (result_type & II_NUM)
 							{
-								add_index_stringl(return_value, i + k + 1, value_char_p, len, should_copy);
+								add_index_stringl(return_value, i + k + IIG(array_index_start), value_char_p, len, should_copy);
 							}
 
 							if (result_type & II_ASSOC)
 							{
-								add_assoc_stringl(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC), value_char_p, len, should_copy);
+								add_assoc_stringl(return_value, php_ii_field_name(ii_link, i + k + IIG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
 							}
 
 							/* eventualy restore data pointer state for
@@ -2477,23 +2477,23 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 				if (result_type & II_NUM)
 				{
-					add_index_null(return_value, i + k + 1);
+					add_index_null(return_value, i + k + IIG(array_index_start));
 				}
 				if (result_type & II_ASSOC)
 				{
-					add_assoc_null(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC));
+					add_assoc_null(return_value, php_ii_field_name(ii_link, i + k + IIG(array_index_start) TSRMLS_CC));
 				}
 			}
 			else
 			{
 				if (result_type & II_NUM)
 				{
-					add_index_stringl(return_value, i + k + 1, lob_data, lob_len, 1);
+					add_index_stringl(return_value, i + k + IIG(array_index_start), lob_data, lob_len, 1);
 				}
 
 				if (result_type & II_ASSOC)
 				{
-					add_assoc_stringl(return_value, php_ii_field_name(ii_link, i + k + 1 TSRMLS_CC), lob_data, lob_len, 1);
+					add_assoc_stringl(return_value, php_ii_field_name(ii_link, i + k + IIG(array_index_start) TSRMLS_CC), lob_data, lob_len, 1);
 				}
 			}
 
