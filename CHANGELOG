@@ -1,4 +1,9 @@
 CVS
+- Fixed Array so the start index is 1 (original default) and not 0 [grantc
+07-04-06]
+- Added ini setting ingres.array_index_start to overide default start index of
+1 [grantc 07-04-06]
+- Fixed crash on module unload [grantc 22-03-06]
 - Added support for parameter typing to match PHP data to Ingres types [grantc 28-11-05]
 - Added preliminary UTF-16 support [grantc 28-11-05] 
 - Added global to configure connection timeout [grantc 15-12-05]

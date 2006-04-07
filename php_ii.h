@@ -97,13 +97,14 @@ ZEND_BEGIN_MODULE_GLOBALS(ii)
 								/* a blob */
 	long trace_connect; /* enable / disable tracing of php_ii_do_connect */
 	long connect_timeout; /* in ms - default -1, no timeout,  if not set */
+	long array_index_start; /* start value for x in  array[x], default 1*/
 
 ZEND_END_MODULE_GLOBALS(ii)
 
 #define II_ASSOC (1<<0)
 #define II_NUM   (1<<1)
 #define II_BOTH  (II_ASSOC|II_NUM)
-#define II_VERSION "1.3.0-dev"
+#define II_VERSION "1.3.1-dev"
 
 #define II_CURSOR_UPDATE 0    /* default */
 #define II_CURSOR_READONLY 1

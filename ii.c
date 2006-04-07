@@ -112,6 +112,7 @@ PHP_INI_BEGIN()
 	STD_PHP_INI_ENTRY("ingres.blob_segment_length", "4096", PHP_INI_ALL, OnUpdateLong, blob_segment_length, zend_ii_globals, ii_globals)
 	STD_PHP_INI_BOOLEAN("ingres.trace_connect", "0", PHP_INI_ALL, OnUpdateLong, trace_connect, zend_ii_globals, ii_globals)
 	STD_PHP_INI_ENTRY("ingres.timeout", "-1", PHP_INI_ALL, OnUpdateLong, connect_timeout, zend_ii_globals, ii_globals)
+	STD_PHP_INI_ENTRY("ingres.array_index_start", "1", PHP_INI_ALL, OnUpdateLong, array_index_start, zend_ii_globals, ii_globals)
 PHP_INI_END()
 /* }}} */
 
@@ -2242,7 +2243,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 					if (result_type & II_NUM)
 					{
-						add_index_null(return_value, i + k);
+						add_index_null(return_value, i + k + 1);
 					}
 					if (result_type & II_ASSOC)
 					{
@@ -2280,7 +2281,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 							if (result_type & II_NUM)
 							{
-								add_index_double(return_value, i + k, value_double);
+								add_index_double(return_value, i + k + 1, value_double);
 							}
 
 							if (result_type & II_ASSOC)
@@ -2317,7 +2318,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 							if (result_type & II_NUM)
 							{
-								add_index_long(return_value, i + k, value_long);
+								add_index_long(return_value, i + k + 1, value_long);
 							}
 
 							if (result_type & II_ASSOC)
@@ -2376,7 +2377,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 							if (result_type & II_NUM)
 							{
-								add_index_stringl(return_value, i + k, value_char_p, len, should_copy);
+								add_index_stringl(return_value, i + k + 1, value_char_p, len, should_copy);
 							}
 
 							if (result_type & II_ASSOC)
@@ -2476,7 +2477,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 				if (result_type & II_NUM)
 				{
-					add_index_null(return_value, i + k);
+					add_index_null(return_value, i + k + 1);
 				}
 				if (result_type & II_ASSOC)
 				{
@@ -2487,7 +2488,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 			{
 				if (result_type & II_NUM)
 				{
-					add_index_stringl(return_value, i + k, lob_data, lob_len, 1);
+					add_index_stringl(return_value, i + k + 1, lob_data, lob_len, 1);
 				}
 
 				if (result_type & II_ASSOC)

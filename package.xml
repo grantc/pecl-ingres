@@ -14,11 +14,11 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grantc@php.net</email>
   <active>yes</active>
  </lead>
- <date>2005-12-15</date>
- <time>17:26:45</time>
+ <date>2006-03-22</date>
+ <time>12:00:00</time>
  <version>
-  <release>1.3.0</release>
-  <api>1.3.0</api>
+  <release>1.3.1</release>
+  <api>1.3.1</api>
  </version>
  <stability>
   <release>alpha</release>
@@ -26,9 +26,12 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
  <notes>This release adds connection timeout. Either add ingres.timeout=&lt;ome value in ms&gt; to your php.ini or call ini_set("ingres.timeout",&lt;some value in ms&gt;) within your script. A value of -1 implies no timeout.
+- Fixed Array so the start index is 1 (original default) and not 0 [grantc 07-04-06]
+- Added ini setting ingres.array_index_start to overide default start index of 1 [grantc 07-04-06]
 - Added support for parameter typing to match PHP data to Ingres types [grantc 28-11-05]
 - Added preliminary UTF-16 support [grantc 28-11-05] 
 - Added global to configure connection timeout [grantc 15-12-05]
+- Fixed crash on module unload [grantc 22-03-05]
  </notes>
  <contents>
   <dir name="/">
