@@ -2232,6 +2232,8 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 				{
 					efree(columnData[k].dv_value);
 				}
+				zend_hash_destroy(return_value->value.ht);
+				efree(return_value->value.ht);
 				efree(columnData);
 				RETURN_FALSE;
 			}
