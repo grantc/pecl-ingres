@@ -296,6 +296,7 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
 	if (ii_link->errorText != NULL )
 	{
 		free(ii_link->errorText);
+		ii_link->errorText = NULL;
 	}
 }
 /*  }}} */
@@ -512,6 +513,34 @@ static int ii_sync(IIAPI_GENPARM *genParm)
 static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC)
 {
 	IIAPI_GETEINFOPARM *error_info;
+	char *	no_message;
+
+    no_message = emalloc(1);
+	sprintf(no_message,"\0");
+
+	/* Initialise global variables */
+	IIG(errorCode) = 0;
+	sprintf(IIG(sqlstate),"\0\0\0\0\0\0");
+	if ( IIG(errorText) != NULL)
+	{
+		free(IIG(errorText));
+		IIG(errorText) = NULL;
+	}
+
+	/* Initialise link */
+	if (ii_link->connHandle != NULL)
+	{
+		ii_link->errorCode = 0;
+		sprintf(ii_link->sqlstate,"\0\0\0\0\0\0");
+		if ( ii_link->errorText != NULL)
+		{
+			free(ii_link->errorText);
+			ii_link->errorText=NULL;
+		}
+	}
+
+	efree(no_message);
+
 	switch (genParm->gp_status)
 	{
 	
@@ -2807,6 +2836,7 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode)
 	int argc;	
 	int len;	
 	char *ptr;
+	long return_code;
 	II_LINK *ii_link;
 
 	argc = ZEND_NUM_ARGS();
@@ -2823,15 +2853,13 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode)
 			WRONG_PARAM_COUNT;
 			break;
 	}
-	
 
 	if (argc == 1)
 	{
 		switch (mode)
 		{
 			case 0:
-				ptr = ecalloc (33,1); /* max number of chars for long including sign and null */
-				sprintf(ptr,"%d",ii_link->errorCode);
+				return_code = ii_link->errorCode;
 				break;
 			case 1:
 				len = strlen(ii_link->errorText);
@@ -2847,17 +2875,26 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode)
 				break;
 		}
 		RETVAL_STRING(ptr, 0);
-	} else {
+	} 
+	else 
+	{
 		switch (mode)
 		{
 			case 0:
-				ptr = ecalloc(33,1);   /* maximum num of chars in a long value including sign and null */
-				sprintf(ptr,"%d",IIG(errorCode));
+				return_code = IIG(errorCode);
 				break;
 			case 1:
-				len = strlen(IIG(errorText));
-				ptr = ecalloc(len + 1, 1);
-				memcpy (ptr, IIG(errorText), len + 1 );
+				if ( IIG(errorText) != NULL ) 
+				{
+					len = strlen(IIG(errorText));
+					ptr = ecalloc(len + 1, 1);
+					memcpy (ptr, IIG(errorText), len + 1 );
+				}
+				else
+				{
+					ptr = ecalloc(1,1);
+					sprintf (ptr, "\0");
+				}
 				break;
 			case 2:
 				len = sizeof(IIG(sqlstate));
@@ -2867,7 +2904,20 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode)
 			default:
 				break;
 		}
-		RETVAL_STRING(ptr, 0);
+
+	}
+
+	switch (mode)
+	{
+		case 0:
+			RETVAL_LONG(return_code);
+			break;
+		case 1:
+		case 2:
+			RETVAL_STRING(ptr, 0);
+			break;
+		default:
+			break;
 	}
 }
 /* }}} */

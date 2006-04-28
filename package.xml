@@ -25,13 +25,18 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <api>alpha</api>
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
- <notes>This release adds connection timeout. Either add ingres.timeout=&lt;ome value in ms&gt; to your php.ini or call ini_set("ingres.timeout",&lt;some value in ms&gt;) within your script. A value of -1 implies no timeout.
+ <notes>This release adds the folllowing ini settings:
+   - ingres.timeout - connection timeout. Either add ingres.timeout=&lt;ome value in ms&gt; to your php.ini or call ini_set("ingres.timeout",&lt;some value in ms&gt;) within your script. A value of -1 implies no timeout. 
+   - ingres.array_index_start - overide the default start value for the index of an array. Default is 1.
+
+The following changes were submitted:
+- Fixed SEGV when using error reporting functions [grantc 28-04-06]
 - Fixed Array so the start index is 1 (original default) and not 0 [grantc 07-04-06]
 - Added ini setting ingres.array_index_start to overide default start index of 1 [grantc 07-04-06]
+- Fixed crash on module unload [grantc 22-03-06]
 - Added support for parameter typing to match PHP data to Ingres types [grantc 28-11-05]
 - Added preliminary UTF-16 support [grantc 28-11-05] 
 - Added global to configure connection timeout [grantc 15-12-05]
-- Fixed crash on module unload [grantc 22-03-05]
  </notes>
  <contents>
   <dir name="/">
