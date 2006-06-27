@@ -88,8 +88,8 @@ library (PECL) to resolve a build conflict with Windows and UNIX/Linux
 platforms. One advantage of this move is it allows the extension to be
 developed with its own release cycle. This permits new functionality to be
 released when possible instead of waiting for the next official
-PHP release. Rather than being available via the main PHP tarball/zip
-archive (<A HREF="http://www.php.net/downloads"     >http://www.php.net/downloads</A>), an additional download is required.
+PHP release. Rather than being available via the main PHP tar-ball/zip
+archive (<A HREF="http://www.php.net/downloads">http://www.php.net/downloads</A>), an additional download is required.
 </P>
 
 <BR><HR>
@@ -124,9 +124,9 @@ deletion of the <I>ingres_ii</I> directory under <I>ext</I>.
 The extension should work against any platform where the above
 Ingres releases are supported. In practice the extension has been developed
 on Windows XP using Visual Studio .Net 2003 (VC7) and SuSE 9.3/Fedora Core
-3 using GCC 3.3.x. There has been limited testing on Solaris 9 Sparc. If you
-find the extension does not work, please contact <A href="mailto:grantc@php.net">grantc@php.net</A> with the
-following information:
+3 using GCC 3.3.x. There has been limited testing on Solaris 9 SPARC. If you
+find the extension does not work, please log a bug via the <A HREF="http://pecl.php.net/package/ingres">project home page</A>
+with the following information:
 </P>
 <UL>
 <LI>operating system and patches/service pack installed 
@@ -167,7 +167,7 @@ The extension provides the following functionality:
 <TR><TD>ingres_fetch_row</TD><TD>Fetch a row of result into an enumerated array</TD></TR>
 <TR><TD>ingres_field_length</TD><TD>Get the length of a field</TD></TR>
 <TR><TD>ingres_field_name</TD><TD>Get the name of a field in a query result</TD></TR>
-<TR><TD>ingres_field_nullable</TD><TD>Test if a field is nullable</TD></TR>
+<TR><TD>ingres_field_nullable</TD><TD>Test if a field is null-able</TD></TR>
 <TR><TD>ingres_field_precision</TD><TD>Get the precision of a field</TD></TR>
 <TR><TD>ingres_field_scale</TD><TD>Get the scale of a field</TD></TR>
 <TR><TD>ingres_field_type</TD><TD>Get the type of a field in a query result</TD></TR>
@@ -185,7 +185,7 @@ The latest tar ball for this extension can be downloaded from
 <A HREF="http://pecl.php.net/project/ingres">http://pecl.php.net/project/ingres</A>. At the moment only source code is
 available for download via this page. Development snapshot builds of
 the PECL extension for Windows can be downloaded from
-<A HREF="http://snaps.php.net">http://snaps.php.net</A>. Binary releases for certain operating systems
+<A HREF="http://pecl4win.php.net">http://pecl4win.php.net</A>. Binary releases for certain operating systems
 will be provided in due course.
 </P>
 
@@ -196,22 +196,12 @@ will be provided in due course.
 <H3>Windows Installation</H3>
 
 The latest binaries for the Ingres extension can be downloaded from <A
- HREF="http://snaps.php.net">http://snaps.php.net</A>. Direct links are
+ HREF="http://pecl4win.php.net">http://snaps.php.net</A>. Direct links are
 provided below for different PHP releases:
 
 <UL>
-<LI><A
- 
-  HREF="http://snaps.php.net/win32/PECL_5_0/php_ingres.dll" 
- >http://snaps.php.net/win32/PECL_5_0/php_ingres.dll</A>
-<LI><A
- 
-  HREF="http://snaps.php.net/win32/PECL_5_1/php_ingres.dll" 
- >http://snaps.php.net/win32/PECL_5_1/php_ingres.dll</A>
-<LI><A
- 
-  HREF="http://snaps.php.net/win32/PECL_UNSTABLE/php_ingres.dll" 
- >http://snaps.php.net/win32/PECL_UNSTABLE/php_ingres.dll</A></LI>
+<LI><A HREF="http://pecl4win.php.net/download.php/ext/5_0/5.0.5/php_ingres.dll">http://pecl4win.php.net/download.php/ext/5_0/5.0.5/php_ingres.dll</A>
+<LI><A HREF="http://pecl4win.php.net/download.php/ext/5_1/5.1.2/php_ingres.dll">http://pecl4win.php.net/download.php/ext/5_1/5.1.2/php_ingres.dll</A>
 </UL>
 
 <P>To activate the extension copy <i>php_ingres.dll</i> into the
@@ -226,11 +216,10 @@ line to <i>php.ini</i>:
 <H3>UNIX/Linux Installation</H3>
 
 <P>The installation of the extension on UNIX/Linux will require a C
-complilation environment.
+compilation environment.
 </P>
 
-<P>The latest source code can be downloaded manually from <A
- HREF="http://pecl.php.net/get/ingres">http://pecl.php.net/get/ingres</A>.
+<P>The latest source code can be downloaded manually from <A HREF="http://pecl.php.net/get/ingres">http://pecl.php.net/get/ingres</A>.
 Or by using PEAR:
 </P>
 
@@ -250,6 +239,31 @@ beforehand:
 <LI>Build the extension:<PRE>make</PRE>
 <LI>Install the extension, N.B. this may require <i>root</i> access :<PRE>make install</PRE></LI>
 </OL>
+
+<H3>Ingres with the Apache web server on UNIX/Linux</H3>
+
+<P>This extension, like other Ingres applications, requires knowledge of a local Ingres installation. Providing Apache with this information can be done two ways both of which require <A HREF="http://httpd.apache.org/docs/2.0/mod/mod_env.html">mod_env</A>. The following assumes Ingres was installed to /opt/Ingres/II:
+
+<OL>
+	<LI>Using PassEnv:</LI>
+	<UL>
+		<LI>In the script that starts Apache add the following lines:<PRE>II_SYSTEM=/opt/Ingres/II
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$II_SYSTEM/ingres/lib
+export II_SYSTEM LD_LIBRARY_PATH
+</PRE></LI>
+		<LI>Add the following lines to the apache configuration script httpd.conf (or equivalent):<PRE>
+PassEnv II_SYSTEM LD_LIBRARY_PATH
+</PRE></LI>
+	</UL>
+	<LI>Using SetEnv:</LI>
+	<UL>
+		<LI>Add the following lines to the apache configuration script httpd.conf (or equivalent):<PRE>
+SetEnv II_SYSTEM /opt/Ingres/II
+SetEnv LD_LIBRARY_PATH /opt/Ingres/II/ingres/lib
+</PRE></LI>
+	</UL>
+</OL>
+</P>
 
 <BR><HR>
 <A NAME="Known issues"><H2>5. Known issues</H2>
@@ -274,9 +288,9 @@ with versions of Ingres or with existing Ingres based PHP code.
 
 The current extension maintains a single statement handle. Whenever a
 query is executed via ingres_query() or ingres_prepare(), any existing
-statement is terminated/closed. For multiple resultsets to work, the
+statement is terminated/closed. For multiple result-sets to work, the
 ingres_fetch_*() statements will need to be able to accept a resource
-that represents an Ingres resultset. Such that:
+that represents an Ingres result-set. Such that:
 </P>
 <PRE>
   ingres_fetch_row( [resource link] ) 
@@ -309,16 +323,14 @@ be done according to demand.
 
 <P>
 The architecture for the Ingres extension is based on code written by David
-Henot (<A href="mailto:henot@php.net">henot@php.net</A>) from 2000-2004.&nbsp;
-Since February 2005, Grant Croker, (<A href="mailto:grantc@php.net">grantc@php.net</A>), took over the maintenance and development of the
-extension.
+Henot (<A href="mailto:henot@php.net">henot@php.net</A>) from 2000-2004. Since February 2005, Grant Croker, (<A href="mailto:grantc@php.net">grantc@php.net</A>), took over the maintenance and development of the extension.
 </P>
 
 <P>
 If you have any comments, features or if you wish to assist in some way 
 with coding, testing or documentation please contact <A href="mailto:grantc@php.net">grantc@php.net</A>.
-</P><!--
-
+</P>
+<!--
 please keep the line below
 vim: autoindent sw=4 ts=4 ff=unix
 -->

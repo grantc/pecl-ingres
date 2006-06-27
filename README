@@ -1,22 +1,22 @@
 
 
-Ingres extension for PHP
+IInnggrreess eexxtteennssiioonn ffoorr PPHHPP
 
 -------------------------------------------------------------------------------
 
-Contents
+CCoonntteennttss
 
-1._Introduction
-2._Platform_support
-3._Function_support
-4._Installing_the_extension
-5._Known_issues
-6._Future_direction
-7._Comments/suggestions/credits
+_1_._ _I_n_t_r_o_d_u_c_t_i_o_n
+_2_._ _P_l_a_t_f_o_r_m_ _s_u_p_p_o_r_t
+_3_._ _F_u_n_c_t_i_o_n_ _s_u_p_p_o_r_t
+_4_._ _I_n_s_t_a_l_l_i_n_g_ _t_h_e_ _e_x_t_e_n_s_i_o_n
+_5_._ _K_n_o_w_n_ _i_s_s_u_e_s
+_6_._ _F_u_t_u_r_e_ _d_i_r_e_c_t_i_o_n
+_7_._ _C_o_m_m_e_n_t_s_/_s_u_g_g_e_s_t_i_o_n_s_/_c_r_e_d_i_t_s
 
 -------------------------------------------------------------------------------
 
-1. Introduction
+11.. IInnttrroodduuccttiioonn
 
 This extension is designed to provide access to the Ingres Enterprise
 Relational Database Management System. Native or direct access is provided for
@@ -27,15 +27,15 @@ In 2005, the Ingres extension was moved to the PHP extension community library
 advantage of this move is it allows the extension to be developed with its own
 release cycle. This permits new functionality to be released when possible
 instead of waiting for the next official PHP release. Rather than being
-available via the main PHP tarball/zip archive (http://www.php.net/downloads),
+available via the main PHP tar-ball/zip archive (_h_t_t_p_:_/_/_w_w_w_._p_h_p_._n_e_t_/_d_o_w_n_l_o_a_d_s),
 an additional download is required.
 
 -------------------------------------------------------------------------------
 
-2. Platform support
+22.. PPllaattffoorrmm ssuuppppoorrtt
 
 
-Ingres Releases
+IInnggrreess RReelleeaasseess
 
 This extension has been written to support the following versions of Ingres:
 
@@ -45,20 +45,21 @@ This extension has been written to support the following versions of Ingres:
 * Ingres r3
 
 
-PHP Releases
+PPHHPP RReelleeaasseess
 
 This extension has been written against PHP 5.1. Prior versions of PHP, i.e.
 4.0.x - 5.0.x, contain an earlier version of the Ingres extension. Building the
 extension with earlier versions requires the deletion of the ingres_ii
 directory under ext.
 
-Operating System Compatibility
+OOppeerraattiinngg SSyysstteemm CCoommppaattiibbiilliittyy
 
 The extension should work against any platform where the above Ingres releases
 are supported. In practice the extension has been developed on Windows XP using
 Visual Studio .Net 2003 (VC7) and SuSE 9.3/Fedora Core 3 using GCC 3.3.x. There
-has been limited testing on Solaris 9 Sparc. If you find the extension does not
-work, please contact grantc@php.net with the following information:
+has been limited testing on Solaris 9 SPARC. If you find the extension does not
+work, please log a bug via the _p_r_o_j_e_c_t_ _h_o_m_e_ _p_a_g_e with the following
+information:
 
 * operating system and patches/service pack installed
 * compiler + version used to build the extension
@@ -75,11 +76,11 @@ work, please contact grantc@php.net with the following information:
 
 -------------------------------------------------------------------------------
 
-3. Function support
+33.. FFuunnccttiioonn ssuuppppoorrtt
 
 The extension provides the following functionality:
 
-Function               Description
+FFuunnccttiioonn               DDeessccrriippttiioonn
 ingres_autocommit      Switch autocommit on or off
 ingres_close           Close an Ingres database connection
 ingres_commit          Commit a transaction
@@ -93,7 +94,7 @@ ingres_fetch_object    Fetch a row of result into an object
 ingres_fetch_row       Fetch a row of result into an enumerated array
 ingres_field_length    Get the length of a field
 ingres_field_name      Get the name of a field in a query result
-ingres_field_nullable  Test if a field is nullable
+ingres_field_nullable  Test if a field is null-able
 ingres_field_precision Get the precision of a field
 ingres_field_scale     Get the scale of a field
 ingres_field_type      Get the type of a field in a query result
@@ -105,27 +106,26 @@ ingres_query           Send a SQL query to Ingres
 ingres_rollback        Rollback a transaction
 
 
-Project home page
+PPrroojjeecctt hhoommee ppaaggee
 
-The latest tar ball for this extension can be downloaded from http://
-pecl.php.net/project/ingres. At the moment only source code is available for
+The latest tar ball for this extension can be downloaded from _h_t_t_p_:_/_/
+_p_e_c_l_._p_h_p_._n_e_t_/_p_r_o_j_e_c_t_/_i_n_g_r_e_s. At the moment only source code is available for
 download via this page. Development snapshot builds of the PECL extension for
-Windows can be downloaded from http://snaps.php.net. Binary releases for
+Windows can be downloaded from _h_t_t_p_:_/_/_p_e_c_l_4_w_i_n_._p_h_p_._n_e_t. Binary releases for
 certain operating systems will be provided in due course.
 
 -------------------------------------------------------------------------------
 
-4. Installing the extension
+44.. IInnssttaalllliinngg tthhee eexxtteennssiioonn
 
 
-Windows Installation
+WWiinnddoowwss IInnssttaallllaattiioonn
 
-The latest binaries for the Ingres extension can be downloaded from http://
-snaps.php.net. Direct links are provided below for different PHP releases:
+The latest binaries for the Ingres extension can be downloaded from _h_t_t_p_:_/_/
+_s_n_a_p_s_._p_h_p_._n_e_t. Direct links are provided below for different PHP releases:
 
-* http://snaps.php.net/win32/PECL_5_0/php_ingres.dll
-* http://snaps.php.net/win32/PECL_5_1/php_ingres.dll
-* http://snaps.php.net/win32/PECL_UNSTABLE/php_ingres.dll
+* _h_t_t_p_:_/_/_p_e_c_l_4_w_i_n_._p_h_p_._n_e_t_/_d_o_w_n_l_o_a_d_._p_h_p_/_e_x_t_/_5___0_/_5_._0_._5_/_p_h_p___i_n_g_r_e_s_._d_l_l
+* _h_t_t_p_:_/_/_p_e_c_l_4_w_i_n_._p_h_p_._n_e_t_/_d_o_w_n_l_o_a_d_._p_h_p_/_e_x_t_/_5___1_/_5_._1_._2_/_p_h_p___i_n_g_r_e_s_._d_l_l
 
 To activate the extension copy php_ingres.dll into the extension_dir configured
 in php.ini. Then add the following line to php.ini:
@@ -133,12 +133,12 @@ in php.ini. Then add the following line to php.ini:
   	extension=php_ingres.dll
 
 
-UNIX/Linux Installation
+UUNNIIXX//LLiinnuuxx IInnssttaallllaattiioonn
 
-The installation of the extension on UNIX/Linux will require a C complilation
+The installation of the extension on UNIX/Linux will require a C compilation
 environment.
-The latest source code can be downloaded manually from http://pecl.php.net/get/
-ingres. Or by using PEAR:
+The latest source code can be downloaded manually from _h_t_t_p_:_/_/_p_e_c_l_._p_h_p_._n_e_t_/_g_e_t_/
+_i_n_g_r_e_s. Or by using PEAR:
 
   	pear download ingres
 
@@ -171,15 +171,47 @@ install, note that $II_SYSTEM needs to be defined beforehand:
 
 
 
+IInnggrreess wwiitthh tthhee AAppaacchhee wweebb sseerrvveerr oonn UUNNIIXX//LLiinnuuxx
+
+This extension, like other Ingres applications, requires knowledge of a local
+Ingres installation. Providing Apache with this information can be done two
+ways both of which require _m_o_d___e_n_v. The following assumes Ingres was installed
+to /opt/Ingres/II:
+
+  1. Using PassEnv:
+
+     o In the script that starts Apache add the following lines:
+
+         II_SYSTEM=/opt/Ingres/II
+         LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$II_SYSTEM/ingres/lib
+         export II_SYSTEM LD_LIBRARY_PATH
+
+     o Add the following lines to the apache configuration script httpd.conf
+       (or equivalent):
+
+         PassEnv II_SYSTEM LD_LIBRARY_PATH
+
+
+  2. Using SetEnv:
+
+     o Add the following lines to the apache configuration script httpd.conf
+       (or equivalent):
+
+         SetEnv II_SYSTEM /opt/Ingres/II
+         SetEnv LD_LIBRARY_PATH /opt/Ingres/II/ingres/lib
+
+
+
+
 -------------------------------------------------------------------------------
 
-5. Known issues
+55.. KKnnoowwnn iissssuueess
 
 There are no known issues at this time.
 
 -------------------------------------------------------------------------------
 
-6. Future direction
+66.. FFuuttuurree ddiirreeccttiioonn
 
 Since the code has been relatively stable for a number of years, all current
 development efforts have tried to avoid, where possible, changing syntax of any
@@ -190,9 +222,9 @@ difficult to implement without breaking backwards compatibility, either with
 versions of Ingres or with existing Ingres based PHP code.
 The current extension maintains a single statement handle. Whenever a query is
 executed via ingres_query() or ingres_prepare(), any existing statement is
-terminated/closed. For multiple resultsets to work, the ingres_fetch_*()
+terminated/closed. For multiple result-sets to work, the ingres_fetch_*()
 statements will need to be able to accept a resource that represents an Ingres
-resultset. Such that:
+result-set. Such that:
 
     ingres_fetch_row( [resource link] )
 
@@ -213,10 +245,10 @@ according to demand.
 
 -------------------------------------------------------------------------------
 
-7. Comments/suggestions/credits
+77.. CCoommmmeennttss//ssuuggggeessttiioonnss//ccrreeddiittss
 
 The architecture for the Ingres extension is based on code written by David
-Henot (henot@php.net) from 2000-2004.  Since February 2005, Grant Croker,
-(grantc@php.net), took over the maintenance and development of the extension.
+Henot (_h_e_n_o_t_@_p_h_p_._n_e_t) from 2000-2004. Since February 2005, Grant Croker,
+(_g_r_a_n_t_c_@_p_h_p_._n_e_t), took over the maintenance and development of the extension.
 If you have any comments, features or if you wish to assist in some way with
-coding, testing or documentation please contact grantc@php.net.
+coding, testing or documentation please contact _g_r_a_n_t_c_@_p_h_p_._n_e_t.
