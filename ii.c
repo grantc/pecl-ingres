@@ -339,47 +339,13 @@ static int php_ii_get_default_link(INTERNAL_FUNCTION_PARAMETERS)
 /* {{{ static void php_ii_globals_init(zend_ii_globals *ii_globals) */
 static void php_ii_globals_init(zend_ii_globals *ii_globals)
 {
-	IIAPI_INITPARM initParm;
-
 	ii_globals->num_persistent = 0;
-
-	/* Ingres api initialization */
-	/* timeout in ms, -1, (default) = no timeout */
-	initParm.in_timeout = ii_globals->connect_timeout;				
-
-#if defined(IIAPI_VERSION_4) 
-    initParm.in_version = IIAPI_VERSION_4;
-#elif defined(IIAPI_VERSION_3)
-    initParm.in_version = IIAPI_VERSION_3;
-#elif defined(IIAPI_VERSION_2) 
-    initParm.in_version = IIAPI_VERSION_2;
-#else
-    initParm.in_version = IIAPI_VERSION_1;
-#endif
-
-	IIapi_initialize(&initParm);
-
-#ifdef IIAPI_VERSION_2
-	if ( initParm.in_envHandle != NULL )
-	{	
-		ii_globals->envHandle = initParm.in_envHandle; 
-	}
-#else
-	ii_globals->envHandle = NULL;
-#endif
-
 }
 /* }}} */
 
 /* {{{ static void php_ii_globals_shutdown(zend_ii_globals *ii_globals) */
 static void php_ii_globals_shutdown(zend_ii_globals *ii_globals)
 {
-#ifdef IIAPI_VERSION_2
-	IIAPI_RELENVPARM   relEnvParm;
-
-	relEnvParm.re_envHandle = ii_globals->envHandle;
-    IIapi_releaseEnv( &relEnvParm );
-#endif
 
 }
 /* }}} */
@@ -440,9 +406,37 @@ PHP_MSHUTDOWN_FUNCTION(ii)
 /* {{{ New request initialization */
 PHP_RINIT_FUNCTION(ii)
 {
+	IIAPI_INITPARM initParm;
+
 	IIG(default_link) = -1;
 	IIG(num_links) = IIG(num_persistent);
 	IIG(cursor_no) = 0;
+
+	/* Ingres api initialization */
+	/* timeout in ms, -1, (default) = no timeout */
+	initParm.in_timeout = IIG(connect_timeout);				
+
+#if defined(IIAPI_VERSION_4) 
+    initParm.in_version = IIAPI_VERSION_4;
+#elif defined(IIAPI_VERSION_3)
+    initParm.in_version = IIAPI_VERSION_3;
+#elif defined(IIAPI_VERSION_2) 
+    initParm.in_version = IIAPI_VERSION_2;
+#else
+    initParm.in_version = IIAPI_VERSION_1;
+#endif
+
+	IIapi_initialize(&initParm);
+
+#ifdef IIAPI_VERSION_2
+	if ( initParm.in_envHandle != NULL )
+	{	
+		IIG(envHandle) = initParm.in_envHandle; 
+	}
+#else
+	IIG(envHandle) = NULL;
+#endif
+
 	return SUCCESS;
 }
 /* }}} */
@@ -450,6 +444,15 @@ PHP_RINIT_FUNCTION(ii)
 /* {{{ End of request */
 PHP_RSHUTDOWN_FUNCTION(ii)
 {
+
+#ifdef IIAPI_VERSION_2
+	IIAPI_RELENVPARM   relEnvParm;
+
+	relEnvParm.re_envHandle = IIG(envHandle);
+    IIapi_releaseEnv( &relEnvParm );
+	IIG(envHandle)=NULL;
+#endif
+
 	if (IIG(default_link) != -1)
 	{
 		zend_list_delete(IIG(default_link));
@@ -598,6 +601,11 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 	II_LINK *ii_link;
 	II_PTR	envHandle = (II_PTR)NULL;
 	char *z_type;
+
+#ifdef IIAPI_VERSION_2
+	IIAPI_SETENVPRMPARM	setEnvPrmParm;
+	long temp_long;
+#endif
 
 	if (IIG(trace_connect)) {
 		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Enter php_ii_do_connect");
@@ -835,6 +843,23 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 			ii_link->connHandle = connParm.co_connHandle;
 
 			/* set environment params */
+
+#ifdef IIAPI_VERSION_2
+			/* first set the blob_segment_length according to the default */
+
+			setEnvPrmParm.se_envHandle = ii_link->envHandle;
+			temp_long = IIG(blob_segment_length);
+			setEnvPrmParm.se_paramValue = (II_PTR)&temp_long;
+			setEnvPrmParm.se_paramID = IIAPI_EP_MAX_SEGMENT_LEN;
+			IIapi_setEnvParam( &setEnvPrmParm );
+
+			if (setEnvPrmParm.se_status != IIAPI_ST_SUCCESS)
+			{
+				efree(hashed_details);
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to set BLOB segment size");
+				RETURN_FALSE;
+			}
+#endif
 
 			if ( argc == 4 ) /* set options */
 			{
@@ -1086,6 +1111,23 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
 		/* set environment params */
 
+#ifdef IIAPI_VERSION_2
+			/* first set the blob_segment_length according to the default  */
+
+			setEnvPrmParm.se_envHandle = ii_link->envHandle;
+			temp_long = IIG(blob_segment_length);
+			setEnvPrmParm.se_paramValue = (II_PTR)&temp_long;
+			setEnvPrmParm.se_paramID = IIAPI_EP_MAX_SEGMENT_LEN;
+			IIapi_setEnvParam( &setEnvPrmParm );
+
+			if (setEnvPrmParm.se_status != IIAPI_ST_SUCCESS)
+			{
+				efree(hashed_details);
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to set BLOB segment size");
+				RETURN_FALSE;
+			}
+#endif
+
 		if ( argc == 4 ) /* set options */
 		{
 			if ( php_ii_set_environment_options(options, ii_link TSRMLS_CC) == II_FAIL )
@@ -1224,6 +1266,7 @@ PHP_FUNCTION(ingres_query)
 	int elementCount;
 	char *procname=NULL;
 	char *statement;
+	char *tmp_statement;
 
 	argc = ZEND_NUM_ARGS();
 	if (argc < 1 || argc > 4 || zend_get_parameters_ex(argc, &query, &link, &queryParams, &paramtypes) == FAILURE)
@@ -1304,7 +1347,10 @@ PHP_FUNCTION(ingres_query)
 
 	if ( ii_link->paramCount > 0  && ii_link->procname == NULL )
 	{ /* convert ? to ~V so we don't have to prepare the query */
-		statement = php_ii_convert_param_markers( Z_STRVAL_PP(query) TSRMLS_CC );
+		tmp_statement=emalloc(Z_STRLEN_PP(query) + ( ii_link->paramCount*3 ) + 1);
+		memcpy (tmp_statement,  Z_STRVAL_PP(query), Z_STRLEN_PP(query));
+		tmp_statement[Z_STRLEN_PP(query)] ='\0';
+		statement = php_ii_convert_param_markers( tmp_statement TSRMLS_CC );
 	}
 	
 	queryParm.qy_genParm.gp_callback = NULL;
@@ -1351,6 +1397,7 @@ PHP_FUNCTION(ingres_query)
 		if ( php_ii_bind_params (INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_link, queryParams, paramtypes) == II_FAIL)
 		{
 			php_error_docref(NULL TSRMLS_CC, E_WARNING,"Error binding parameters");
+			efree(tmp_statement);
 			RETURN_FALSE;
 		}
 	}
@@ -1371,6 +1418,13 @@ PHP_FUNCTION(ingres_query)
 	/* store the results */
 	ii_link->fieldCount = getDescrParm.gd_descriptorCount;
 	ii_link->descriptor = getDescrParm.gd_descriptor;
+
+	if ( ii_link->paramCount > 0  && ii_link->procname == NULL )
+	{ /* convert ? to ~V so we don't have to prepare the query */
+		efree(tmp_statement);
+		efree(statement);
+	}
+	
 
 	RETURN_TRUE;
 }
@@ -2468,7 +2522,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 					RETURN_FALSE;
 				}
 
-				if (columnData[k].dv_null)
+				if (columnData[0].dv_null)
 				{
 					break;
 				}
@@ -2490,6 +2544,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 				/* copy segement in to buffer. First two bytes contain the length of the segment. */
 
+
 				lob_segment += 2;
 				lob_ptr = lob_data + lob_len;
 				memcpy(lob_ptr, lob_segment, lob_segment_len);
@@ -2498,12 +2553,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 				so far */
 				lob_segment -= 2;
 				lob_len += lob_segment_len;
-				lob_data[lob_len] = '\0';
-			
+
 			} 
 			while ( getColParm.gc_moreSegments );
 
-			if (columnData[k].dv_null)
+			if (columnData[0].dv_null)
 			{	/* NULL value ? */
 
 				if (result_type & II_NUM)
@@ -2530,7 +2584,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 			efree(lob_segment);
 			efree(columnData);
-			if (!columnData[k].dv_null)
+			if (lob_len != 0)
 			{
 				efree(lob_data);
 			}
@@ -2874,7 +2928,6 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode)
 			default:
 				break;
 		}
-		RETVAL_STRING(ptr, 0);
 	} 
 	else 
 	{
@@ -3465,14 +3518,15 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, ch
 }
 /* }}} */
 
-/* {{{ static void php_ii_convert_param_markers (char *statement TSRMLS_DC) */
+/* {{{ static char *php_ii_convert_param_markers (char *statement TSRMLS_DC) */
 /* takes a statement with ? param markers and converts them to ~V */
 static char *php_ii_convert_param_markers (char *statement TSRMLS_DC)
 {
-	char *tmp_statement;
+	char *new_statement;
 	char ch, tmp_ch;
 	char *p, *tmp_p;
 	long parameter_count;
+	long statement_length;
 	int j;
 
 
@@ -3480,13 +3534,14 @@ static char *php_ii_convert_param_markers (char *statement TSRMLS_DC)
 	/* used to know how much to memory to allocate */
 	parameter_count = php_ii_paramcount (statement TSRMLS_CC);
 
-	tmp_statement = emalloc ( strlen(statement) + (parameter_count*3) + 1); /* allow for space either side and a null*/
-	sprintf(tmp_statement,"\0");
+	statement_length = strlen(statement);
+	new_statement = emalloc ( statement_length + (parameter_count*3) + 1); /* allow for space either side and a null*/
+	sprintf(new_statement,"\0");
 
     j = 0;
 
 	p = statement;
-	tmp_p = tmp_statement;
+	tmp_p = new_statement;
 
 	while ( (ch = *p++) != '\0') 
 	{
@@ -3523,9 +3578,8 @@ static char *php_ii_convert_param_markers (char *statement TSRMLS_DC)
 	}
 	*tmp_p = '\0'; /* terminate the new query */
 
-	sprintf (statement,"%s", tmp_statement);
-	efree(tmp_statement);
-	return statement;
+	efree(statement);
+	return new_statement;
 }
 /* }}} */
 
@@ -3575,9 +3629,13 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 	double tmp_double;
 	long tmp_long;
 	char *tmp_string;
+	char *tmp_lob = NULL;
+	char *tmp_lob_ptr;
 	char *key;
 	int key_len;
 	long index;
+	long lob_len;
+	long segment_length;
 	short with_procedure = 0;
 	char *types;
 
@@ -3665,6 +3723,21 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 				switch (types[param - with_procedure])
 				{
 					case 'B': /* long byte */
+						convert_to_string_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_LBYTE_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = IIAPI_COL_QPARM;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
 						break;
 					case 'b': /* byte */
 					case 'c': /* char */
@@ -3738,6 +3811,22 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 						break;
 					case 'T': /* long text */
 					case 'V': /* long varchar */
+						convert_to_string_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_LVCH_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						setDescrParm.sd_descriptor[param].ds_length =  Z_STRLEN_PP(val);
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
 						break;
 					case 'i': /* integer */
 						convert_to_long_ex(val);
@@ -3921,19 +4010,21 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 	putParmParm.pp_genParm.gp_callback = NULL;
 	putParmParm.pp_genParm.gp_closure = NULL;
 	putParmParm.pp_stmtHandle = ii_link->stmtHandle;
-	putParmParm.pp_parmCount = setDescrParm.sd_descriptorCount;
+	putParmParm.pp_parmCount = 0; /* we will work this out as we go along */
 
 	columnData = (IIAPI_DATAVALUE *) safe_emalloc(sizeof(IIAPI_DATAVALUE),setDescrParm.sd_descriptorCount, 0);
 	putParmParm.pp_parmData = columnData;
 
-	for ( param = 0 ; param < putParmParm.pp_parmCount ; param++)
+	for ( param = 0 ; param < setDescrParm.sd_descriptorCount ; param++)
 	{
+		putParmParm.pp_parmCount++; /* New parameter */
+		
 		if ((ii_link->procname != NULL) && (param == 0))
 		{
 			/* place the procedure name as the first parameter */
-			putParmParm.pp_parmData[param].dv_null = FALSE;
-			putParmParm.pp_parmData[param].dv_length = strlen(ii_link->procname);
-			putParmParm.pp_parmData[param].dv_value = ii_link->procname;
+			putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_null = FALSE;
+			putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_length = strlen(ii_link->procname);
+			putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_value = ii_link->procname;
 		}
 		else
 		{
@@ -3950,23 +4041,23 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 			{
 				case IS_LONG:
 					convert_to_long_ex(val);
-					putParmParm.pp_parmData[param].dv_null = FALSE;
-					putParmParm.pp_parmData[param].dv_length = sizeof(Z_LVAL_PP(val));
+					putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_null = FALSE;
+					putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_length = sizeof(Z_LVAL_PP(val));
 					tmp_long = Z_LVAL_PP(val);
-					putParmParm.pp_parmData[param].dv_value = &tmp_long;
+					putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_value = &tmp_long;
 					break;
 				case IS_DOUBLE:
 					convert_to_double_ex(val);
-					putParmParm.pp_parmData[param].dv_null = FALSE;
-					putParmParm.pp_parmData[param].dv_length = sizeof(Z_DVAL_PP(val)); 
+					putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_null = FALSE;
+					putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_length = sizeof(Z_DVAL_PP(val)); 
 					tmp_double = Z_DVAL_PP(val);
-					putParmParm.pp_parmData[param].dv_value = &tmp_double;
+					putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_value = &tmp_double;
 					break;
 				case IS_STRING:
 					convert_to_string_ex(val);
 					if ( paramtypes != NULL ) 
 					{
-						switch (types[param - with_procedure] )
+						switch (types[putParmParm.pp_parmCount-1 - with_procedure] )
 						{
 							case 'N': /* NVARCHAR */
 								/* copy the data to a new buffer then set the size  */
@@ -3975,8 +4066,8 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 								memcpy(tmp_string + 2, Z_STRVAL_PP(val), Z_STRLEN_PP(val));
 								/* set the 1st 2 bytes as the length of the string */
 								*((II_INT2*)(tmp_string)) = Z_STRLEN_PP(val)/2 ; 
-								putParmParm.pp_parmData[param].dv_value = tmp_string;
-								putParmParm.pp_parmData[param].dv_length = Z_STRLEN_PP(val) + 2; 
+								putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_value = tmp_string;
+								putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_length = Z_STRLEN_PP(val) + 2; 
 								break;
 							case 'v': /* VARCHAR */
 								/* copy the data to a new buffer then set the size  */
@@ -3988,6 +4079,93 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 								putParmParm.pp_parmData[param].dv_value = tmp_string;
 								putParmParm.pp_parmData[param].dv_length = Z_STRLEN_PP(val) + 2; 
 								break;
+							case 'B': /* LONG BYTE */
+							case 'L': /* LONG TEXT */
+							case 'V': /* LONG VARCHAR */
+								putParmParm.pp_parmCount--; /* decrement parameter count */
+								
+								/* If any non LOB columns have been prepared we need to flush before "put"ing LOB data */
+								if ( putParmParm.pp_parmCount )
+								{
+									putParmParm.pp_moreSegments = 0;
+
+									IIapi_putParms( &putParmParm );
+									ii_sync(&(putParmParm.pp_genParm));
+
+									if (ii_success(&(putParmParm.pp_genParm), ii_link TSRMLS_CC) == II_FAIL)
+									{
+										efree(descriptorInfo);
+										efree(columnData);
+										if ( paramtypes != NULL )
+										{
+											efree (types);
+											if ( tmp_string != NULL)
+											{
+												efree (tmp_string);
+											}
+										}
+
+										return II_FAIL;
+									}
+								}
+
+								putParmParm.pp_parmCount  = 1;   /* soon to be "put" LOB */
+								putParmParm.pp_moreSegments = 1; 
+
+								tmp_lob = (char *)emalloc(Z_STRLEN_PP(val) + 2);
+								/* Get the length of the new LOB */
+								lob_len = Z_STRLEN_PP(val);
+								/* Load it in to the first 2 bytes of the put buffer */
+								memcpy( tmp_lob, (char *)&lob_len, 2 );
+								memcpy( tmp_lob + 2, Z_STRVAL_PP(val), lob_len );
+								tmp_lob_ptr = tmp_lob;
+								
+								/* Copy 1st segment into tmp_lob */
+
+								while (putParmParm.pp_moreSegments) 
+								{
+									if ( lob_len <= IIG(blob_segment_length) )
+									{
+										putParmParm.pp_moreSegments = 0;
+										segment_length = lob_len; 
+									}
+									else
+									{
+										putParmParm.pp_moreSegments = 1; 
+										lob_len -= IIG(blob_segment_length);
+										segment_length = IIG(blob_segment_length); 
+									}
+
+
+									putParmParm.pp_parmData[0].dv_null = FALSE;
+									putParmParm.pp_parmData[0].dv_length = segment_length + 2;
+									putParmParm.pp_parmData[0].dv_value = tmp_lob_ptr;
+
+									IIapi_putParms( &putParmParm );
+									ii_sync(&(putParmParm.pp_genParm));
+
+									if (ii_success(&(putParmParm.pp_genParm), ii_link TSRMLS_CC) == II_FAIL)
+									{
+										efree(descriptorInfo);
+										efree(columnData);
+										efree(tmp_lob);
+										if ( paramtypes != NULL )
+										{
+											efree (types);
+											if ( tmp_string != NULL)
+											{
+												efree (tmp_string);
+											}
+										}
+
+										return II_FAIL;
+									}
+
+									/* bump pointer for data by segment_length */
+									tmp_lob_ptr += segment_length;
+								} 
+								putParmParm.pp_parmCount = 0;  /* reset paramCount */
+								break;
 							default: /* everything else */
 								putParmParm.pp_parmData[param].dv_value = Z_STRVAL_PP(val);
 								putParmParm.pp_parmData[param].dv_length = Z_STRLEN_PP(val); 
@@ -3996,14 +4174,14 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 					}
 					else
 					{
-						putParmParm.pp_parmData[param].dv_value = Z_STRVAL_PP(val);
+						putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_value = Z_STRVAL_PP(val);
 					}
-					putParmParm.pp_parmData[param].dv_null = FALSE;
+					putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_null = FALSE;
 					break;
 				case IS_NULL: /* TODO need to check this */
-					putParmParm.pp_parmData[param].dv_null = TRUE;
-					putParmParm.pp_parmData[param].dv_length = Z_STRLEN_PP(val); 
-					putParmParm.pp_parmData[param].dv_value = Z_STRVAL_PP(val);
+					putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_null = TRUE;
+					putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_length = Z_STRLEN_PP(val); 
+					putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_value = Z_STRVAL_PP(val);
 					break;
 				default:
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Error putting a parameter of unknown type" );
@@ -4019,29 +4197,34 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 
 	} /* param = 0 ; param < ii_link->paramCount ; param++ */
 
-	putParmParm.pp_moreSegments = 0;
+	if ( putParmParm.pp_parmCount ) {
 
-	IIapi_putParms( &putParmParm );
-	ii_sync(&(putParmParm.pp_genParm));
+		putParmParm.pp_moreSegments = 0;
 
-	if (ii_success(&(putParmParm.pp_genParm), ii_link TSRMLS_CC) == II_FAIL)
+		IIapi_putParms( &putParmParm );
+		ii_sync(&(putParmParm.pp_genParm));
+
+		if (ii_success(&(putParmParm.pp_genParm), ii_link TSRMLS_CC) == II_FAIL)
+		{
+			efree(descriptorInfo);
+			efree(columnData);
+			if ( paramtypes != NULL )
+			{
+				efree (types);
+				if ( tmp_string != NULL)
+				{
+					efree (tmp_string);
+				}
+			}
+			return II_FAIL;
+		}
+	}
+
+	if ( setDescrParm.sd_descriptorCount )
 	{
 		efree(descriptorInfo);
 		efree(columnData);
-		if ( paramtypes != NULL )
-		{
-			efree (types);
-		    if ( tmp_string != NULL)
-			{
-				efree (tmp_string);
-			}
-		}
-
-		return II_FAIL;
 	}
-
-	efree(descriptorInfo);
-	efree(columnData);
 
 	if ( paramtypes != NULL )
 	{
@@ -4050,6 +4233,11 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 		{
 			efree (tmp_string);
 		}
+	}
+
+	if (tmp_lob != NULL)
+	{
+		efree (tmp_lob);
 	}
 
 	return II_OK;
