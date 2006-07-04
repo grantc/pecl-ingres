@@ -1,4 +1,8 @@
 CVS
+- Added support for updating/inserting LOBS [grantc 04-07-06]
+- blob_segment_length is now picked up without using ingres_connect option
+parameter [grantc 04-07-06]
+- Changed startup to initialize OpenAPI per request [grantc 04-07-06]
 - Fixed SEGV when using error reporting functions [grantc 28-04-06]
 - Fixed Array so the start index is 1 (original default) and not 0 [grantc 07-04-06]
 - Added ini setting ingres.array_index_start to overide default start index of

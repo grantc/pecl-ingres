@@ -4,8 +4,6 @@ Still to do
 - procedure return value with a row producing procedure
 - procedure byref parameters
 - Unicode
-- BLOBS
-  - storing
 - Add/Show/Delete Ingres Name server entries
 - BIG int / int8 support
   - not possible with PHP as yet since it does not support 8 byte int
