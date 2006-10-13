@@ -83,6 +83,10 @@ typedef struct _II_RESULT {
 #define II_MONEY_LEAD_SIGN IIAPI_CPV_MONEY_LEAD_SIGN
 #define II_MONEY_TRAIL_SIGN IIAPI_CPV_MONEY_TRAIL_SIGN
 
+#define BOM_UTF16_LE "\xff\xfe" 
+#define BOM_UTF16_BE "\xfe\xff" 
+#define BOM_UTF8 "\xef\xbb\xbf"
+
 static int ii_sync(IIAPI_GENPARM *genParm);
 static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC);
 
@@ -105,6 +109,7 @@ static char * php_ii_convert_param_markers ( char *statement TSRMLS_DC);
 static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, zval **queryParams, zval **paramtypes);
 static II_LONG php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_LINK *ii_link, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC );
 static short int php_ii_set_environment_options (zval **options, II_LINK *ii_link TSRMLS_DC);
+
 
 #endif  /* HAVE_II */
 #endif	/* II_H */

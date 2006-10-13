@@ -1,12 +1,14 @@
 CVS
+- Fixed SEGV during shutdown when TSRM enabled [grantc 02-10-06]
+- Fixed several SEGVs when working with parameters [grantc 02-10-06]
+- Added support for Unicode (UTF-16) insertion and retrieval [grantc 15-08-06]
 - Added support for updating/inserting LOBS [grantc 04-07-06]
 - blob_segment_length is now picked up without using ingres_connect option
 parameter [grantc 04-07-06]
 - Changed startup to initialize OpenAPI per request [grantc 04-07-06]
 - Fixed SEGV when using error reporting functions [grantc 28-04-06]
 - Fixed Array so the start index is 1 (original default) and not 0 [grantc 07-04-06]
-- Added ini setting ingres.array_index_start to overide default start index of
-1 [grantc 07-04-06]
+- Added ini setting ingres.array_index_start to override default start index of 1 [grantc 07-04-06]
 - Fixed crash on module unload [grantc 22-03-06]
 - Added support for parameter typing to match PHP data to Ingres types [grantc 28-11-05]
 - Added preliminary UTF-16 support [grantc 28-11-05] 
@@ -19,14 +21,14 @@ version 1.2.1
 version 1.2
 - Fixed memory allocation when handling null blobs [grantc 04-10-05]
 - Fix php_ii_fetch() to allow the fetching of multiple blobs [grantc 22-09-05]
-- Fix php_ii_convert_data() to address correct indicies [grantc 22-09-05]
+- Fix php_ii_convert_data() to address correct indices [grantc 22-09-05]
 - Added preliminary support for BLOB fetching [grantc 21-09-05]
 - Fixed double memory free when working with results [grantc 21-09-05]
 - Fix non-parameterized procedures so they run [grantc 09-09-05]
 - Added support for ISO4 dates [grantc 07-09-05]
 - Added support for specifying the scope of login credentials for remote
 connections [grantc 02-09-05]
-- Added support for specifying the stucture of new tables and indexes [grantc 02-09-05]
+- Added support for specifying the structure of new tables and indexes [grantc 02-09-05]
 - Added support for specifying the precision of Ingres floats [grantc 02-09-05]
 - Added ingres_set_environment() [grantc 02-09-05]
 - Fixed ingres_connect() to allow locale params to function without a cast [grantc 01-09-05]

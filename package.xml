@@ -14,11 +14,11 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grantc@php.net</email>
   <active>yes</active>
  </lead>
- <date>2006-03-22</date>
+ <date>2006-10-13</date>
  <time>12:00:00</time>
  <version>
-  <release>1.3.1</release>
-  <api>1.3.1</api>
+  <release>1.3.2</release>
+  <api>1.3.2</api>
  </version>
  <stability>
   <release>alpha</release>
@@ -29,7 +29,10 @@ http://pear.php.net/dtd/package-2.0.xsd">
    - ingres.timeout - connection timeout. Either add ingres.timeout=&lt;ome value in ms&gt; to your php.ini or call ini_set("ingres.timeout",&lt;some value in ms&gt;) within your script. A value of -1 implies no timeout. 
    - ingres.array_index_start - overide the default start value for the index of an array. Default is 1.
 
-The following changes were submitted:
+ The following changes were submitted:
+- Fixed SEGV during shutdown when TSRM enabled [grantc 02-10-06]
+- Fixed several SEGVs when working with parameters [grantc 02-10-06]
+- Added support for Unicode (UTF-16) insertion and retrieval [grantc 15-08-06]
 - Added support for updating/inserting LOBS [grantc 04-07-06]
 - blob_segment_length is now picked up without using ingres_connect option
 parameter [grantc 04-07-06]

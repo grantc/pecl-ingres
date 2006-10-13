@@ -68,6 +68,7 @@ PHP_FUNCTION(ingres_prepare);
 PHP_FUNCTION(ingres_execute);
 PHP_FUNCTION(ingres_cursor);
 PHP_FUNCTION(ingres_set_environment);
+PHP_FUNCTION(ingres_fetch_proc_return);
 
 ZEND_BEGIN_MODULE_GLOBALS(ii)
 	long allow_persistent;
@@ -111,7 +112,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 
 #ifdef ZTS
 #define IIG(v) TSRMG(ii_globals_id, zend_ii_globals *, v)
-#define II_THREAD_ID tsrm_thread_id()
+#define II_THREAD_ID (unsigned long)tsrm_thread_id()
 #else
 #define IIG(v) (ii_globals.v)
 #define II_THREAD_ID 0
