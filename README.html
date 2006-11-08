@@ -88,7 +88,7 @@ library (PECL) to resolve a build conflict with Windows and UNIX/Linux
 platforms. One advantage of this move is it allows the extension to be
 developed with its own release cycle. This permits new functionality to be
 released when possible instead of waiting for the next official
-PHP release. Rather than being available via the main PHP tar-ball/zip
+PHP release. Rather than being available via the main PHP tarball/zip
 archive (<A HREF="http://www.php.net/downloads">http://www.php.net/downloads</A>), an additional download is required.
 </P>
 
@@ -101,13 +101,16 @@ This extension has been written to support the following versions of
 Ingres:
 </P>
 <UL>
-<LI>Ingres II 2.0/OpenIngres 2.0 
+<LI>Ingres II 2.0/OpenIngres 2.0</LI>
   
-<LI>Ingres II 2.5 
+<LI>Ingres II 2.5 </LI>
   
-<LI>Advantage Ingres 2.6 
+<LI>Advantage Ingres 2.6</LI>
   
 <LI>Ingres r3</LI>
+
+<LI>Ingres 2006</LI>
+
 </UL>
 
 <H3>PHP Releases</H3>
@@ -124,7 +127,7 @@ deletion of the <I>ingres_ii</I> directory under <I>ext</I>.
 The extension should work against any platform where the above
 Ingres releases are supported. In practice the extension has been developed
 on Windows XP using Visual Studio .Net 2003 (VC7) and SuSE 9.3/Fedora Core
-3 using GCC 3.3.x. There has been limited testing on Solaris 9 SPARC. If you
+3 using GCC 3.3.x. There has been limited testing on Solaris 9 Sparc. If you
 find the extension does not work, please log a bug via the <A HREF="http://pecl.php.net/package/ingres">project home page</A>
 with the following information:
 </P>
@@ -162,19 +165,23 @@ The extension provides the following functionality:
 <TR><TD>ingres_error</TD><TD>Get the error text</TD></TR>
 <TR><TD>ingres_errno</TD><TD>Get the error code</TD></TR>
 <TR><TD>ingres_errsqlstate</TD><TD>Get the SQLState</TD></TR>
+<TR><TD>ingres_execute</TD><TD>Execute a cursor prepared by <code>ingres_prepare</code></TD></TR>
 <TR><TD>ingres_fetch_array</TD><TD>Fetch a row of result into an array</TD></TR>
 <TR><TD>ingres_fetch_object</TD><TD>Fetch a row of result into an object</TD></TR>
+<TR><TD>ingres_fetch_proc_return</TD><TD>Get the return value from a procedure call</TD></TR>
 <TR><TD>ingres_fetch_row</TD><TD>Fetch a row of result into an enumerated array</TD></TR>
 <TR><TD>ingres_field_length</TD><TD>Get the length of a field</TD></TR>
 <TR><TD>ingres_field_name</TD><TD>Get the name of a field in a query result</TD></TR>
-<TR><TD>ingres_field_nullable</TD><TD>Test if a field is null-able</TD></TR>
+<TR><TD>ingres_field_nullable</TD><TD>Test if a field is nullable</TD></TR>
 <TR><TD>ingres_field_precision</TD><TD>Get the precision of a field</TD></TR>
 <TR><TD>ingres_field_scale</TD><TD>Get the scale of a field</TD></TR>
 <TR><TD>ingres_field_type</TD><TD>Get the type of a field in a query result</TD></TR>
 <TR><TD>ingres_num_fields</TD><TD>Get the number of fields returned by the last query</TD></TR>
 <TR><TD>ingres_num_rows</TD><TD>Get the number of rows affected or returned by the last query</TD></TR>
 <TR><TD>ingres_pconnect</TD><TD>Open a persistent connection to an Ingres database</TD></TR>
+<TR><TD>ingres_prepare</TD><TD>Prepares a query for execution by<code>ingres_execute</code></TD></TR>
 <TR><TD>ingres_query</TD><TD>Send a SQL query to Ingres</TD></TR>
+<TR><TD>ingres_set_environment</TD><TD>Set one or more Ingres environment variables</TD></TR>
 <TR><TD>ingres_rollback</TD><TD>Rollback a transaction</TD></TR>
 </TABLE>
 
@@ -196,12 +203,13 @@ will be provided in due course.
 <H3>Windows Installation</H3>
 
 The latest binaries for the Ingres extension can be downloaded from <A
- HREF="http://pecl4win.php.net">http://snaps.php.net</A>. Direct links are
+ HREF="http://pecl4win.php.net">http://pecl4win.php.net</A>. Direct links are
 provided below for different PHP releases:
 
 <UL>
 <LI><A HREF="http://pecl4win.php.net/download.php/ext/5_0/5.0.5/php_ingres.dll">http://pecl4win.php.net/download.php/ext/5_0/5.0.5/php_ingres.dll</A>
 <LI><A HREF="http://pecl4win.php.net/download.php/ext/5_1/5.1.2/php_ingres.dll">http://pecl4win.php.net/download.php/ext/5_1/5.1.2/php_ingres.dll</A>
+<LI><A HREF="http://pecl4win.php.net/download.php/ext/5_2/5.2.0/php_ingres.dll">http://pecl4win.php.net/download.php/ext/5_2/5.2.0/php_ingres.dll</A>
 </UL>
 
 <P>To activate the extension copy <i>php_ingres.dll</i> into the
@@ -216,7 +224,7 @@ line to <i>php.ini</i>:
 <H3>UNIX/Linux Installation</H3>
 
 <P>The installation of the extension on UNIX/Linux will require a C
-compilation environment.
+complilation environment.
 </P>
 
 <P>The latest source code can be downloaded manually from <A HREF="http://pecl.php.net/get/ingres">http://pecl.php.net/get/ingres</A>.
@@ -288,9 +296,9 @@ with versions of Ingres or with existing Ingres based PHP code.
 
 The current extension maintains a single statement handle. Whenever a
 query is executed via ingres_query() or ingres_prepare(), any existing
-statement is terminated/closed. For multiple result-sets to work, the
+statement is terminated/closed. For multiple resultsets to work, the
 ingres_fetch_*() statements will need to be able to accept a resource
-that represents an Ingres result-set. Such that:
+that represents an Ingres resultset. Such that:
 </P>
 <PRE>
   ingres_fetch_row( [resource link] ) 
