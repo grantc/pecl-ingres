@@ -1,4 +1,5 @@
 CVS
+- Added missing constants for table structures [grantc 20-10-06]
 - Fixed SEGV during shutdown when TSRM enabled [grantc 02-10-06]
 - Fixed several SEGVs when working with parameters [grantc 02-10-06]
 - Added support for Unicode (UTF-16) insertion and retrieval [grantc 15-08-06]

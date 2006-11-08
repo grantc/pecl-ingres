@@ -14,7 +14,7 @@ if ($conn) {
 	$rc=ingres_query("select * from iirelation where relid='iirelation'");
 	if ($rc) {
 		echo "Query succeeded.";
-		while ($row=ingres_fetch_array()) {
+		while ($row=ingres_fetch_array(INGRES_ASSOC)) {
 			echo $row["relowner"];
 		}
 	} else {

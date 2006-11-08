@@ -11,25 +11,26 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <lead>
   <name>Grant Croker</name>
   <user>grant</user>
-  <email>grantc@php.net</email>
+  <email>grant.croker@ingres.com</email>
   <active>yes</active>
  </lead>
- <date>2006-10-13</date>
- <time>12:00:00</time>
+ <date>2006-11-08</date>
+ <time>09:00:00</time>
  <version>
-  <release>1.3.2</release>
-  <api>1.3.2</api>
+  <release>1.4.0</release>
+  <api>1.4.0</api>
  </version>
  <stability>
-  <release>alpha</release>
-  <api>alpha</api>
+  <release>beta</release>
+  <api>beta</api>
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
  <notes>This release adds the folllowing ini settings:
-   - ingres.timeout - connection timeout. Either add ingres.timeout=&lt;ome value in ms&gt; to your php.ini or call ini_set("ingres.timeout",&lt;some value in ms&gt;) within your script. A value of -1 implies no timeout. 
+   - ingres.timeout - connection timeout. Either add ingres.timeout=&lt;some value in ms&gt; to php.ini or call ini_set("ingres.timeout",&lt;some value in ms&gt;) within the php script. A value of -1 implies no timeout. 
    - ingres.array_index_start - overide the default start value for the index of an array. Default is 1.
 
- The following changes were submitted:
+The following changes were submitted:
+- Added missing constants for table structures [grantc 20-10-06]
 - Fixed SEGV during shutdown when TSRM enabled [grantc 02-10-06]
 - Fixed several SEGVs when working with parameters [grantc 02-10-06]
 - Added support for Unicode (UTF-16) insertion and retrieval [grantc 15-08-06]
