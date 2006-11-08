@@ -4,7 +4,7 @@ dnl
 
 PHP_ARG_WITH(ingres, for Ingres support,
 [  --with-ingres[=DIR]     Include Ingres support. DIR is the Ingres
-                          base directory (default $II_SYSTEM/ingres)])
+                          base directory (default $II_SYSTEM)])
 
 if test "$PHP_INGRES" != "no"; then
   AC_DEFINE(HAVE_II, 1, [Whether you have Ingres])
@@ -14,7 +14,7 @@ if test "$PHP_INGRES" != "no"; then
   if test "$PHP_INGRES" = "yes"; then
     II_DIR=$II_SYSTEM/ingres
   else
-    II_DIR=$PHP_INGRES
+    II_DIR=$PHP_INGRES/ingres
   fi
 
   if test -r $II_DIR/files/iiapi.h; then
