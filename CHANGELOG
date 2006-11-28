@@ -1,4 +1,8 @@
 CVS
+- Fixed Array index start for php_ii_field_name [grantc 20-11-06] 
+- Fixed constant typo [grantc 22-10-06]
+
+version 1.4.0
 - Added missing constants for table structures [grantc 20-10-06]
 - Fixed SEGV during shutdown when TSRM enabled [grantc 02-10-06]
 - Fixed several SEGVs when working with parameters [grantc 02-10-06]

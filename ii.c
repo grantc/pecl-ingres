@@ -344,6 +344,8 @@ static int php_ii_get_default_link(INTERNAL_FUNCTION_PARAMETERS)
 static void php_ii_globals_init(zend_ii_globals *ii_globals)
 {
 	ii_globals->num_persistent = 0;
+	ii_globals->errorText = NULL;
+	ii_globals->envHandle = NULL;
 }
 /* }}} */
 
@@ -464,7 +466,6 @@ PHP_RINIT_FUNCTION(ii)
 #else
 	IIG(envHandle) = NULL;
 #endif
-	IIG(errorText) = NULL;
 
 	return SUCCESS;
 }
@@ -2082,15 +2083,15 @@ static char *php_ii_field_name(II_LINK *ii_link, int index TSRMLS_DC)
 
 	char *colname;
 	
-	if (index < 1 || index > ii_link->fieldCount)
+	if ((index < IIG(array_index_start)) || index > ii_link->fieldCount)
 	{
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "php_ii_field_name() called with wrong index (%d)", index);
 		return NULL;
 	}
 
-	if ( (ii_link->descriptor[index - 1]).ds_columnName != NULL )
+	if ( (ii_link->descriptor[index - IIG(array_index_start)]).ds_columnName != NULL )
 	{
-		return (ii_link->descriptor[index - 1]).ds_columnName;
+		return (ii_link->descriptor[index - IIG(array_index_start)]).ds_columnName;
 	}
 	else
 	{ /* need to make up a column name if one is not available */
