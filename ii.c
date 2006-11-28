@@ -196,11 +196,33 @@ static int _rollback_transaction(II_LINK *ii_link  TSRMLS_DC)
 static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
 {
 	IIAPI_DISCONNPARM disconnParm;
+	IIAPI_AUTOPARM autoParm;
 
 	if (ii_link->tranHandle && _rollback_transaction(ii_link TSRMLS_CC))
 	{
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to rollback transaction");
 	}
+
+	/* Disable autocommit if enabled */
+	if ( ii_link->autocommit ) 
+	{
+		autoParm.ac_genParm.gp_callback = NULL;
+		autoParm.ac_genParm.gp_closure = NULL;
+		autoParm.ac_connHandle = ii_link->connHandle;
+		autoParm.ac_tranHandle = ii_link->tranHandle;
+
+		IIapi_autocommit(&autoParm);
+		ii_sync(&(autoParm.ac_genParm));
+
+		if (ii_success(&(autoParm.ac_genParm), ii_link TSRMLS_CC) == II_FAIL)
+		{
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to disable autocommit");
+		}
+
+		ii_link->autocommit = 0;
+		ii_link->tranHandle = NULL;
+	}
+
 
 	disconnParm.dc_genParm.gp_callback = NULL;
 	disconnParm.dc_genParm.gp_closure = NULL;
@@ -2921,7 +2943,7 @@ PHP_FUNCTION(ingres_autocommit)
 	{
 		link_id = IIG(default_link);
 		if (link_id == -1)
-	{
+	    {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured getting the default link" );
 			RETURN_FALSE;
 		}

@@ -1,4 +1,5 @@
 CVS
+- Fixed auto commit cannot be enabled on shutdown [grantc 27-11-06] 
 - Fixed Array index start for php_ii_field_name [grantc 20-11-06] 
 - Fixed constant typo [grantc 22-10-06]
 
