@@ -496,13 +496,6 @@ PHP_RINIT_FUNCTION(ii)
 /* {{{ End of request */
 PHP_RSHUTDOWN_FUNCTION(ii)
 {
-
-
-	if (IIG(default_link) != -1)
-	{
-		zend_list_delete(IIG(default_link));
-		IIG(default_link) = -1;
-	}
 	return SUCCESS;
 }
 /* }}} */
