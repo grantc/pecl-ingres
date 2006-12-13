@@ -130,6 +130,8 @@ static int _close_statement(II_LINK *ii_link TSRMLS_DC)
 	IIapi_close(&closeParm);
 	ii_sync(&(closeParm.cl_genParm));
 
+	IIG(errorText) = NULL;
+
 	if (ii_success(&(closeParm.cl_genParm), ii_link TSRMLS_CC) == II_FAIL)
 	{
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "_close_statement : failed ");
@@ -556,7 +558,7 @@ static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC)
 	IIAPI_GETEINFOPARM *error_info;
 	char *	no_message;
 
-    no_message = emalloc(1);
+	no_message = emalloc(1);
 	sprintf(no_message,"\0");
 
 	/* Initialise global variables */
