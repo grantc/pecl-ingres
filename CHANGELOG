@@ -1,4 +1,5 @@
 CVS
+- Fixed spurious E_WARNING with empty LOB dataset [grantc 13-11-06]
 - Fixed SEGV when ingres_close() is not called [grantc 13-11-06]
 - Fixed auto commit cannot be enabled on shutdown [grantc 27-11-06] 
 - Fixed Array index start for php_ii_field_name [grantc 20-11-06] 

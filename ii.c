@@ -2571,12 +2571,21 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 				IIapi_getColumns(&getColParm);
 				ii_sync(&(getColParm.gc_genParm));
 
-				if (ii_success(&(getColParm.gc_genParm), ii_link TSRMLS_CC) != II_OK)
+				switch (ii_success(&(getColParm.gc_genParm), ii_link TSRMLS_CC)) 
 				{
-					efree(lob_segment);
-					efree(columnData);
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured whilst fetching a BLOB");
-					RETURN_FALSE;
+					case II_OK:
+						break;
+					case II_NO_DATA:
+						efree(lob_segment);
+						efree(columnData);
+						RETURN_FALSE;
+					    break;
+					default:
+						efree(lob_segment);
+						efree(columnData);
+						php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured whilst fetching a BLOB");
+						RETURN_FALSE;
+						break;
 				}
 
 				if (columnData[0].dv_null)
