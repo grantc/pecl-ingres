@@ -1,4 +1,5 @@
-CVS
+version 1.4.1
+- Added environment check during initialization  [grantc 18-12-06]
 - Fixed SEGV when closing a statement [grantc 13-12-06]
 - Fixed spurious E_WARNING with empty LOB dataset [grantc 13-12-06]
 - Fixed SEGV when ingres_close() is not called [grantc 13-12-06]

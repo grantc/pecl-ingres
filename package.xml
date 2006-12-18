@@ -14,8 +14,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grant.croker@ingres.com</email>
   <active>yes</active>
  </lead>
- <date>2006-11-08</date>
- <time>09:00:00</time>
+ <date>2006-12-18</date>
+ <time>17:00:00</time>
  <version>
   <release>1.4.1</release>
   <api>1.4.1</api>
@@ -25,26 +25,14 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <api>beta</api>
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
- <notes>This release adds the folllowing ini settings:
-   - ingres.timeout - connection timeout. Either add ingres.timeout=&lt;some value in ms&gt; to php.ini or call ini_set("ingres.timeout",&lt;some value in ms&gt;) within the php script. A value of -1 implies no timeout. 
-   - ingres.array_index_start - overide the default start value for the index of an array. Default is 1.
-
-The following changes were submitted:
-- Added missing constants for table structures [grantc 20-10-06]
-- Fixed SEGV during shutdown when TSRM enabled [grantc 02-10-06]
-- Fixed several SEGVs when working with parameters [grantc 02-10-06]
-- Added support for Unicode (UTF-16) insertion and retrieval [grantc 15-08-06]
-- Added support for updating/inserting LOBS [grantc 04-07-06]
-- blob_segment_length is now picked up without using ingres_connect option
-parameter [grantc 04-07-06]
-- Changed startup to initialize OpenAPI per request [grantc 04-07-06]
-- Fixed SEGV when using error reporting functions [grantc 28-04-06]
-- Fixed Array so the start index is 1 (original default) and not 0 [grantc 07-04-06]
-- Added ini setting ingres.array_index_start to overide default start index of 1 [grantc 07-04-06]
-- Fixed crash on module unload [grantc 22-03-06]
-- Added support for parameter typing to match PHP data to Ingres types [grantc 28-11-05]
-- Added preliminary UTF-16 support [grantc 28-11-05] 
-- Added global to configure connection timeout [grantc 15-12-05]
+ <notes>The following changes were submitted:
+   - Added environment check during initialization  [grantc 18-12-06]
+   - Fixed SEGV when closing a statement [grantc 13-12-06]
+   - Fixed spurious E_WARNING with empty LOB dataset [grantc 13-12-06]
+   - Fixed SEGV when ingres_close() is not called [grantc 13-12-06]
+   - Fixed auto commit cannot be enabled on shutdown [grantc 27-11-06] 
+   - Fixed Array index start for php_ii_field_name [grantc 20-11-06] 
+   - Fixed constant typo [grantc 22-10-06]
  </notes>
  <contents>
   <dir name="/">
