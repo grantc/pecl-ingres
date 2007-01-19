@@ -1388,7 +1388,7 @@ PHP_FUNCTION(ingres_query)
 		ii_link->procname = NULL;
 	}
 
-    ii_link->procname = php_ii_check_procedure(Z_STRVAL_PP(query), ii_link TSRMLS_CC);
+	ii_link->procname = php_ii_check_procedure(Z_STRVAL_PP(query), ii_link TSRMLS_CC);
 
 	if ( ii_link->paramCount > 0  && ii_link->procname == NULL )
 	{ /* convert ? to ~V so we don't have to prepare the query */
@@ -1397,7 +1397,7 @@ PHP_FUNCTION(ingres_query)
 		tmp_statement[Z_STRLEN_PP(query)] ='\0';
 		statement = php_ii_convert_param_markers( tmp_statement TSRMLS_CC );
 	}
-	
+
 	queryParm.qy_genParm.gp_callback = NULL;
 	queryParm.qy_genParm.gp_closure = NULL;
 	queryParm.qy_connHandle = ii_link->connHandle;
@@ -1446,7 +1446,7 @@ PHP_FUNCTION(ingres_query)
 			RETURN_FALSE;
 		}
 	}
-				
+
 	/* get description of results */
 	getDescrParm.gd_genParm.gp_callback = NULL;
 	getDescrParm.gd_genParm.gp_closure  = NULL;
@@ -1469,7 +1469,7 @@ PHP_FUNCTION(ingres_query)
 		efree(tmp_statement);
 		efree(statement);
 	}
-	
+
 
 	RETURN_TRUE;
 }
@@ -1542,7 +1542,7 @@ PHP_FUNCTION(ingres_prepare)
 	   load the procedure name into ii_link->procname.
 	   If ii_link->procname is NULL then there is no procedure */
 
-    ii_link->procname = php_ii_check_procedure(Z_STRVAL_PP(query), ii_link TSRMLS_CC);
+	ii_link->procname = php_ii_check_procedure(Z_STRVAL_PP(query), ii_link TSRMLS_CC);
 
 	if ( ii_link->procname == NULL )
 	{
@@ -3526,10 +3526,12 @@ static short int php_ii_set_connect_options(zval **options, II_LINK *ii_link, ch
 			{
 				parameter_id = IIAPI_CP_SECONDARY_INX;
 			}
+#ifdef IIAPI_VERSION_4
 			else if ( strcmp("login_local", key) == 0 )
 			{
 				parameter_id = IIAPI_CP_LOGIN_LOCAL;
 			}
+#endif
 			else if ( strcmp("timezone", key) == 0 )
 			{
 				ignore = TRUE;
