@@ -573,7 +573,7 @@ static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC)
 	sprintf(IIG(sqlstate),"\0\0\0\0\0\0");
 	if ( IIG(errorText) != NULL)
 	{
-		efree(IIG(errorText));
+		free(IIG(errorText));
 		IIG(errorText) = NULL;
 	}
 
