@@ -16,7 +16,7 @@
    |                http://www.eclips-software.com                        |
    |                mailto:idev@eclips-software.com                       |
    |                Ingres Corporation, http://ingres.com                 |
-   | Authors: David Hénot <henot@php.net>                                 |
+   | Authors: David HÃ©not <henot@php.net>                                 |
    |          Grant Croker <grantc@php.net>                               |
    +----------------------------------------------------------------------+
 */
@@ -331,7 +331,6 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
 static void _clean_ii_plink(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
 	II_LINK *ii_link;
-	//(II_LINK *)ii_link = (II_LINK *)rsrc->ptr;
 	ii_link = (II_LINK *)rsrc->ptr;
 	_ai_clean_ii_plink(ii_link TSRMLS_CC);
 }
@@ -367,15 +366,60 @@ static int php_ii_get_default_link(INTERNAL_FUNCTION_PARAMETERS)
 /* {{{ static void php_ii_globals_init(zend_ii_globals *ii_globals) */
 static void php_ii_globals_init(zend_ii_globals *ii_globals)
 {
+	IIAPI_INITPARM initParm;
+
+	/* Ingres api initialization */
+	/* timeout in ms, -1, (default) = no timeout */
+	initParm.in_timeout = ii_globals->connect_timeout;
+
+#if defined(IIAPI_VERSION_4) 
+    initParm.in_version = IIAPI_VERSION_4;
+#elif defined(IIAPI_VERSION_3)
+    initParm.in_version = IIAPI_VERSION_3;
+#elif defined(IIAPI_VERSION_2) 
+    initParm.in_version = IIAPI_VERSION_2;
+#else
+    initParm.in_version = IIAPI_VERSION_1;
+#endif
+
+	IIapi_initialize(&initParm);
+
+#ifdef IIAPI_VERSION_2
+	if ( initParm.in_envHandle != NULL )
+	{	
+		ii_globals->envHandle = initParm.in_envHandle; 
+	}
+#else
+	ii_globals->envHandle = NULL;
+#endif
+
 	ii_globals->num_persistent = 0;
 	ii_globals->errorText = NULL;
-	ii_globals->envHandle = NULL;
 }
 /* }}} */
 
 /* {{{ static void php_ii_globals_shutdown(zend_ii_globals *ii_globals) */
 static void php_ii_globals_shutdown(zend_ii_globals *ii_globals)
 {
+	IIAPI_TERMPARM termParm;
+	IIAPI_RELENVPARM   relEnvParm;
+
+
+#ifdef IIAPI_VERSION_2
+	relEnvParm.re_envHandle = ii_globals->envHandle;
+    IIapi_releaseEnv( &relEnvParm );
+#endif
+	/* Ingres api termination */
+	IIapi_terminate(&termParm);
+/*	if (termParm.tm_status == IIAPI_ST_SUCCESS)
+	{
+		return SUCCESS;
+	} else {
+		return FAILURE;
+
+	}
+*/
+
 
 }
 /* }}} */
@@ -443,64 +487,24 @@ PHP_MSHUTDOWN_FUNCTION(ii)
 #ifdef ZTS
 
 	ts_free_id(ii_globals_id);	
-	return SUCCESS;
 
-#else
-	IIAPI_TERMPARM termParm;
-	IIAPI_RELENVPARM   relEnvParm;
+#endif
 
 	UNREGISTER_INI_ENTRIES();
 
-#ifdef IIAPI_VERSION_2
-	relEnvParm.re_envHandle = IIG(envHandle);
-    IIapi_releaseEnv( &relEnvParm );
-	IIG(envHandle)=NULL;
-#endif
-	/* Ingres api termination */
-	IIapi_terminate(&termParm);
-	if (termParm.tm_status == IIAPI_ST_SUCCESS)
-	{
-		return SUCCESS;
-	} else {
-		return FAILURE;
-	}
-#endif
+	return SUCCESS;
+
 }
 /* }}} */
 
 /* {{{ New request initialization */
 PHP_RINIT_FUNCTION(ii)
 {
-	IIAPI_INITPARM initParm;
 
 	IIG(default_link) = -1;
 	IIG(num_links) = IIG(num_persistent);
 	IIG(cursor_no) = 0;
 
-	/* Ingres api initialization */
-	/* timeout in ms, -1, (default) = no timeout */
-	initParm.in_timeout = IIG(connect_timeout);				
-
-#if defined(IIAPI_VERSION_4) 
-    initParm.in_version = IIAPI_VERSION_4;
-#elif defined(IIAPI_VERSION_3)
-    initParm.in_version = IIAPI_VERSION_3;
-#elif defined(IIAPI_VERSION_2) 
-    initParm.in_version = IIAPI_VERSION_2;
-#else
-    initParm.in_version = IIAPI_VERSION_1;
-#endif
-
-	IIapi_initialize(&initParm);
-
-#ifdef IIAPI_VERSION_2
-	if ( initParm.in_envHandle != NULL )
-	{	
-		IIG(envHandle) = initParm.in_envHandle; 
-	}
-#else
-	IIG(envHandle) = NULL;
-#endif
 
 	return SUCCESS;
 }
@@ -1465,8 +1469,7 @@ PHP_FUNCTION(ingres_query)
 	ii_link->descriptor = getDescrParm.gd_descriptor;
 
 	if ( ii_link->paramCount > 0  && ii_link->procname == NULL )
-	{ /* convert ? to ~V so we don't have to prepare the query */
-		efree(tmp_statement);
+	{ 
 		efree(statement);
 	}
 
@@ -1549,7 +1552,6 @@ PHP_FUNCTION(ingres_prepare)
 		/* Adapt the query into a prepared statement */
 		queryLen = strlen(statement);
 
-		//ii_link->cursor_id = malloc(33);
 		php_ii_gen_cursor_id(ii_link TSRMLS_CC);
 		cursor_id_len = strlen(ii_link->cursor_id);
 		preparedStatement=ecalloc(queryLen + 15 + cursor_id_len, 1);
@@ -2104,7 +2106,10 @@ static char *php_ii_field_name(II_LINK *ii_link, int index TSRMLS_DC)
 {
 
 	char *colname;
+	char space;
 	
+	space = ' ';
+
 	if ((index < IIG(array_index_start)) || index > ii_link->fieldCount)
 	{
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "php_ii_field_name() called with wrong index (%d)", index);
@@ -2113,14 +2118,19 @@ static char *php_ii_field_name(II_LINK *ii_link, int index TSRMLS_DC)
 
 	if ( (ii_link->descriptor[index - IIG(array_index_start)]).ds_columnName != NULL )
 	{
-		return (ii_link->descriptor[index - IIG(array_index_start)]).ds_columnName;
+		/* if the column name has a space */
+		if ( strchr((ii_link->descriptor[index - IIG(array_index_start)]).ds_columnName, space ) != NULL ) 
+		{
+			sprintf(ii_link->descriptor[index - IIG(array_index_start)].ds_columnName,"col%d",index); 
+		}
+		/* If we have created the memory ourselves */
+		if ( (ii_link->descriptor[index - IIG(array_index_start)]).ds_columnName[0]  == '\0' ) 
+		{
+			sprintf(ii_link->descriptor[index - IIG(array_index_start)].ds_columnName,"col%d",index); 
+		}
 	}
-	else
-	{ /* need to make up a column name if one is not available */
-		colname = emalloc(8); /* colxxxx - should be enough */
-		sprintf(colname,"col%d",index);
-		return colname;
-	}
+
+	return (ii_link->descriptor[index - IIG(array_index_start)]).ds_columnName;
 }
 /* }}} */
 
@@ -2267,6 +2277,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 	int len, should_copy, correct_length=0;
 	int lob_len ;
 	short int lob_segment_len, found_lob;
+	short int null_column_name, mem;
 	char *lob_segment, *lob_ptr, *lob_data;
 
 	/* array initialization */
@@ -2373,6 +2384,18 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 
 			for (k = 0; k < j; k++)
 			{
+
+				/* some releases of Ingres do not set a column name for row producing procedures */
+				/* set up some memory so we can roll our own column name */
+				if ( ii_link->procname != NULL && ii_link->descriptor[i + k].ds_columnName == NULL )
+				{
+					ii_link->descriptor[i+k].ds_columnName = emalloc(8);
+					for ( mem = 0 ; mem < 8 ; mem++ ) 
+					{
+						ii_link->descriptor[i+k].ds_columnName[mem] = '\0';
+					}
+					null_column_name = 1;
+				}
 				if (columnData[k].dv_null)
 					{	/* NULL value ? */
 
@@ -2547,6 +2570,13 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int res
 						columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value - 2;
 					}
 				}
+				if ( ii_link->procname != NULL && null_column_name == 1 )
+				{
+					efree(ii_link->descriptor[i+k].ds_columnName);
+					ii_link->descriptor[i+k].ds_columnName = NULL;
+					null_column_name = 0;
+				}
+
 			}
 
 			/* free the memory buffers */
@@ -2909,25 +2939,35 @@ PHP_FUNCTION(ingres_commit)
 
 	ZEND_FETCH_RESOURCE2(ii_link, II_LINK *, link, link_id, "Ingres Link", le_ii_link, le_ii_plink);
 
-	if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
+	if ( ii_link ->tranHandle != NULL )
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement");
-		RETURN_FALSE;
+		if (ii_link->stmtHandle && _close_statement(ii_link TSRMLS_CC))
+		{
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement");
+			RETURN_FALSE;
+		}
+
+		commitParm.cm_genParm.gp_callback = NULL;
+		commitParm.cm_genParm.gp_closure = NULL;
+		commitParm.cm_tranHandle = ii_link->tranHandle;
+
+		IIapi_commit(&commitParm);
+		ii_sync(&(commitParm.cm_genParm));
+
+		if (ii_success(&(commitParm.cm_genParm), ii_link TSRMLS_CC) == II_FAIL)
+		{
+			RETURN_FALSE;
+		}
+
+		ii_link->tranHandle = NULL;
+	}
+	else
+	{
+		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "There is no active transaction to commit");
 	}
 
-	commitParm.cm_genParm.gp_callback = NULL;
-	commitParm.cm_genParm.gp_closure = NULL;
-	commitParm.cm_tranHandle = ii_link->tranHandle;
 
-	IIapi_commit(&commitParm);
-	ii_sync(&(commitParm.cm_genParm));
-
-	if (ii_success(&(commitParm.cm_genParm), ii_link TSRMLS_CC) == II_FAIL)
-	{
-		RETURN_FALSE;
-	}
-
-	ii_link->tranHandle = NULL;
+			
 	RETURN_TRUE;
 }
 /* }}} */
@@ -3815,7 +3855,6 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 	for ( param = 0 ; param < setDescrParm.sd_descriptorCount ; param++)
 	{
 
-		printf("%d\r\n",param);
 		if (( ii_link->procname != NULL)  && (param == 0) ) 
 		{ 
 			/* setup the first parameter as the procedure name */
@@ -3984,40 +4023,32 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 						}
 						break;
 					case 'n': /* nchar NFC/NFD UTF-16*/
-					case 'N': /* nvarchar NFC/NFD UTF-16*/ 
 						convert_to_string_ex(val);
-						if (types[param - with_procedure] == 'N')
-						{
-							setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_NVCH_TYPE;
-						} 
-						else
-						{
-							setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_NCHA_TYPE;
-						}
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_NCHA_TYPE;
 						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
-
-						/* Testing for UTF-16 BOM in the string - since it needs to be removed */
-						/* At the moment we do no do anything with it since it is expected */
-                        /* that the we will be using LE strings on LE PHP/Ingres */
-                        /* and vice versa for BE strings */
-
-						if ((memcmp(BOM_UTF16_LE, Z_STRVAL_PP(val), 2)) ||  (memcmp(BOM_UTF16_BE, Z_STRVAL_PP(val), 2)))
-						{
-							have_bom=1;
-
-						}
-
-						if ( have_bom )
-						{
-							setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
-						}
-						else
-						{
-							setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val) + 2;
-						}
+						setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
 						setDescrParm.sd_descriptor[param].ds_precision = 0;
 						setDescrParm.sd_descriptor[param].ds_scale = 0;
 						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+						if ( ii_link->procname == NULL )
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+						}
+						else
+						{
+							setDescrParm.sd_descriptor[param].ds_columnName = key;
+						}
+						break;
+					case 'N': /* nvarchar NFC/NFD UTF-16*/ 
+						convert_to_string_ex(val);
+						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_NVCH_TYPE;
+						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+						/* The first two bytes will contain the length */
+						setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val) + 2;
+						setDescrParm.sd_descriptor[param].ds_precision = 0;
+						setDescrParm.sd_descriptor[param].ds_scale = 0;
+						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+
 						if ( ii_link->procname == NULL )
 						{
 							setDescrParm.sd_descriptor[param].ds_columnName = NULL;
@@ -4166,7 +4197,6 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 	for ( param = 0 ; param < setDescrParm.sd_descriptorCount ; param++)
 	{
 		putParmParm.pp_parmCount=1; /* New parameter */
-		//putParmParm.pp_parmCount++; /* New parameter */
 		
 		if ((ii_link->procname != NULL) && (param == 0))
 		{
@@ -4209,27 +4239,14 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 						switch (types[param - with_procedure] )
 						{
 							case 'N': /* NVARCHAR */
-							case 'n': /* NCHAR */
 								/* copy the data to a new buffer then set the size  */
-								/* of the string at the begining of the buffer */
-								if (have_bom) 
-								{
-									/* since we will be losing the first 2 bytes */
-									tmp_string = emalloc(Z_STRLEN_PP(val));
-									memcpy(tmp_string + 2, Z_STRVAL_PP(val) + 2, Z_STRLEN_PP(val) - 2);
-									*((II_INT2*)(tmp_string)) = (Z_STRLEN_PP(val) - 2)/2; 
-									putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_length = Z_STRLEN_PP(val); 
-								}
-								else
-								{
-									tmp_string = emalloc(Z_STRLEN_PP(val) + 2);
-									memcpy(tmp_string + 2, Z_STRVAL_PP(val), Z_STRLEN_PP(val));
-									*((II_INT2*)(tmp_string)) = Z_STRLEN_PP(val) - 2; 
-									putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_length = Z_STRLEN_PP(val) + 2; 
-								}
-
-								putParmParm.pp_parmData[putParmParm.pp_parmCount-1].dv_value = tmp_string;
-
+								/* of the string in chars at the begining of the buffer */
+								tmp_string = emalloc(Z_STRLEN_PP(val) + 2);
+								memcpy(tmp_string + 2, Z_STRVAL_PP(val), Z_STRLEN_PP(val));
+								/* set the 1st 2 bytes as the length of the string in chars */
+								*((II_INT2*)(tmp_string)) = Z_STRLEN_PP(val)/2; 
+								putParmParm.pp_parmData[0].dv_value = tmp_string;
+								putParmParm.pp_parmData[0].dv_length = Z_STRLEN_PP(val) + 2; 
 								break;
 							case 'v': /* VARCHAR */
 								/* copy the data to a new buffer then set the size  */
@@ -4274,16 +4291,13 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 								putParmParm.pp_parmCount  = 1;   /* soon to be "put" LOB */
 								putParmParm.pp_moreSegments = 1; 
 
-								tmp_lob = (char *)emalloc(Z_STRLEN_PP(val) + 2);
+								/* setup a buffer to stream the data in */
+								tmp_lob = emalloc(IIG(blob_segment_length) + 2 );
+								
+								tmp_lob_ptr = Z_STRVAL_PP(val);
 								/* Get the length of the new LOB */
 								lob_len = Z_STRLEN_PP(val);
-								/* Load it in to the first 2 bytes of the put buffer */
-								memcpy( tmp_lob, (char *)&lob_len, 2 );
-								memcpy( tmp_lob + 2, Z_STRVAL_PP(val), lob_len );
-								tmp_lob_ptr = tmp_lob;
 								
-								/* Copy 1st segment into tmp_lob */
-
 								while (putParmParm.pp_moreSegments) 
 								{
 									if ( lob_len <= IIG(blob_segment_length) )
@@ -4297,11 +4311,13 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 										lob_len -= IIG(blob_segment_length);
 										segment_length = IIG(blob_segment_length); 
 									}
+									*((II_UINT2*)tmp_lob) = (II_UINT2)segment_length;
+									memcpy( tmp_lob + 2, tmp_lob_ptr, segment_length);
 
 
 									putParmParm.pp_parmData[0].dv_null = FALSE;
 									putParmParm.pp_parmData[0].dv_length = segment_length + 2;
-									putParmParm.pp_parmData[0].dv_value = tmp_lob_ptr;
+									putParmParm.pp_parmData[0].dv_value = tmp_lob;
 
 									IIapi_putParms( &putParmParm );
 									ii_sync(&(putParmParm.pp_genParm));
@@ -4326,7 +4342,12 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 									/* bump pointer for data by segment_length */
 									tmp_lob_ptr += segment_length;
 								} 
-								putParmParm.pp_parmCount = 0;  /* reset paramCount */
+								putParmParm.pp_parmCount = 0;
+								if (tmp_lob != NULL)
+								{
+									efree (tmp_lob);
+									tmp_lob = NULL;
+								}
 								break;
 							default: /* everything else */
 								putParmParm.pp_parmData[0].dv_value = Z_STRVAL_PP(val);
@@ -4336,6 +4357,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 					}
 					else
 					{
+						putParmParm.pp_parmData[0].dv_length = Z_STRLEN_PP(val);
 						putParmParm.pp_parmData[0].dv_value = Z_STRVAL_PP(val);
 					}
 					putParmParm.pp_parmData[0].dv_null = FALSE;
@@ -4357,34 +4379,35 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 			zend_hash_move_forward_ex(arr_hash, &pointer);
 		}
 
-		putParmParm.pp_moreSegments = 0;
+		if ( putParmParm.pp_parmCount ) {
+			putParmParm.pp_moreSegments = 0;
 
-		IIapi_putParms( &putParmParm );
-		ii_sync(&(putParmParm.pp_genParm));
+			IIapi_putParms( &putParmParm );
+			ii_sync(&(putParmParm.pp_genParm));
 
-		if (ii_success(&(putParmParm.pp_genParm), ii_link TSRMLS_CC) == II_FAIL)
-		{
-			efree(descriptorInfo);
-			efree(columnData);
-			if ( paramtypes != NULL )
+			if (ii_success(&(putParmParm.pp_genParm), ii_link TSRMLS_CC) == II_FAIL)
 			{
-				efree (types);
-				if ( tmp_string != NULL)
+				efree(descriptorInfo);
+				efree(columnData);
+				if ( paramtypes != NULL )
 				{
-					efree (tmp_string);
+					efree (types);
+					if ( tmp_string != NULL)
+					{
+						efree (tmp_string);
+					}
 				}
+				return II_FAIL;
 			}
-			return II_FAIL;
+			if (tmp_string != NULL )
+			{
+				efree(tmp_string);
+				tmp_string = NULL;
+			}
 		}
-		if (tmp_string != NULL )
-		{
-			efree(tmp_string);
-			tmp_string = NULL;
-		}
-
-
-		putParmParm.pp_parmCount=0; /* New parameter */
-	} /* param = 0 ; param < ii_link->paramCount ; param++ */
+		/* Reset Parameter Count */ 
+		putParmParm.pp_parmCount  = 0;
+ 	} /* param = 0 ; param < ii_link->paramCount ; param++ */
 
 	if ( putParmParm.pp_parmCount ) {
 
@@ -4429,11 +4452,6 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 	{
 		efree (tmp_string);
 		tmp_string = NULL;
-	}
-	if (tmp_lob != NULL)
-	{
-		efree (tmp_lob);
-		tmp_lob = NULL;
 	}
 
 	return II_OK;

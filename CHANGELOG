@@ -1,3 +1,13 @@
+CVS
+- Reduced memory usage when putting Long objects into the database [grantc 08-02-07]
+- Initialize Ingres OpenAPI once during module startup [grantc 08-02-07]
+- Fixed memory leak when fetching column names for row producing procedures [grantc 08-02-07]
+- Fixed parameter handling for procedures with Unicode parameters [grantc 08-02-07]
+- ingres_commit() no longer tries to commit when there is no transaction in effect [grantc 08-02-07]
+- Removed elimination of UNICODE BOM [grantc 08-02-07]
+- Fixed SEGV on module shutdown [grantc 24-01-07]
+- Fix build against Ingres II 2.6 [grantc 17-01-07]
+
 version 1.4.1
 - Added environment check during initialization  [grantc 18-12-06]
 - Fixed SEGV when closing a statement [grantc 13-12-06]
