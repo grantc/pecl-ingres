@@ -197,8 +197,8 @@ static int _rollback_transaction(II_LINK *ii_link  TSRMLS_DC)
 /* {{{ static void _close_ii_link(II_LINK *ii_link TSRMLS_DC) */
 static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
 {
-	IIAPI_DISCONNPARM disconnParm;
 	IIAPI_AUTOPARM autoParm;
+	IIAPI_ABORTPARM abortParm;
 
 	if (ii_link->tranHandle && _rollback_transaction(ii_link TSRMLS_CC))
 	{
@@ -225,12 +225,10 @@ static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
 		ii_link->tranHandle = NULL;
 	}
 
+	abortParm.ab_genParm.gp_closure = NULL;
+	abortParm.ab_connHandle = ii_link->connHandle;
 
-	disconnParm.dc_genParm.gp_callback = NULL;
-	disconnParm.dc_genParm.gp_closure = NULL;
-	disconnParm.dc_connHandle = ii_link->connHandle;
-
-	IIapi_disconnect(&disconnParm);
+	IIapi_abort(&abortParm);
 
 	free(ii_link);
 
@@ -2105,7 +2103,6 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, int info_type)
 static char *php_ii_field_name(II_LINK *ii_link, int index TSRMLS_DC)
 {
 
-	char *colname;
 	char space;
 	
 	space = ' ';

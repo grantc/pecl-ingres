@@ -1,4 +1,5 @@
 CVS
+- Use IIapi_abort() to close connections at the request end [grantc 28-02-07]
 - Reduced memory usage when putting Long objects into the database [grantc 08-02-07]
 - Initialize Ingres OpenAPI once during module startup [grantc 08-02-07]
 - Fixed memory leak when fetching column names for row producing procedures [grantc 08-02-07]
