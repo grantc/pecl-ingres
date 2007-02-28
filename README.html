@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
 <HTML><HEAD><TITLE>Ingres extension for PHP</TITLE>
-<META http-equiv=Content-Type content="text/html; charset=windows-1253">
+<META http-equiv=Content-Type content="text/html; charset=iso-8859-1">
 <STYLE type=text/css>A:link {
 	FONT-WEIGHT: bold; FONT-SIZE: 12px; COLOR: #336699; TEXT-DECORATION: underline
 }
@@ -116,7 +116,7 @@ Ingres:
 <H3>PHP Releases</H3>
 
 <P>
-This extension has been written against PHP 5.1. Prior versions of
+This extension has been written against PHP 5.1 and PHP 5.2. Prior versions of
 PHP, i.e. 4.0.x - 5.0.x, contain an earlier version of the Ingres
 extension. Building the extension with earlier versions requires the
 deletion of the <I>ingres_ii</I> directory under <I>ext</I>.
@@ -192,9 +192,101 @@ The latest tar ball for this extension can be downloaded from
 <A HREF="http://pecl.php.net/project/ingres">http://pecl.php.net/project/ingres</A>. At the moment only source code is
 available for download via this page. Development snapshot builds of
 the PECL extension for Windows can be downloaded from
-<A HREF="http://pecl4win.php.net">http://pecl4win.php.net</A>. Binary releases for certain operating systems
+<A HREF="http://pecl4win.php.net/ext.php/php_ingres.dll">http://pecl4win.php.net/ext.php/php_ingres.dll</A>. Binary releases for certain operating systems
 will be provided in due course.
 </P>
+
+<H3>Configuration Options</H3>
+
+<P>The following options configure the behaviour of the Ingres extension:</P>
+
+<TABLE BORDER="1">
+  <TR>
+  	<TH>Setting</TH>
+  	<TH>Description</TH>
+  	<TH>Default</TH>
+  	<TH>php.ini</TH>
+  	<TH>ini_set()</TH>
+  </TR>
+  <TR>
+  	<TD>ingres.allow_persistent</TD>
+  	<TD>Allow persistent links</TD>
+  	<TD>On</TD>
+  	<TD>Yes</TD>
+  	<TD>No</TD>
+  </TR>
+  <TR>
+  	<TD>ingres.max_persistent</TD>
+  	<TD>Maximum number of persistent links allowed</TD>
+  	<TD>-1</TD>
+  	<TD>Yes</TD>
+  	<TD>No</TD>
+  </TR>
+  <TR>
+  	<TD>ingres.max_links</TD>
+  	<TD>Maximum number of links allowed</TD>
+  	<TD>-1</TD>
+  	<TD>Yes</TD>
+  	<TD>No</TD>
+  </TR>
+  <TR>
+  	<TD>ingres.default_database</TD>
+  	<TD>Default database name</TD>
+  	<TD>&nbsp;</TD>
+  	<TD>Yes</TD>
+  	<TD>Yes</TD>
+  </TR>
+  <TR>
+  	<TD>ingres.default_user</TD>
+  	<TD>Default user name</TD>
+  	<TD>&nbsp;</TD>
+  	<TD>Yes</TD>
+  	<TD>Yes</TD>
+  </TR>
+  <TR>
+  	<TD>ingres.default_password</TD>
+  	<TD>Default password</TD>
+  	<TD>&nbsp;</TD>
+  	<TD>Yes</TD>
+  	<TD>Yes</TD>
+  </TR>
+  <TR>
+  	<TD>ingres.report_db_warnings</TD>
+  	<TD>Suppress DB warnings</TD>
+  	<TD>On</TD>
+  	<TD>Yes</TD>
+  	<TD>Yes</TD>
+  </TR>
+  <TR>
+  	<TD>ingres.blob_segment_length</TD>
+  	<TD>Size of the memory buffer in bytes to be used when chunking BLOB data</TD>
+  	<TD>4096</TD>
+  	<TD>Yes</TD>
+  	<TD>Yes</TD>
+  </TR>
+  <TR>
+  	<TD>ingres.trace_connect</TD>
+  	<TD>Trace the ingres_connect() / ingres_pconnect() functions</TD>
+  	<TD>Off</TD>
+  	<TD>Yes</TD>
+  	<TD>Yes</TD>
+  </TR>
+  <TR>
+  	<TD>ingres.timeout</TD>
+  	<TD>Time in ms the OpenAPI IIapi_initialize function will wait before failing
+</TD>
+  	<TD>-1</TD>
+  	<TD>Yes</TD>
+  	<TD>Yes</TD>
+  </TR>
+  <TR>
+  	<TD>ingres.array_index_start</TD>
+  	<TD>Start index from which arrays return by ingres_fetch_array() should use</TD>
+  	<TD>1</TD>
+  	<TD>Yes</TD>
+  	<TD>Yes</TD>
+  </TR>
+</TABLE>
 
 
 <BR><HR>
@@ -202,24 +294,17 @@ will be provided in due course.
 
 <H3>Windows Installation</H3>
 
-The latest binaries for the Ingres extension can be downloaded from <A
- HREF="http://pecl4win.php.net">http://pecl4win.php.net</A>. Direct links are
+<P>The latest binaries for the Ingres extension can be downloaded from <A
+ HREF="http://pecl4win.php.net/ext.php/php_ingres.dll">http://pecl4win.php.net/ext.php/php_ingres.dll</A>. Direct links are
 provided below for different PHP releases:
 
 <UL>
 <LI><A HREF="http://pecl4win.php.net/download.php/ext/5_0/5.0.5/php_ingres.dll">http://pecl4win.php.net/download.php/ext/5_0/5.0.5/php_ingres.dll</A>
-<LI><A HREF="http://pecl4win.php.net/download.php/ext/5_1/5.1.2/php_ingres.dll">http://pecl4win.php.net/download.php/ext/5_1/5.1.2/php_ingres.dll</A>
-<LI><A HREF="http://pecl4win.php.net/download.php/ext/5_2/5.2.0/php_ingres.dll">http://pecl4win.php.net/download.php/ext/5_2/5.2.0/php_ingres.dll</A>
+<LI><A HREF="http://pecl4win.php.net/download.php/ext/5_1/5.1.6/php_ingres.dll">http://pecl4win.php.net/download.php/ext/5_1/5.1.6/php_ingres.dll</A>
+<LI><A HREF="http://pecl4win.php.net/download.php/ext/5_2/5.2.1/php_ingres.dll">http://pecl4win.php.net/download.php/ext/5_2/5.2.1/php_ingres.dll</A>
 </UL>
 
-<P>To activate the extension copy <i>php_ingres.dll</i> into the
-extension_dir configured in <i>php.ini</i>. Then add the following
-line to <i>php.ini</i>:
-
-<PRE>
-	extension=php_ingres.dll
-</PRE>
-<P></P>
+To install the extension copy <i>php_ingres.dll</i> into the extension_dir configured in <i>php.ini</i>. </P>
 
 <H3>UNIX/Linux Installation</H3>
 
@@ -228,11 +313,11 @@ complilation environment.
 </P>
 
 <P>The latest source code can be downloaded manually from <A HREF="http://pecl.php.net/get/ingres">http://pecl.php.net/get/ingres</A>.
-Or by using PEAR:
+Or by using the <i>pecl</i> command:
 </P>
 
 <PRE>
-	pear download ingres
+    pecl download ingres-1.4.2
 </PRE>
 
 Once you have the source archive run through the following steps to
@@ -240,8 +325,8 @@ build and install, note that <i>$II_SYSTEM</i> needs to be defined
 beforehand:
 
 <OL>
-<LI>Extract the archive, adapt the version number accordingly:<PRE>tar -zxvf ingres-1.0.tgz</PRE>
-<LI>Enter the newly created directory:<PRE>cd ingres-1.0</PRE>
+<LI>Extract the archive, adapt the version number accordingly:<PRE>tar -zxvf ingres-1.4.2.tgz</PRE>
+<LI>Enter the newly created directory:<PRE>cd ingres-1.4.2</PRE>
 <LI>Generate the configuration file for the extension:<PRE>phpize</PRE>
 <LI>Generate the Makefile needed to build the extension:<PRE>./configure</PRE>
 <LI>Build the extension:<PRE>make</PRE>
@@ -250,7 +335,9 @@ beforehand:
 
 <H3>Ingres with the Apache web server on UNIX/Linux</H3>
 
-<P>This extension, like other Ingres applications, requires knowledge of a local Ingres installation. Providing Apache with this information can be done two ways both of which require <A HREF="http://httpd.apache.org/docs/2.0/mod/mod_env.html">mod_env</A>. The following assumes Ingres was installed to /opt/Ingres/II:
+<P>This extension, like other Ingres applications, requires knowledge of a local Ingres installation. 
+Providing Apache with this information can be done two ways both of which require 
+<A HREF="http://httpd.apache.org/docs/2.2/mod/mod_env.html">mod_env</A>. The following assumes Ingres was installed to /opt/Ingres/II:
 
 <OL>
 	<LI>Using PassEnv:</LI>
@@ -273,10 +360,49 @@ SetEnv LD_LIBRARY_PATH /opt/Ingres/II/ingres/lib
 </OL>
 </P>
 
+<H3>Activating the Ingres PECL extension</H3>
+
+<H4>Windows</H4>
+
+<P>Add the following line to the <i>php.ini</i> configuration file:
+
+<PRE>
+extension = php_ingres.dll
+</PRE>
+
+If a web server is being used to serve PHP scripts, restart it to activate the Ingres extension.</P>
+
+<H4>UNIX/Linux</H4>
+
+<P>Add the following line to the <i>php.ini</i> configuration file:
+
+<PRE>
+extension = ingres.so
+</PRE>
+
+If a web server is being used to serve PHP scripts, restart it to activate the Ingres extension.</P>
+
+
 <BR><HR>
 <A NAME="Known issues"><H2>5. Known issues</H2>
 
-<P>There are no known issues at this time.</P>
+<H3>Bugs</H3>
+
+<P>For a list of known bugs go to <A HREF="http://pecl.php.net/bugs/search.php?cmd=display&status=Open&package_name[]=ingres">pecl.php.net</a>.</P>
+
+<H3>Multi-threaded web servers</H3>
+
+<P>When working with multi-threaded web servers certain 
+considerations need to be made. Each server thread that can service an HTTP 
+request could potentially connect to an Ingres server, either directly or via 
+Ingres/NET. Depending on the number of server threads configured this could 
+exceed the number of sessions allowed by Ingres. With Apache HTTPd's 
+<A HREF="http://httpd.apache.org/docs/2.2/mod/mpm_winnt.html">mpm-winnt</A> 
+module this is configured using <I>ThreadsPerChild</I> and with the 
+<A HREF="http://httpd.apache.org/docs/2.2/mod/worker.html">worker</A> module 
+this is controlled using the <I>MaxSpareThreads</I> (with Apache HTTPd worker 
+<I>MaxSpareThreads</I> controls the overall number threads across all child processes).</P>
+
 
 <BR><HR>
 <A NAME="Future direction"><H2>6. Future direction</H2>
@@ -331,7 +457,7 @@ be done according to demand.
 
 <P>
 The architecture for the Ingres extension is based on code written by David
-Henot (<A href="mailto:henot@php.net">henot@php.net</A>) from 2000-2004. Since February 2005, Grant Croker, (<A href="mailto:grantc@php.net">grantc@php.net</A>), took over the maintenance and development of the extension.
+Hιnot (<A href="mailto:henot@php.net">henot@php.net</A>) from 2000-2004. Since February 2005, Grant Croker, (<A href="mailto:grantc@php.net">grantc@php.net</A>), took over the maintenance and development of the extension.
 </P>
 
 <P>
@@ -340,7 +466,7 @@ with coding, testing or documentation please contact <A href="mailto:grantc@php.
 </P>
 <!--
 please keep the line below
-vim: autoindent sw=4 ts=4 ff=unix
+vim: autoindent sw=4 ts=4 ff=unix fileencoding=latin1
 -->
 </BODY>
 </HTML>
