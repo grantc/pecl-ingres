@@ -14,11 +14,11 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grant.croker@ingres.com</email>
   <active>yes</active>
  </lead>
- <date>2006-12-18</date>
+ <date>2007-03-01</date>
  <time>17:00:00</time>
  <version>
-  <release>1.4.1</release>
-  <api>1.4.1</api>
+  <release>1.4.2</release>
+  <api>1.4.2</api>
  </version>
  <stability>
   <release>beta</release>
@@ -26,13 +26,15 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
  <notes>The following changes were submitted:
-   - Added environment check during initialization  [grantc 18-12-06]
-   - Fixed SEGV when closing a statement [grantc 13-12-06]
-   - Fixed spurious E_WARNING with empty LOB dataset [grantc 13-12-06]
-   - Fixed SEGV when ingres_close() is not called [grantc 13-12-06]
-   - Fixed auto commit cannot be enabled on shutdown [grantc 27-11-06] 
-   - Fixed Array index start for php_ii_field_name [grantc 20-11-06] 
-   - Fixed constant typo [grantc 22-10-06]
+    - Use IIapi_abort() to close connections at the request end [grantc 28-02-07]
+    - Reduced memory usage when putting Long objects into the database [grantc 08-02-07]
+    - Initialize Ingres OpenAPI once during module startup [grantc 08-02-07]
+    - Fixed memory leak when fetching column names for row producing procedures [grantc 08-02-07]
+    - Fixed parameter handling for procedures with Unicode parameters [grantc 08-02-07]
+    - ingres_commit() no longer tries to commit when there is no transaction in effect [grantc 08-02-07]
+    - Removed elimination of UNICODE BOM [grantc 08-02-07]
+    - Fixed SEGV on module shutdown [grantc 24-01-07]
+    - Fix build against Ingres II 2.6 [grantc 17-01-07]
  </notes>
  <contents>
   <dir name="/">
@@ -86,6 +88,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <file baseinstalldir="ingres" name="php_ii.h" role="src" />
    <file baseinstalldir="ingres" name="README" role="doc" />
    <file baseinstalldir="ingres" name="README.html" role="doc" />
+   <file baseinstalldir="ingres" name="ingres.ini" role="doc" />
    <file baseinstalldir="ingres" name="TODO" role="doc" />
   </dir> <!-- / -->
  </contents>
