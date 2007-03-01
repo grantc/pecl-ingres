@@ -105,7 +105,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define II_ASSOC (1<<0)
 #define II_NUM   (1<<1)
 #define II_BOTH  (II_ASSOC|II_NUM)
-#define II_VERSION "1.4.2-dev"
+#define II_VERSION "1.4.2"
 
 #define II_CURSOR_UPDATE 0    /* default */
 #define II_CURSOR_READONLY 1
