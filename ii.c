@@ -3787,6 +3787,12 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 	II_INT2				columnType;
     HashTable *arr_hash;
     HashPosition pointer;
+
+#ifdef IIAPI_VERSION_2
+	IIAPI_FORMATPARM formatParm;
+#else
+	IIAPI_CONVERTPARM convertParm;
+#endif 
 	
 	
 	double tmp_double;
@@ -3934,10 +3940,12 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 						}
 						break;
 					case 'D': /* decimal */
-						convert_to_double_ex(val);
+						/* Treat the incoming decimal as a string so as not to loose */
+						/* the actual value being stored if a PHP FLOAT type was used */
+						convert_to_string_ex(val);
 						setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_DEC_TYPE;
 						setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
-						setDescrParm.sd_descriptor[param].ds_length = sizeof(Z_DVAL_PP(val));
+						setDescrParm.sd_descriptor[param].ds_length = 16;
 						setDescrParm.sd_descriptor[param].ds_precision = 31;
 						setDescrParm.sd_descriptor[param].ds_scale = 15;
 						setDescrParm.sd_descriptor[param].ds_columnType = columnType;
@@ -4255,6 +4263,81 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 								putParmParm.pp_parmData[0].dv_value = tmp_string;
 								putParmParm.pp_parmData[0].dv_length = Z_STRLEN_PP(val) + 2; 
 								break;
+							case 'D': /* DECIMAL */
+#ifdef IIAPI_VERSION_2
+								formatParm.fd_envHandle = ii_link->envHandle; 
+							    formatParm.fd_srcDesc.ds_dataType  = IIAPI_CHA_TYPE;  
+								formatParm.fd_srcDesc.ds_nullable  = FALSE;  
+								formatParm.fd_srcDesc.ds_length  = Z_STRLEN_PP(val);
+								formatParm.fd_srcDesc.ds_precision = 0;
+								formatParm.fd_srcDesc.ds_scale = 0;
+								formatParm.fd_srcDesc.ds_columnType = IIAPI_COL_QPARM;
+								formatParm.fd_srcDesc.ds_columnName = NULL;
+		
+								formatParm.fd_srcValue.dv_null = FALSE;
+								formatParm.fd_srcValue.dv_length = Z_STRLEN_PP(val);
+								formatParm.fd_srcValue.dv_value = Z_STRVAL_PP(val);
+
+								formatParm.fd_dstDesc.ds_dataType = IIAPI_DEC_TYPE;
+								formatParm.fd_dstDesc.ds_nullable = FALSE;
+								formatParm.fd_dstDesc.ds_length = 16;
+								formatParm.fd_dstDesc.ds_precision = 31;
+								formatParm.fd_dstDesc.ds_scale = 15;
+								formatParm.fd_dstDesc.ds_columnType = IIAPI_COL_QPARM;
+								formatParm.fd_dstDesc.ds_columnName = NULL;
+
+								tmp_string = emalloc(16);
+
+								formatParm.fd_dstValue.dv_null = FALSE;
+								formatParm.fd_dstValue.dv_length = 16;
+								formatParm.fd_dstValue.dv_value = tmp_string;
+
+								IIapi_formatData( &formatParm );
+
+								if ( formatParm.fd_status != IIAPI_ST_SUCCESS )
+								{
+									php_error_docref(NULL TSRMLS_CC, E_WARNING, "Error occured converting to DECIMAL. Value supplied was %s", Z_STRVAL_PP(val) );
+								}
+
+								putParmParm.pp_parmData[0].dv_length = formatParm.fd_dstValue.dv_length; 
+#else
+							    convertParm.cv_srcDesc.ds_dataType  = IIAPI_CHA_TYPE;  
+								convertParm.cv_srcDesc.ds_nullable  = FALSE;  
+								convertParm.cv_srcDesc.ds_length  = Z_STRLEN_PP(val);
+								convertParm.cv_srcDesc.ds_precision = 0;
+								convertParm.cv_srcDesc.ds_scale = 0;
+								convertParm.cv_srcDesc.ds_columnType = IIAPI_COL_QPARM;
+								convertParm.cv_srcDesc.ds_columnName = NULL;
+		
+								convertParm.cv_srcValue.dv_null = FALSE;
+								convertParm.cv_srcValue.dv_length = Z_STRLEN_PP(val);
+								convertParm.cv_srcValue.dv_value = Z_STRVAL_PP(val);
+
+								convertParm.cv_dstDesc.ds_dataType = IIAPI_DEC_TYPE;
+								convertParm.cv_dstDesc.ds_nullable = FALSE;
+								convertParm.cv_dstDesc.ds_length = 16;
+								convertParm.cv_dstDesc.ds_precision = 31;
+								convertParm.cv_dstDesc.ds_scale = 15;
+								convertParm.cv_dstDesc.ds_columnType = IIAPI_COL_QPARM;
+								convertParm.cv_dstDesc.ds_columnName = NULL;
+
+								tmp_string = emalloc(16);
+
+								convertParm.cv_dstValue.dv_null = FALSE;
+								convertParm.cv_dstValue.dv_length = 16;
+								convertParm.cv_dstValue.dv_value = tmp_string;
+
+								IIapi_convertData( &convertParm );
+
+								if ( convertParm.cv_status != IIAPI_ST_SUCCESS )
+								{
+									php_error_docref(NULL TSRMLS_CC, E_WARNING, "Error occured converting to DECIMAL. Value supplied was %s", Z_STRVAL_PP(val) );
+								}
+
+								putParmParm.pp_parmData[0].dv_length = convertParm.cv_dstValue.dv_length;
+#endif /* IIAPI_VERSION_2 */
+								putParmParm.pp_parmData[0].dv_value = tmp_string;
+								break;
 							case 'B': /* LONG BYTE */
 							case 'L': /* LONG TEXT */
 							case 'V': /* LONG VARCHAR */
@@ -4347,13 +4430,15 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link,
 								}
 								break;
 							default: /* everything else */
+							    putParmParm.pp_parmData[0].dv_null = FALSE;
 								putParmParm.pp_parmData[0].dv_value = Z_STRVAL_PP(val);
 								putParmParm.pp_parmData[0].dv_length = Z_STRLEN_PP(val); 
 								break;
 						}
 					}
 					else
-					{
+					{	
+						putParmParm.pp_parmData[0].dv_null = FALSE;		
 						putParmParm.pp_parmData[0].dv_length = Z_STRLEN_PP(val);
 						putParmParm.pp_parmData[0].dv_value = Z_STRVAL_PP(val);
 					}

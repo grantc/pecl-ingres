@@ -14,7 +14,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grant.croker@ingres.com</email>
   <active>yes</active>
  </lead>
- <date>2007-03-01</date>
+ <date>2007-03-05</date>
  <time>17:00:00</time>
  <version>
   <release>1.4.2</release>
@@ -26,6 +26,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
  <notes>The following changes were submitted:
+    - Use exact value for DECIMAL parameters and not float estimates [05-03-07]
     - Use IIapi_abort() to close connections at the request end [grantc 28-02-07]
     - Reduced memory usage when putting Long objects into the database [grantc 08-02-07]
     - Initialize Ingres OpenAPI once during module startup [grantc 08-02-07]
@@ -83,6 +84,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <file baseinstalldir="ingres" name="config.m4" role="src" />
    <file baseinstalldir="ingres" name="config.w32" role="src" />
    <file baseinstalldir="ingres" name="CREDITS" role="doc" />
+   <file baseinstalldir="ingres" name="ingres.ini" role="doc" />
    <file baseinstalldir="ingres" name="ii.c" role="src" />
    <file baseinstalldir="ingres" name="ii.h" role="src" />
    <file baseinstalldir="ingres" name="php_ii.h" role="src" />
