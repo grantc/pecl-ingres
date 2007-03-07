@@ -14,29 +14,21 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grant.croker@ingres.com</email>
   <active>yes</active>
  </lead>
- <date>2007-03-05</date>
+ <date>2007-03-07</date>
  <time>17:00:00</time>
  <version>
-  <release>1.4.2</release>
-  <api>1.4.2</api>
+  <release>1.4.3</release>
+  <api>1.4.3</api>
  </version>
  <stability>
   <release>beta</release>
   <api>beta</api>
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
- <notes>The following changes were submitted:
-    - Use exact value for DECIMAL parameters and not float estimates [05-03-07]
-    - Use IIapi_abort() to close connections at the request end [grantc 28-02-07]
-    - Added sample ingres.ini configuration file [grantc 15-02-07]
-    - Reduced memory usage when putting Long objects into the database [grantc 08-02-07]
-    - Initialize Ingres OpenAPI once during module startup [grantc 08-02-07]
-    - Fixed memory leak when fetching column names for row producing procedures [grantc 08-02-07]
-    - Fixed parameter handling for procedures with Unicode parameters [grantc 08-02-07]
-    - ingres_commit() no longer tries to commit when there is no transaction in effect [grantc 08-02-07]
-    - Removed elimination of UNICODE BOM [grantc 08-02-07]
-    - Fixed SEGV on module shutdown [grantc 24-01-07]
-    - Fix build against Ingres II 2.6 [grantc 17-01-07]
+ <notes>This release incorporates a single change that stablizes the Ingres PECL extension under multi-threaded webservers such as Apache worker or Microsoft IIS. Users of these web servers are strongly recommended to install this update.
+
+The following changes were submitted:
+    - Wait for disconnect to complete to prevent thread terminating uncleanly [grantc 07-03-07]
  </notes>
  <contents>
   <dir name="/">

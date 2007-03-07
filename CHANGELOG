@@ -1,3 +1,6 @@
+version 1.4.3
+- Wait for disconnect to complete to prevent thread terminating uncleanly [grantc 07-03-07]
+
 version 1.4.2
 - Use exact value for DECIMAL parameters and not float estimates [05-03-07]
 - Use IIapi_abort() to close connections at the request end [grantc 28-02-07]
