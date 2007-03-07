@@ -198,7 +198,7 @@ static int _rollback_transaction(II_LINK *ii_link  TSRMLS_DC)
 static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
 {
 	IIAPI_AUTOPARM autoParm;
-	IIAPI_ABORTPARM abortParm;
+	IIAPI_DISCONNPARM disconnParm;
 
 	if (ii_link->tranHandle && _rollback_transaction(ii_link TSRMLS_CC))
 	{
@@ -225,10 +225,18 @@ static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
 		ii_link->tranHandle = NULL;
 	}
 
-	abortParm.ab_genParm.gp_closure = NULL;
-	abortParm.ab_connHandle = ii_link->connHandle;
+	disconnParm.dc_genParm.gp_callback = NULL; 	         
+	disconnParm.dc_genParm.gp_closure = NULL; 	 
+	disconnParm.dc_connHandle = ii_link->connHandle; 	 
 
-	IIapi_abort(&abortParm);
+	IIapi_disconnect(&disconnParm);
+	ii_sync(&(disconnParm.dc_genParm));
+
+	if (ii_success(&(disconnParm.dc_genParm), ii_link TSRMLS_CC) == II_FAIL)
+	{
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close link");
+	}
+
 
 	free(ii_link);
 
