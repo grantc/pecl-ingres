@@ -175,18 +175,18 @@ environment.
 The latest source code can be downloaded manually from http://pecl.php.net/get/
 ingres. Or by using the pecl command:
 
-      pecl download ingres-1.4.2
+      pecl download ingres-1.4.3
 
 Once you have the source archive run through the following steps to build and
 install, note that $II_SYSTEM needs to be defined beforehand:
 
   1. Extract the archive, adapt the version number accordingly:
 
-       tar -zxvf ingres-1.4.2.tgz
+       tar -zxvf ingres-1.4.3.tgz
 
   2. Enter the newly created directory:
 
-       cd ingres-1.4.2
+       cd ingres-1.4.3
 
   3. Generate the configuration file for the extension:
 
@@ -204,6 +204,13 @@ install, note that $II_SYSTEM needs to be defined beforehand:
 
        make install
 
+  7. If your PHP build environment is not the same as the target PHP
+     environment then use the following command, N.B. this may require root
+     access :
+
+       cp -v modules/ingres.so `php -r 'echo ini_get("extension_dir");'`
+
+     Where php is the PHP executable for your target environment.
 
 
 Ingres with the Apache web server on UNIX/Linux

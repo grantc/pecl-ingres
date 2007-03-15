@@ -317,7 +317,7 @@ Or by using the <i>pecl</i> command:
 </P>
 
 <PRE>
-    pecl download ingres-1.4.2
+    pecl download ingres-1.4.3
 </PRE>
 
 Once you have the source archive run through the following steps to
@@ -325,12 +325,13 @@ build and install, note that <i>$II_SYSTEM</i> needs to be defined
 beforehand:
 
 <OL>
-<LI>Extract the archive, adapt the version number accordingly:<PRE>tar -zxvf ingres-1.4.2.tgz</PRE>
-<LI>Enter the newly created directory:<PRE>cd ingres-1.4.2</PRE>
+<LI>Extract the archive, adapt the version number accordingly:<PRE>tar -zxvf ingres-1.4.3.tgz</PRE>
+<LI>Enter the newly created directory:<PRE>cd ingres-1.4.3</PRE>
 <LI>Generate the configuration file for the extension:<PRE>phpize</PRE>
 <LI>Generate the Makefile needed to build the extension:<PRE>./configure</PRE>
 <LI>Build the extension:<PRE>make</PRE>
 <LI>Install the extension, N.B. this may require <i>root</i> access :<PRE>make install</PRE></LI>
+<LI>If your PHP build environment is not the same as the target PHP environment then use the following command, N.B. this may require <i>root</i> access :<PRE>cp -v modules/ingres.so `php -r 'echo ini_get("extension_dir");'`</PRE>Where php is the PHP executable for your target environment.</LI> 
 </OL>
 
 <H3>Ingres with the Apache web server on UNIX/Linux</H3>
