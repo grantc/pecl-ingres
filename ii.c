@@ -576,7 +576,7 @@ static int ii_sync(IIAPI_GENPARM *genParm)
 */
 static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC)
 {
-	IIAPI_GETEINFOPARM *error_info;
+	IIAPI_GETEINFOPARM error_info;
 
 	/* Initialise global variables */
 	IIG(errorCode) = 0;
@@ -613,29 +613,37 @@ static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC)
 			{	/* no error message available */
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Server or API error - no error message available");
 			} else {
-                error_info=(IIAPI_GETEINFOPARM *) emalloc(sizeof(IIAPI_GETEINFOPARM));
-				error_info->ge_errorHandle = genParm->gp_errorHandle;
-				IIapi_getErrorInfo(error_info);
+                //error_info=(IIAPI_GETEINFOPARM *) emalloc(sizeof(IIAPI_GETEINFOPARM));
 
-			    /* load error information into globals */
-				IIG(errorCode) = error_info->ge_errorCode;
-				memcpy(IIG(sqlstate),error_info->ge_SQLSTATE,sizeof(error_info->ge_SQLSTATE));
-				IIG(errorText) = strdup(error_info->ge_message);
+				error_info.ge_errorHandle = genParm->gp_errorHandle;
+				IIapi_getErrorInfo(&error_info);
 
-				/* load error information into the passed link
-                */
-				if (ii_link->connHandle != NULL)
+				switch (error_info.ge_status)
 				{
-					ii_link->errorCode = error_info->ge_errorCode;
-					memcpy (ii_link->sqlstate ,error_info->ge_SQLSTATE,sizeof(error_info->ge_SQLSTATE));
-					ii_link->errorText=strdup(error_info->ge_message);
+					case IIAPI_ST_SUCCESS:
+						/* load error information into globals */
+						IIG(errorCode) = error_info.ge_errorCode;
+						memcpy(IIG(sqlstate),error_info.ge_SQLSTATE,strlen(error_info.ge_SQLSTATE));
+						IIG(errorText) = estrdup(error_info.ge_message);
+
+						/* load error information into the passed link
+						*/
+						if (ii_link->connHandle != NULL)
+						{
+							ii_link->errorCode = error_info.ge_errorCode;
+							memcpy (ii_link->sqlstate ,error_info.ge_SQLSTATE,strlen(error_info.ge_SQLSTATE));
+							ii_link->errorText=strdup(error_info.ge_message);
+						}
+						if (IIG(report_db_warnings))
+						{
+							php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres error : %ld : %s",IIG(errorCode), IIG(errorText));
+							php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres SQLSTATE : %s", IIG(sqlstate));
+						}
+						break;
+					default: /* An error occured with IIapi_getErrorInfo() */
+						php_error_docref(NULL TSRMLS_CC, E_ERROR, "IIapi_getErrorInfo error, status returned was : %d", error_info.ge_status );
+						break;
 				}
-				if (IIG(report_db_warnings))
-				{
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres error : %ld : %s",IIG(errorCode), IIG(errorText));
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres SQLSTATE : %s", IIG(sqlstate));
-				}
-				efree(error_info);
 			}
 			return II_FAIL;
 	}
@@ -1349,6 +1357,57 @@ PHP_FUNCTION(ingres_query)
 	}
 
 	convert_to_string_ex(query);
+
+    int query_type = php_ii_query_type(Z_STRVAL_PP(query) TSRMLS_CC);
+
+    switch (query_type)
+    {
+        case INGRES_SQL_SELECT:
+        case INGRES_SQL_INSERT:
+        case INGRES_SQL_UPDATE:
+        case INGRES_SQL_DELETE:
+			break;
+        case INGRES_SQL_COMMIT:
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Use ingres_commit() to commit a transaction");
+			RETURN_FALSE;
+			break;
+        case INGRES_SQL_ROLLBACK:
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Use ingres_rollback() to rollback a transaction");
+			RETURN_FALSE;
+			break;
+        case INGRES_SQL_OPEN:
+        case INGRES_SQL_CLOSE:
+			break;
+        case INGRES_SQL_CONNECT:
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Use ingres_connect() to connect to a database");
+			RETURN_FALSE;
+			break;
+        case INGRES_SQL_DISCONNECT:
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Use ingres_close() to disconnect from a database");
+			RETURN_FALSE;
+			break;
+        case INGRES_SQL_GETDBEVENT:
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres 'GET DBEVENT' is not supported at the current time");
+			RETURN_FALSE;
+			break;
+        case INGRES_SQL_SAVEPOINT:
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres 'SAVEPOINT' is not supported at the current time");
+			RETURN_FALSE;
+			break;
+        case INGRES_SQL_AUTOCOMMIT:
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Use ingres_autocommit() to set the autocommit state");
+			RETURN_FALSE;
+			break;
+        case INGRES_SQL_EXECUTE_PROCEDURE:
+        case INGRES_SQL_CALL:
+			break;
+		case INGRES_SQL_COPY:
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres 'COPY TABLE() INTO/FROM' is not supported at the current time");
+			RETURN_FALSE;
+			break;
+        default:
+            break;
+    }
 
 	/* check to see if there are any parameters to the query */
 
@@ -2971,8 +3030,6 @@ PHP_FUNCTION(ingres_commit)
 		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "There is no active transaction to commit");
 	}
 
-
-			
 	RETURN_TRUE;
 }
 /* }}} */
@@ -3309,6 +3366,25 @@ static char *php_ii_check_procedure(char *statement, II_LINK *ii_link TSRMLS_DC)
 	}
 
 	return tmp_procname;
+}
+/* }}} */
+
+/* {{{ static int php_ii_query_type(char *statement TSRMLS_DC) */
+/* Returns the type of query being called in order to better handle certain types of query. */
+static int php_ii_query_type(char *statement TSRMLS_DC)
+{
+    int count = 0;
+
+    for ( count = 0; count < INGRES_NO_OF_COMMANDS; count++ )
+    {
+        if (strncasecmp(SQL_COMMANDS[count].command, statement, strlen(SQL_COMMANDS[count].command)) == 0 )
+        {
+            return SQL_COMMANDS[count].code;
+        }
+    }
+    
+    return -1;
+
 }
 /* }}} */
 

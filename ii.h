@@ -96,6 +96,49 @@ typedef struct _II_RESULT {
 #define BOM_UTF16_BE "\xfe\xff" 
 #define BOM_UTF8 "\xef\xbb\xbf"
 
+#define INGRES_SQL_SELECT 1
+#define INGRES_SQL_INSERT 2
+#define INGRES_SQL_UPDATE 3
+#define INGRES_SQL_DELETE 4
+#define INGRES_SQL_COMMIT 5
+#define INGRES_SQL_ROLLBACK 6
+#define INGRES_SQL_OPEN 7
+#define INGRES_SQL_CLOSE 8
+#define INGRES_SQL_CONNECT 9
+#define INGRES_SQL_DISCONNECT 10
+#define INGRES_SQL_GETDBEVENT 11
+#define INGRES_SQL_SAVEPOINT 12
+#define INGRES_SQL_AUTOCOMMIT 13
+#define INGRES_SQL_EXECUTE_PROCEDURE 14
+#define INGRES_SQL_CALL 15
+#define INGRES_SQL_COPY 16
+
+#define INGRES_NO_OF_COMMANDS 16
+
+static struct
+{
+    char        *command;
+    int         code;
+} SQL_COMMANDS [INGRES_NO_OF_COMMANDS] =
+{
+    { "SELECT", INGRES_SQL_SELECT },
+    { "INSERT", INGRES_SQL_INSERT },
+    { "UPDATE", INGRES_SQL_UPDATE },
+    { "DELETE", INGRES_SQL_DELETE },
+    { "COMMIT", INGRES_SQL_COMMIT },
+    { "ROLLBACK", INGRES_SQL_ROLLBACK },
+    { "OPEN", INGRES_SQL_OPEN },
+    { "CLOSE", INGRES_SQL_CLOSE },
+    { "CONNECT", INGRES_SQL_CONNECT },
+    { "DISCONNECT", INGRES_SQL_DISCONNECT },
+    { "GET DBEVENT", INGRES_SQL_GETDBEVENT },
+    { "SAVEPOINT", INGRES_SQL_SAVEPOINT },
+    { "SET AUTOCOMMIT", INGRES_SQL_AUTOCOMMIT },
+    { "EXECUTE PROCEDURE", INGRES_SQL_EXECUTE_PROCEDURE },
+    { "CALL", INGRES_SQL_CALL },
+    { "COPY", INGRES_SQL_COPY },
+};
+
 static int ii_sync(IIAPI_GENPARM *genParm);
 static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC);
 
@@ -118,7 +161,7 @@ static char * php_ii_convert_param_markers ( char *statement TSRMLS_DC);
 static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, zval **queryParams, zval **paramtypes);
 static II_LONG php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_LINK *ii_link, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC );
 static short int php_ii_set_environment_options (zval **options, II_LINK *ii_link TSRMLS_DC);
-
+static int php_ii_query_type(char *statement TSRMLS_DC);
 
 #endif  /* HAVE_II */
 #endif	/* II_H */
