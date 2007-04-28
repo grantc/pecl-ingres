@@ -1330,6 +1330,7 @@ PHP_FUNCTION(ingres_query)
 	char *procname=NULL;
 	char *statement;
 	char *tmp_statement;
+	int query_type;
 
 	argc = ZEND_NUM_ARGS();
 	if (argc < 1 || argc > 4 || zend_get_parameters_ex(argc, &query, &link, &queryParams, &paramtypes) == FAILURE)
@@ -1358,7 +1359,7 @@ PHP_FUNCTION(ingres_query)
 
 	convert_to_string_ex(query);
 
-    int query_type = php_ii_query_type(Z_STRVAL_PP(query) TSRMLS_CC);
+    query_type = php_ii_query_type(Z_STRVAL_PP(query) TSRMLS_CC);
 
     switch (query_type)
     {
