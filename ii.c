@@ -583,7 +583,7 @@ static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC)
 	sprintf(IIG(sqlstate),"\0\0\0\0\0\0");
 	if ( IIG(errorText) != NULL)
 	{
-		free(IIG(errorText));
+		efree(IIG(errorText));
 		IIG(errorText) = NULL;
 	}
 
@@ -613,8 +613,6 @@ static int ii_success(IIAPI_GENPARM *genParm, II_LINK *ii_link TSRMLS_DC)
 			{	/* no error message available */
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Server or API error - no error message available");
 			} else {
-                //error_info=(IIAPI_GETEINFOPARM *) emalloc(sizeof(IIAPI_GETEINFOPARM));
-
 				error_info.ge_errorHandle = genParm->gp_errorHandle;
 				IIapi_getErrorInfo(&error_info);
 
