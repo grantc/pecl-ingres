@@ -1608,7 +1608,7 @@ PHP_FUNCTION(ingres_query)
     /* invokes a commit before auto-commit is re-enabled */
 
     /* If we are to simulate auto-commit */ 
-    if (IIG(auto_multi))
+    if ((IIG(auto_multi)) && ((ii_link->autocommit) || (ii_link->auto_multi)))
     {
         if (ii_link->auto_multi) /* We are in emulation mode */
         {
@@ -1708,7 +1708,7 @@ PHP_FUNCTION(ingres_query)
 
     ii_result->procname = php_ii_check_procedure(query, ii_link TSRMLS_CC);
 
-/* convert ? to ~V so we don't have to prepare the query */
+    /* convert ? to ~V so we don't have to prepare the query */
     if ( ii_result->paramCount > 0  && ii_result->procname == NULL )
     { 
         converted_query = emalloc(query_len + ( ii_result->paramCount*3 ) + 1);
@@ -1755,7 +1755,8 @@ PHP_FUNCTION(ingres_query)
             queryParm.qy_flags = 0;
 #endif
             queryParm.qy_queryType  = IIAPI_QT_QUERY;
-        }
+        } /* query_type == INGRES_SQL_SELECT */
+
         if ( ii_result->paramCount > 0 )
         {
             queryParm.qy_parameters = TRUE;
@@ -1774,9 +1775,16 @@ PHP_FUNCTION(ingres_query)
                 queryParm.qy_queryText  = query;
             }
 #else
-            queryParm.qy_queryText  = query;
+            if ( converted_query != NULL )
+            {
+                queryParm.qy_queryText = converted_query;
+            }
+            else
+            {
+                queryParm.qy_queryText = query;
+            }
 #endif
-        }
+        } /* ii_result->paramCount > 0 */
     }
     else
     {
@@ -3787,6 +3795,7 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode)
     char *type_name;
     IIAPI_GETEINFOPARM error_info;
     int type;
+    char empty_string = '\0';
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"|z" , &value) == FAILURE) 
     {
@@ -3799,7 +3808,14 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode)
             RETVAL_LONG(IIG(error_number));
             break;
         case 1:
-            RETVAL_STRING(IIG(error_text),1);
+            if ( IIG(error_text) != NULL )
+            {
+                RETVAL_STRING(IIG(error_text),1);
+            }
+            else
+            {
+                RETVAL_NULL();
+            }
             break;
         case 2:
             RETVAL_STRING(IIG(error_sqlstate),1);
