@@ -1,10 +1,14 @@
 CVS
- - Added support for multiple concurrent result-sets
- - Added automatic coercion between UTF-8 and UTF-16 
- - Added support for Bi-directional scrolling cursors
- - Added ingres_free_results() - free the memory associated with a given result set
- - Added ingres_autocommit_state() - return the current auto-commit state
- - Added ingres_next_error() - fetch additional errors if any
+- Init queryParm.qy_flags for Ingres >= 9.2.0 - fix SEGV for database procedure call
+- Simplify statement closure
+- Return NULL when there is no message, fix SEGV for ingres_error()
+- Ingres < 9.2.0 - ingres_query() make select cursor queries read-only too
+- Added support for multiple concurrent result-sets
+- Added automatic coercion between UTF-8 and UTF-16 
+- Added support for Bi-directional scrolling cursors
+- Added ingres_free_results() - free the memory associated with a given result set
+- Added ingres_autocommit_state() - return the current auto-commit state
+- Added ingres_next_error() - fetch additional errors if any
 
 version 1.4.3
 - Wait for disconnect to complete to prevent thread terminating uncleanly [grantc 07-03-07]

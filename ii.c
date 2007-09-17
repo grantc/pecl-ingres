@@ -189,19 +189,48 @@ PHP_INI_END()
 /* closes statement in given link */
 static int _close_statement(II_RESULT *ii_result TSRMLS_DC)
 {
-    IIAPI_CLOSEPARM closeParm;
+    IIAPI_CANCELPARM   cancelParm;
+    IIAPI_CLOSEPARM       closeParm;
+    IIAPI_GETEINFOPARM  error_info;
 
-    closeParm.cl_genParm.gp_callback = NULL;
-    closeParm.cl_genParm.gp_closure = NULL;
-    closeParm.cl_stmtHandle = ii_result->stmtHandle;
-
-    IIapi_close(&closeParm);
-    ii_sync(&(closeParm.cl_genParm));
-
-    if (ii_success(&(closeParm.cl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+    if (ii_result->stmtHandle)
     {
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, "_close_statement : failed ");
-        return 1;
+        /* see if we can close the query without cancelling it */
+        /* Free query resources. */
+        closeParm.cl_genParm.gp_callback = NULL;
+        closeParm.cl_genParm.gp_closure = NULL;
+        closeParm.cl_stmtHandle = ii_result->stmtHandle;
+
+        IIapi_close(&closeParm);
+        ii_sync(&(closeParm.cl_genParm));
+
+        if (ii_success(&(closeParm.cl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+        {
+            /* unable to close */
+            /* Cancel query processing. */
+            cancelParm.cn_genParm.gp_callback = NULL;
+            cancelParm.cn_genParm.gp_closure = NULL;
+            cancelParm.cn_stmtHandle = ii_result->stmtHandle;
+
+            IIapi_cancel(&cancelParm );
+
+            ii_sync(&(cancelParm.cn_genParm));
+
+            /* Free query resources. */
+            closeParm.cl_genParm.gp_callback = NULL;
+            closeParm.cl_genParm.gp_closure = NULL;
+            closeParm.cl_stmtHandle = ii_result->stmtHandle;
+
+            IIapi_close( &closeParm );
+
+            ii_sync(&(closeParm.cl_genParm));
+
+            if (ii_success(&(closeParm.cl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+            {
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "_close_statement : failed ");
+                return II_FAIL;
+            }
+        }
     }
 
     ii_result->stmtHandle = NULL;
@@ -226,7 +255,7 @@ static int _close_statement(II_RESULT *ii_result TSRMLS_DC)
 
     ii_result->paramCount = 0;
 
-    return 0;
+    return II_OK;
 }
 /* }}} */
 
@@ -427,7 +456,7 @@ static void _free_ii_link_result_list (II_LINK *ii_link TSRMLS_DC)
 
         if ( ii_result )
         {
-            _close_ii_result (ii_result TSRMLS_CC);
+            _close_statement (ii_result TSRMLS_CC);
         }
         zend_list_delete(ii_link->result_list_ptr->result_id);
 
@@ -497,58 +526,6 @@ static void php_close_ii_link(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 }
 /*  }}} */
 
-/* {{{ static void _close_ii_result(II_LINK *ii_result TSRMLS_DC) */
-static int _close_ii_result(II_RESULT *ii_result TSRMLS_DC)
-{
-    IIAPI_CANCELPARM   cancelParm;
-    IIAPI_CLOSEPARM       closeParm;
-    IIAPI_GETEINFOPARM  error_info;
-
-    if (ii_result->stmtHandle)
-    {
-        /* see if we can close the query without cancelling it */
-        /* Free query resources. */
-        closeParm.cl_genParm.gp_callback = NULL;
-        closeParm.cl_genParm.gp_closure = NULL;
-        closeParm.cl_stmtHandle = ii_result->stmtHandle;
-
-        IIapi_close( &closeParm );
-
-        ii_sync(&(closeParm.cl_genParm));
-
-        if (ii_success(&(closeParm.cl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
-        {
-            /* unable to close */
-            /* Cancel query processing. */
-            cancelParm.cn_genParm.gp_callback = NULL;
-            cancelParm.cn_genParm.gp_closure = NULL;
-            cancelParm.cn_stmtHandle = ii_result->stmtHandle;
-
-            IIapi_cancel(&cancelParm );
-
-            ii_sync(&(cancelParm.cn_genParm));
-
-            /* Free query resources. */
-            closeParm.cl_genParm.gp_callback = NULL;
-            closeParm.cl_genParm.gp_closure = NULL;
-            closeParm.cl_stmtHandle = ii_result->stmtHandle;
-
-            IIapi_close( &closeParm );
-
-            ii_sync(&(closeParm.cl_genParm));
-
-            if (ii_success(&(closeParm.cl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
-            {
-                php_error_docref(NULL TSRMLS_CC, E_WARNING, "_close_ii_result : Unable to close statement");
-                return II_FAIL;
-            }
-        }
-    }
-    ii_result->stmtHandle = NULL;
-    return II_OK;
-}
-/*  }}} */
-
 /* {{{ static void php_close_ii_result(zend_rsrc_list_entry *rsrc TSRMLS_DC)
  * closes the given result
 */
@@ -556,7 +533,7 @@ static void php_close_ii_result(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
     II_RESULT *ii_result = (II_RESULT *) rsrc->ptr;
 
-    _close_ii_result(ii_result TSRMLS_CC);
+    _close_statement(ii_result TSRMLS_CC);
 }
 /*  }}} */
 
@@ -1722,6 +1699,9 @@ PHP_FUNCTION(ingres_query)
     queryParm.qy_connHandle = ii_result->connHandle;
     queryParm.qy_tranHandle = ii_result->tranHandle;
     queryParm.qy_stmtHandle = NULL;
+#if defined(IIAPI_VERSION_6)
+    queryParm.qy_flags  = 0;
+#endif
 
     if ( ii_result->procname == NULL )
     {
@@ -1732,6 +1712,8 @@ PHP_FUNCTION(ingres_query)
             /* Enable scrolling cursor support */
             queryParm.qy_flags  = IIAPI_QF_SCROLL;
             ii_result->scrollable = 1;
+#else
+            ii_result->scrollable = 0;
 #endif
 
             if ( converted_query != NULL )
@@ -2717,7 +2699,7 @@ PHP_FUNCTION(ingres_free_result)
 
     ZEND_FETCH_RESOURCE(ii_result, II_RESULT *, &result, -1, "Ingres result", le_ii_result);
 
-    if (ii_result->stmtHandle && _close_statement(ii_result TSRMLS_CC))
+    if (ii_result->stmtHandle && _close_statement(ii_result TSRMLS_CC) == II_FAIL)
     {
          php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement");
          RETURN_FALSE;

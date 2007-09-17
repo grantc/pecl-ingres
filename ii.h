@@ -157,7 +157,6 @@ static int _rollback_transaction(II_LINK *ii_link TSRMLS_DC);
 static int _commit_transaction(II_LINK *ii_link  TSRMLS_DC);
 static void _close_ii_link(II_LINK *link TSRMLS_DC);
 static void _close_ii_plink(zend_rsrc_list_entry *link TSRMLS_DC);
-static int _close_ii_result(II_RESULT *result TSRMLS_DC);
 static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent);
 static char *php_ii_field_name(II_RESULT *ii_result, int index TSRMLS_DC);
 static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, long index, int info_type);
