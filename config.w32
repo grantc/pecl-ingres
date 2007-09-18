@@ -3,20 +3,20 @@
 
 ARG_WITH("ingres2", "Ingres support", "no");
 
-if (PHP_INGRES != "no") {
-    if (PHP_INGRES == "yes") { 
-		// no path was supplied to --with-ingres
+if (PHP_INGRES2 != "no") {
+    if (PHP_INGRES2 == "yes") { 
+		// no path was supplied to --with-ingres2
 		// Find Ingres header files and libaries through %II_SYSTEM%
 		var ii_system=WshShell.Environment("Process").Item("II_SYSTEM");
 
 		if (ii_system != "") {
-			if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", ii_system + "\\ingres\\files;" + PHP_INGRES) &&
-				CHECK_LIB("iilibapi.lib", "ingres2", ii_system + "\\ingres\\lib;" + PHP_INGRES)) {
+			if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", ii_system + "\\ingres\\files;" + PHP_INGRES2) &&
+				CHECK_LIB("iilibapi.lib", "ingres2", ii_system + "\\ingres\\lib;" + PHP_INGRES2)) {
 				// Ingres r3 
 				AC_DEFINE('HAVE_INGRES2', 1);
 				EXTENSION("ingres2","ii.c convertUTF.c");
-			} else if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", ii_system + "\\ingres\\files;" + PHP_INGRES) &&
-				CHECK_LIB("oiapi.lib", "ingres2", ii_system + "\\ingres\\lib;" + PHP_INGRES)) {
+			} else if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", ii_system + "\\ingres\\files;" + PHP_INGRES2) &&
+				CHECK_LIB("oiapi.lib", "ingres2", ii_system + "\\ingres\\lib;" + PHP_INGRES2)) {
 				// Ingres 2.0/2.5/2.6
 				AC_DEFINE('HAVE_INGRES2', 1);
 				EXTENSION("ingres2","ii.c convertUTF.c");
@@ -36,13 +36,13 @@ if (PHP_INGRES != "no") {
 			}
 		}
 	} else { 
-		// path supplied to  --with-ingres
-		if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", PHP_INGRES + "\\ingres\\files;") &&
-			CHECK_LIB("iilibapi.lib", "ingres2", PHP_INGRES + "\\ingres\\lib;"))  {
+		// path supplied to  --with-ingres2
+		if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", PHP_INGRES2 + "\\ingres\\files;") &&
+			CHECK_LIB("iilibapi.lib", "ingres2", PHP_INGRES2 + "\\ingres\\lib;"))  {
 			AC_DEFINE('HAVE_INGRES2', 1);
 			EXTENSION("ingres2","ii.c convertUTF.c");
-		} else if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", PHP_INGRES + "\\ingres\\files;" + PHP_INGRES) &&
-				CHECK_LIB("oiapi.lib", "ingres2", PHP_INGRES + "\\ingres\\lib;")) {
+		} else if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", PHP_INGRES2 + "\\ingres\\files;" + PHP_INGRES2) &&
+				CHECK_LIB("oiapi.lib", "ingres2", PHP_INGRES2 + "\\ingres\\lib;")) {
 				// Ingres 2.0/2.5/2.6
 				AC_DEFINE('HAVE_INGRES2', 1);
 				EXTENSION("ingres2","ii.c convertUTF.c");
