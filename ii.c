@@ -3228,16 +3228,19 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                         case IIAPI_INTDS_TYPE: /* Interval Day to Second */
 #endif
                             /* convert date to variable length string */
-                            if ((ii_result->descriptor[i + k]).ds_dataType == IIAPI_DTE_TYPE ||
-                                (ii_result->descriptor[i + k]).ds_dataType == IIAPI_ADATE_TYPE ||
-                                (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TIME_TYPE ||
-                                (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TMWO_TYPE ||
-                                (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TMTZ_TYPE ||
-                                (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TS_TYPE ||
-                                (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TSWO_TYPE ||
-                                (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TSTZ_TYPE ||
-                                (ii_result->descriptor[i + k]).ds_dataType == IIAPI_INTYM_TYPE ||
-                                (ii_result->descriptor[i + k]).ds_dataType == IIAPI_INTDS_TYPE)
+                            if ((ii_result->descriptor[i + k]).ds_dataType == IIAPI_DTE_TYPE 
+#if defined(IIAPI_VERSION_5) 
+                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_ADATE_TYPE
+                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TIME_TYPE 
+                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TMWO_TYPE
+                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TMTZ_TYPE
+                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TS_TYPE
+                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TSWO_TYPE
+                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TSTZ_TYPE
+                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_INTYM_TYPE
+                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_INTDS_TYPE
+#endif
+                                )
                             {
                                 php_ii_convert_data ( IIAPI_VCH_TYPE, 32, 0, ii_result, columnData, getColParm, i, k TSRMLS_CC );
                                 columnData[k].dv_length = *((II_INT2 *) columnData[k].dv_value);
