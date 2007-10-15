@@ -1712,8 +1712,6 @@ PHP_FUNCTION(ingres_query)
             /* Enable scrolling cursor support */
             queryParm.qy_flags  = IIAPI_QF_SCROLL;
             ii_result->scrollable = 1;
-#else
-            ii_result->scrollable = 0;
 #endif
 
             if ( converted_query != NULL )
@@ -2957,14 +2955,23 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
     }
 
 #if defined(IIAPI_VERSION_6)
-    if ((row_position > 0) && (ii_result->scrollable ))
+    if (ii_result->scrollable)
     {
-
+        if (row_position > 0) 
+        {
+            /* go to the requested row */
+            posParm.po_reference = IIAPI_POS_BEGIN;
+            posParm.po_offset = row_position;
+        } 
+        else
+        {
+            /* get next row */
+            posParm.po_reference = IIAPI_POS_CURRENT;
+            posParm.po_offset = 1;
+        }
         posParm.po_genParm.gp_callback = NULL;
         posParm.po_genParm.gp_closure = NULL;
         posParm.po_stmtHandle = ii_result->stmtHandle;
-        posParm.po_reference = IIAPI_POS_BEGIN;
-        posParm.po_offset = row_position;
         posParm.po_rowCount = 1;
 
         IIapi_position(&posParm);
@@ -2974,7 +2981,8 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
         {
             RETURN_FALSE;
         }
-    }
+    } 
+
 #else
     if ( row_position > 0)
     {
@@ -4075,27 +4083,28 @@ static short int php_ii_set_environment_options (zval *options, II_LINK *ii_link
 #if defined(IIAPI_VERSION_2)
     II_LONG parameter_id;
     IIAPI_SETENVPRMPARM    setEnvPrmParm;
-    zval *data;
+    zval **data;
     char *key;
     long index;
-    int i;
-    int num_options;
+    int key_len;
     char *temp_string;
     long temp_long;
     II_BOOL ignore;
+    HashTable *arr_hash;
 
-    num_options = zend_hash_num_elements(Z_ARRVAL_P(options));
-    zend_hash_internal_pointer_reset(Z_ARRVAL_P(options));
+    arr_hash = Z_ARRVAL_P(options);
 
     setEnvPrmParm.se_envHandle = ii_link->envHandle;
 
-    for ( i = 0; i < num_options; i++ )
+    for ( zend_hash_internal_pointer_reset(arr_hash); 
+          zend_hash_has_more_elements(arr_hash) == SUCCESS; 
+          zend_hash_move_forward(arr_hash))
     {
         ignore = FALSE;
 
-        if (zend_hash_get_current_key(Z_ARRVAL_P(options), &key, &index, 0) == HASH_KEY_IS_STRING)
-           {
-            zend_hash_get_current_data(Z_ARRVAL_P(options), (void*)&data);
+        if (zend_hash_get_current_key_ex(arr_hash, &key, &key_len, &index, 0, NULL) == HASH_KEY_IS_STRING)
+        {
+            zend_hash_get_current_data_ex(arr_hash, (void**)&data, NULL);
 
             if ( strcmp("role", key) == 0 ) 
             {
@@ -4164,8 +4173,8 @@ static short int php_ii_set_environment_options (zval *options, II_LINK *ii_link
             else if ( strcmp("blob_segment_length", key) == 0 ) 
             {
                     parameter_id = IIAPI_EP_MAX_SEGMENT_LEN;
-                    convert_to_long_ex(&data);
-                    IIG(blob_segment_length) = Z_LVAL_P(data);
+                    convert_to_long_ex(data);
+                    IIG(blob_segment_length) = Z_LVAL_PP(data);
             }
             else 
             {
@@ -4175,7 +4184,7 @@ static short int php_ii_set_environment_options (zval *options, II_LINK *ii_link
         }
         else
         {
-            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unexpected index in connection options array.");
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unexpected index in evironment options array.");
             return II_FAIL;
         }
 
@@ -4183,25 +4192,21 @@ static short int php_ii_set_environment_options (zval *options, II_LINK *ii_link
 
             setEnvPrmParm.se_paramID = parameter_id;
 
-            switch (Z_TYPE_P(data))
+            switch (Z_TYPE_PP(data))
             {
                 case IS_STRING:
-                    convert_to_string_ex(&data);
-                    temp_string = Z_STRVAL_P(data);
-                    setEnvPrmParm.se_paramValue = temp_string;
+                    convert_to_string_ex(data);
+                    temp_string = Z_STRVAL_PP(data);
+                    setEnvPrmParm.se_paramValue = (II_PTR)temp_string;
                     break;
                 case IS_LONG:
-                    convert_to_long_ex(&data);
-                    temp_long = Z_LVAL_P(data);
-                    setEnvPrmParm.se_paramValue = (II_PTR)&temp_long;
-                    break;
                 case IS_BOOL:
-                    convert_to_long_ex(&data);
-                    temp_long = Z_LVAL_P(data);
+                    convert_to_long_ex(data);
+                    temp_long = Z_LVAL_PP(data);
                     setEnvPrmParm.se_paramValue = (II_PTR)&temp_long;
                     break;
                 default:
-                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown option type, %l, in connection options", Z_TYPE_P(data));
+                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown option type, %ld, in environment options", Z_TYPE_PP(data));
                     return II_FAIL;
             }
 
@@ -4209,26 +4214,23 @@ static short int php_ii_set_environment_options (zval *options, II_LINK *ii_link
 
             if (setEnvPrmParm.se_status != IIAPI_ST_SUCCESS)
             {
-                if ( Z_TYPE_P(data) == IS_STRING )
+                if ( Z_TYPE_PP(data) == IS_STRING )
                 {
-                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %s", key, Z_STRVAL_P(data));
+                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
                     return II_FAIL;
                 }
                 else
                 {
-                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %ld. Error code %d.", key, Z_LVAL_P(data), setEnvPrmParm.se_status );
+                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %ld. Error code %d.", key, Z_LVAL_PP(data), setEnvPrmParm.se_status );
                     return II_FAIL;
                 }
             }
         }
-
-        zend_hash_move_forward(Z_ARRVAL_P(options));
-
     }
 
     return II_OK;
 #else
-    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Setting environment options requires Ingres II 2.5 or newer", key, Z_LVAL_P(data));
+    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Setting environment options requires Ingres II 2.5 or newer");
     return II_FAIL;
 #endif
 
@@ -4243,64 +4245,27 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
     IIAPI_SETCONPRMPARM    setConPrmParm;
     IIAPI_CONNPARM connParm;
     IIAPI_DISCONNPARM    disconnParm;
-    zval *data;
+    zval **data;
     char *key;
     long index;
-    int i;
-    int num_options;
+    int key_len;
     char *temp_string;
     long temp_long;
     II_BOOL ignore;
+    HashTable *arr_hash;
+    HashPosition pointer;
 
-    num_options = zend_hash_num_elements(Z_ARRVAL_P(options));
-    zend_hash_internal_pointer_reset(Z_ARRVAL_P(options));
+    arr_hash = Z_ARRVAL_P(options);
 
-    connParm.co_genParm.gp_callback = NULL;
-    connParm.co_genParm.gp_closure = NULL;
-    connParm.co_target = database;
-#if defined(IIAPI_VERSION_2)
-    /* Use the environment handle in ii_link->connHandle */
-    connParm.co_connHandle = ii_link->envHandle;
-#else
-    connParm.co_connHandle = NULL;
-#endif
-    connParm.co_tranHandle = NULL;
-    connParm.co_type = IIAPI_CT_SQL; 
-    connParm.co_username = NULL;
-    connParm.co_password = NULL;
-    connParm.co_timeout = -1;
-
-    IIapi_connect( &connParm );
-
-    if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), &ii_link->errorHandle TSRMLS_CC) == II_FAIL)
-    {
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to connect to database (%s), to setup options", database);
-        return II_FAIL;
-    }
-
-    ii_link->connHandle = connParm.co_connHandle;
-
-    disconnParm.dc_genParm.gp_callback = NULL;
-    disconnParm.dc_genParm.gp_closure = NULL;
-    disconnParm.dc_connHandle = ii_link->connHandle;
-
-    IIapi_disconnect( &disconnParm );
-
-    if (!ii_sync(&(disconnParm.dc_genParm)) || ii_success(&(disconnParm.dc_genParm), &ii_link->errorHandle TSRMLS_CC) == II_FAIL)
-    {
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to disconnect during setup of options");
-        return II_FAIL;
-    }
-
-    ii_link->connHandle = NULL;
-
-    for ( i = 0; i < num_options; i++ )
+    for ( zend_hash_internal_pointer_reset(arr_hash); 
+          zend_hash_has_more_elements(arr_hash) == SUCCESS; 
+          zend_hash_move_forward(arr_hash))
     {
         ignore = FALSE;
 
-        if (zend_hash_get_current_key(Z_ARRVAL_P(options), &key, &index, 0) == HASH_KEY_IS_STRING)
-           {
-            zend_hash_get_current_data(Z_ARRVAL_P(options), (void*)&data);
+        if (zend_hash_get_current_key_ex(arr_hash, &key, &key_len, &index, 0, NULL) == HASH_KEY_IS_STRING)
+        {
+            zend_hash_get_current_data_ex(arr_hash, (void**)&data, NULL);
 
             if ( strcmp("role", key) == 0 ) 
             {
@@ -4396,25 +4361,21 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
 #endif
             setConPrmParm.sc_paramID = parameter_id;
 
-            switch (Z_TYPE_P(data))
+            switch (Z_TYPE_PP(data))
             {
                 case IS_STRING:
-                    convert_to_string_ex(&data);
-                    temp_string = Z_STRVAL_P(data);
+                    convert_to_string_ex(data);
+                    temp_string = Z_STRVAL_PP(data);
                     setConPrmParm.sc_paramValue = temp_string;
                     break;
                 case IS_LONG:
-                    convert_to_long_ex(&data);
-                    temp_long = Z_LVAL_P(data);
-                    setConPrmParm.sc_paramValue = (II_PTR)&temp_long;
-                    break;
                 case IS_BOOL:
-                    convert_to_long_ex(&data);
-                    temp_long = Z_LVAL_P(data);
+                    convert_to_long_ex(data);
+                    temp_long = Z_LVAL_PP(data);
                     setConPrmParm.sc_paramValue = (II_PTR)&temp_long;
                     break;
                 default:
-                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown option type, %l, in connection options", Z_TYPE_P(data));
+                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown option type, %ld, in connection options", Z_TYPE_PP(data));
                     return II_FAIL;
             }
 
@@ -4422,23 +4383,20 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
 
             if (!ii_sync(&(setConPrmParm.sc_genParm)) || ii_success(&(setConPrmParm.sc_genParm), &ii_link->errorHandle TSRMLS_CC) == II_FAIL)
             {
-                if ( Z_TYPE_P(data) == IS_STRING )
+                if ( Z_TYPE_PP(data) == IS_STRING )
                 {
-                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %s", key, Z_STRVAL_P(data));
+                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
                     return II_FAIL;
                 }
                 else
                 {
-                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %ld", key, Z_LVAL_P(data));
+                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %ld", key, Z_LVAL_PP(data));
                     return II_FAIL;
                 }
             }
 
             ii_link->connHandle = setConPrmParm.sc_connHandle;
         }
-
-        zend_hash_move_forward(Z_ARRVAL_P(options));
-
     }
     return II_OK;
 }
@@ -4555,7 +4513,8 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
     long lob_len;
     long segment_length;
     short with_procedure = 0;
-    char *types;
+    char *types0
+    short unicode_lob = 0;
 
     UTF8 *string_start = NULL;
     UTF16 *tmp_utf16_string = NULL; 
@@ -4759,6 +4718,49 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             setDescrParm.sd_descriptor[param].ds_columnName = key;
                         }
                         break;
+                    case 'M': /* long nvarchar */
+                        convert_to_string_ex(val);
+                        setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_LNVCH_TYPE;
+                        setDescrParm.sd_descriptor[param].ds_precision = 0;
+                        setDescrParm.sd_descriptor[param].ds_scale = 0;
+                        setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+
+                        /* If this is a NULL value being passed we should pick it up */
+                        if (Z_TYPE_PP(val) == IS_NULL)
+                        {
+                            setDescrParm.sd_descriptor[param].ds_nullable = TRUE;
+                            setDescrParm.sd_descriptor[param].ds_length = 32;
+                        }
+                        else
+                        {
+                            convert_to_string_ex(val);
+                            if (IIG(utf8)) {
+                                tmp_utf16_string = emalloc((Z_STRLEN_PP(val) * 4));
+                                string_start = Z_STRVAL_PP(val);
+                                tmp_utf16_string_ptr = tmp_utf16_string;
+                                result = ConvertUTF8toUTF16((const UTF8 **) &string_start,  string_start + Z_STRLEN_PP(val) + 1, &tmp_utf16_string_ptr, tmp_utf16_string_ptr + (Z_STRLEN_PP(val) * 4) , strictConversion);
+                                utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string + 1)) * 2;
+                                setDescrParm.sd_descriptor[param].ds_length = utf16_string_len; 
+                                efree(tmp_utf16_string);
+                                tmp_utf16_string = NULL;
+                            }
+                            else
+                            {
+                                setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
+                            }
+                            setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+                        }
+
+
+                        if ( ii_result->procname == NULL )
+                        {
+                            setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+                        }
+                        else
+                        {
+                            setDescrParm.sd_descriptor[param].ds_columnName = key;
+                        }
+                        break;                        
                     case 'i': /* integer */
                         setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_INT_TYPE;
                         setDescrParm.sd_descriptor[param].ds_precision = 0;
@@ -5098,6 +5100,8 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 putParmParm.pp_parmData[0].dv_value = tmp_string;
                                 putParmParm.pp_parmData[0].dv_length = Z_STRLEN_PP(val) + 2; 
                                 break;
+                            case 'M': /* LONG NVARCHAR */
+                                unicode_lob = 1;
                             case 'B': /* LONG BYTE */
                             case 'L': /* LONG TEXT */
                             case 'V': /* LONG VARCHAR */
