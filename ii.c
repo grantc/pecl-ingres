@@ -4513,7 +4513,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
     long lob_len;
     long segment_length;
     short with_procedure = 0;
-    char *types0
+    char *types;
     short unicode_lob = 0;
 
     UTF8 *string_start = NULL;
