@@ -2722,7 +2722,7 @@ PHP_FUNCTION(ingres_free_result)
 /* }}} */
 
 /* {{{ static short php_ii_result_remove ( II_RESULT *ii_result, long result_id  ) 
-    Remove the result information from the link that references it
+    Remove the result information from the associated link
 */
 static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_DC)
 {
@@ -2777,30 +2777,13 @@ static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_
             {
                 if ( next_ptr != NULL ) /* another result after this one */
                 {
-                    if (last_ptr == (char *)((II_LINK *)resource)->result_list_ptr)
-                    {
-                        ((II_LINK *)resource)->result_list_ptr = (ii_result_entry *)next_ptr;
-                    }
-                    else
-                    {
-                        ((ii_result_entry *)last_ptr)->next_result_ptr = next_ptr;
-                    } /* (last_ptr == (char *)((II_LINK *)resource)->result_list_ptr) */
-
+                    ((ii_result_entry *)last_ptr)->next_result_ptr = next_ptr;
                     free(this_ptr);
                 } 
                 else /* nothing else after us in the list */
                 {
-                    if (last_ptr == (char *)((II_LINK *)resource)->result_list_ptr)
-                    {
-                        ((II_LINK *)resource)->result_list_ptr = NULL;
-                    }
-                    else
-                    {
-                        ((ii_result_entry *)last_ptr)->next_result_ptr = NULL;
-                    } /* (last_ptr == (char *)((II_LINK *)resource)->result_list_ptr) */
-
+                    ((ii_result_entry *)last_ptr)->next_result_ptr = NULL;
                     free(this_ptr);
-
                 } /* ( next_ptr != NULL ) */
             } /* (this_ptr == (char *)((II_LINK *)resource)->result_list_ptr) */
         }
