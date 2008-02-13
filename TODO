@@ -1,8 +1,6 @@
 Still to do
 - Byref procedure calls
 - Add/Show/Delete Ingres Name server entries
-- BIG int / int8 support
-  - not possible with PHP as yet since it does not support 8 byte int
 
 
 vim: ff=unix ts=4 sw=4 expandtab

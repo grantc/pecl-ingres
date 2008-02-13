@@ -1,4 +1,6 @@
 CVS
+- Return INTEGER8 values outside the range of LONG_MIN/LONG_MAX as a string
+- Restrict UNICODE operations to IIAPI_VERSION_3 or greater
 - Init queryParm.qy_flags for Ingres >= 9.2.0 - fix SEGV for database procedure call
 - Simplify statement closure
 - Return NULL when there is no message, fix SEGV for ingres_error()

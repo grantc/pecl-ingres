@@ -150,9 +150,12 @@ ZEND_BEGIN_MODULE_GLOBALS(ii)
 	long connect_timeout; /* in ms - default -1, no timeout,  if not set */
 	long array_index_start; /* start value for x in  array[x], default 1*/
     
+#if defined (IIAPI_VERSION_3)
     short utf8;   /* convert unicode data to / from UTF-8 */
+#endif
     short auto_multi;   /* Enable multiple cursors when auto commit is enabled */
     short reuse_connection;   /* should ingres_connect() reuse existing connections? */
+    short ingres_trace; /* enable E_NOTICE tracing - not suitable for production usage */
 
 ZEND_END_MODULE_GLOBALS(ii)
 
@@ -196,6 +199,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define INGRES_INI_AUTO "ingres2.auto"
 #define INGRES_INI_UTF8 "ingres2.utf8"
 #define INGRES_INI_REUSE_CONNECTION "ingres2.reuse_connection"
+#define INGRES_INI_TRACE "ingres2.trace"
 
 #else
 
@@ -214,6 +218,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define INGRES_INI_AUTO "ingres.auto"
 #define INGRES_INI_UTF8 "ingres.utf8"
 #define INGRES_INI_REUSE_CONNECTION "ingres.reuse_connection"
+#define INGRES_INI_TRACE "ingres.trace"
 
 #endif /* HAVE_INGRES2 */
 

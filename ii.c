@@ -34,7 +34,9 @@
 #include "php_ii.h"
 #include "ii.h"
 #include "ext/standard/php_string.h"
+#if defined (IIAPI_VERSION_3)
 #include "convertUTF.h"
+#endif
 
 #if HAVE_INGRES
 
@@ -182,6 +184,7 @@ PHP_INI_BEGIN()
     STD_PHP_INI_BOOLEAN(INGRES_INI_AUTO, "1", PHP_INI_ALL, OnUpdateBool, auto_multi, zend_ii_globals, ii_globals)
     STD_PHP_INI_BOOLEAN(INGRES_INI_UTF8, "1", PHP_INI_ALL, OnUpdateBool, utf8, zend_ii_globals, ii_globals)
     STD_PHP_INI_BOOLEAN(INGRES_INI_REUSE_CONNECTION, "1", PHP_INI_ALL, OnUpdateBool, reuse_connection, zend_ii_globals, ii_globals)
+    STD_PHP_INI_BOOLEAN(INGRES_INI_TRACE, "0", PHP_INI_ALL, OnUpdateBool, ingres_trace, zend_ii_globals, ii_globals)
 PHP_INI_END()
 /* }}} */
 
@@ -661,6 +664,7 @@ static void php_ii_globals_init(zend_ii_globals *ii_globals)
     ii_globals->num_persistent = 0;
     ii_globals->auto_multi = 1;
     ii_globals->trace_connect = 0;
+    ii_globals->ingres_trace = 0;
     ii_globals->array_index_start = 1;
     ii_globals->error_text = NULL;
     ii_globals->error_number = 0;
@@ -824,7 +828,7 @@ PHP_MINFO_FUNCTION(ingres)
 */
 static int ii_sync(IIAPI_GENPARM *genParm)
 {
-    static IIAPI_WAITPARM waitParm = {
+    IIAPI_WAITPARM waitParm = {
         -1,        /* no timeout, we don't want asynchronous queries */
         0        /* wt_status (output) */
     };
@@ -1579,6 +1583,12 @@ PHP_FUNCTION(ingres_query)
             break;
     }
 
+    if (IIG(ingres_trace))
+    {
+        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "%s", query);
+        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "%s:%d, ac-state:%d, ac-emulation:%d",INGRES_INI_AUTO, IIG(auto_multi), ii_link->autocommit, ii_link->auto_multi);
+    }
+
     /* Ingres only allows for a single cursor to be open when auto-commit is enabled */
     /* To allow multiple open cursors we disable auto-commit before opening the first cursor */
     /* auto-commit is restarted when all resultsets have been freed. The last freed resultset */
@@ -1597,10 +1607,18 @@ PHP_FUNCTION(ingres_query)
                     /* clean up any un-freed statements/results */
                     _free_ii_link_result_list(ii_link TSRMLS_CC);
                 }
+                if (IIG(ingres_trace))
+                {
+                    php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Issuing commit whilst in auto-commit emulation mode");
+                }
                 /* commit the previous statement before changing the auto-commit state */
                 if (_commit_transaction(ii_link TSRMLS_CC) == II_FAIL)
                 {
                     php_error_docref(NULL TSRMLS_CC, E_ERROR, "An error occur when issuing an internal commit");
+                }
+                if (IIG(ingres_trace))
+                {
+                    php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Re-activating auto-commit");
                 }
                 if (_autocommit_transaction(ii_link TSRMLS_CC) == II_FAIL)
                 {
@@ -1623,6 +1641,10 @@ PHP_FUNCTION(ingres_query)
                         /* clean up any un-freed statements/results */
                         _free_ii_link_result_list(ii_link TSRMLS_CC);
                     }
+                    if (IIG(ingres_trace))
+                    {
+                        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Disabling auto-commit");
+                    }
                     if (_autocommit_transaction(ii_link TSRMLS_CC) == II_FAIL)
                     {
                         php_error_docref(NULL TSRMLS_CC, E_ERROR, "An error occur when changing the auto-commit state");
@@ -1633,6 +1655,10 @@ PHP_FUNCTION(ingres_query)
                 }
             }
         }
+    }
+    if (IIG(ingres_trace))
+    {
+        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "%s:%d, ac-state:%d, ac-emulation:%d",INGRES_INI_AUTO, IIG(auto_multi), ii_link->autocommit, ii_link->auto_multi);
     }
 
     /* Allocate and initialize the memory for the new result resource */
@@ -1713,7 +1739,6 @@ PHP_FUNCTION(ingres_query)
             queryParm.qy_flags  = IIAPI_QF_SCROLL;
             ii_result->scrollable = 1;
 #endif
-
             if ( converted_query != NULL )
             {
                 converted_query_len  =  strlen(converted_query);
@@ -1727,13 +1752,9 @@ PHP_FUNCTION(ingres_query)
                 query_ptr = &(converted_query[query_len]);
             }
             sprintf (query_ptr," for readonly");
-
         }
         else
         {
-#if defined(IIAPI_VERSION_6)
-            queryParm.qy_flags = 0;
-#endif
             queryParm.qy_queryType  = IIAPI_QT_QUERY;
         } /* query_type == INGRES_SQL_SELECT */
 
@@ -1745,16 +1766,6 @@ PHP_FUNCTION(ingres_query)
         else
         {
             queryParm.qy_parameters = FALSE;
-#if defined(IIAPI_VERSION_6)
-            if ( queryParm.qy_flags == IIAPI_QF_SCROLL )
-            {
-                queryParm.qy_queryText  = converted_query;
-            }
-            else
-            {
-                queryParm.qy_queryText  = query;
-            }
-#else
             if ( converted_query != NULL )
             {
                 queryParm.qy_queryText = converted_query;
@@ -1763,7 +1774,6 @@ PHP_FUNCTION(ingres_query)
             {
                 queryParm.qy_queryText = query;
             }
-#endif
         } /* ii_result->paramCount > 0 */
     }
     else
@@ -2900,6 +2910,9 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
     int i, j, k, l;
     double value_double = 0;
     long value_long = 0;
+    long long int value_long_long = 0;
+    char value_long_long_str[21];
+    int value_long_long_str_len=0;
     char *value_char_p;
     int len, should_copy, correct_length=0;
     int lob_len ;
@@ -3003,8 +3016,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
         while ((i + j) < ii_result->fieldCount ) 
         {
             if ((ii_result->descriptor[i+j]).ds_dataType != IIAPI_LBYTE_TYPE &&
-                (ii_result->descriptor[i+j]).ds_dataType != IIAPI_LVCH_TYPE &&
-                (ii_result->descriptor[i+j]).ds_dataType != IIAPI_LNVCH_TYPE )
+                (ii_result->descriptor[i+j]).ds_dataType != IIAPI_LVCH_TYPE 
+#if defined (IIAPI_VERSION_3)
+                && (ii_result->descriptor[i+j]).ds_dataType != IIAPI_LNVCH_TYPE 
+#endif
+               )
             {
                 j++;
             }
@@ -3066,7 +3082,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                     null_column_name = 1;
                 }
                 if (columnData[k].dv_null)
-                    {    /* NULL value ? */
+                {    /* NULL value ? */
 
                     if (result_type & II_NUM)
                     {
@@ -3135,7 +3151,20 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                     break;
 #if defined(IIAPI_VERSION_4)
                                 case 8:
-                                    value_long = (long) *((II_INT4 *) columnData[k].dv_value);
+                                    /* PHP does not support BIGINT/INTEGER8 so we have to return */
+                                    /* values greater/smaller than the max/min size of a LONG value as a string */
+                                    /* Anyone wanting to manipulate this value can use PECL big_int */
+                                    if ((*((long long int *) columnData[k].dv_value) > LONG_MAX ) ||
+                                        (*((long long int *) columnData[k].dv_value) < LONG_MIN ))
+                                    {
+                                        value_long_long = *((long long int *) columnData[k].dv_value);
+                                        sprintf(value_long_long_str, "%lld\0", value_long_long);
+                                        value_long_long_str_len = strlen(value_long_long_str);
+                                    }
+                                    else
+                                    {
+                                        value_long = (long) *((II_INT4 *) columnData[k].dv_value);
+                                    }
                                     break;
 #endif
                                 default:
@@ -3143,14 +3172,29 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                     break;
                             }
 
-                            if (result_type & II_NUM)
+                            if (value_long_long_str[0] != '\0')
                             {
-                                add_index_long(return_value, i + k + IIG(array_index_start), value_long);
+                                if (result_type & II_NUM)
+                                {
+                                    add_index_stringl(return_value, i + k + IIG(array_index_start), value_long_long_str, value_long_long_str_len, should_copy);
+                                }
+                                if (result_type & II_ASSOC)
+                                {
+                                    add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_long_long_str, value_long_long_str_len, should_copy);
+                                }
+                                /* Init the first char to '\0' for later reuse */
+                                value_long_long_str[0] = '\0';
                             }
-
-                            if (result_type & II_ASSOC)
+                            else
                             {
-                                add_assoc_long(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_long);
+                                if (result_type & II_NUM)
+                                {
+                                    add_index_long(return_value, i + k + IIG(array_index_start), value_long);
+                                }
+                                if (result_type & II_ASSOC)
+                                {
+                                    add_assoc_long(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_long);
+                                }
                             }
                             break;
 
@@ -3277,7 +3321,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid SQL data type in fetched field (%d -- length : %d)", (ii_result->descriptor[i + k]).ds_dataType, columnData[k].dv_length);
                             break;
                     }
-                    /* eventualy restore data pointer state for variable length data types */
+                    /* eventually restore data pointer state for variable length data types */
                     if (correct_length)
                     {
                         columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value - 2;
@@ -3298,6 +3342,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                 efree(columnData[k].dv_value);
             }
             efree(columnData);
+            columnData = NULL;
         }
 
         if (found_lob) 
@@ -4294,7 +4339,7 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
             {
                 parameter_id = IIAPI_CP_SECONDARY_INX;
             }
-#if defined(IIAPI_VERSION_4)
+#if defined(IIAPI_VERSION_3)
             else if ( strcmp("login_local", key) == 0 )
             {
                 parameter_id = IIAPI_CP_LOGIN_LOCAL;
@@ -4742,7 +4787,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 string_start = Z_STRVAL_PP(val);
                                 tmp_utf16_string_ptr = tmp_utf16_string;
                                 result = ConvertUTF8toUTF16((const UTF8 **) &string_start,  string_start + Z_STRLEN_PP(val) + 1, &tmp_utf16_string_ptr, tmp_utf16_string_ptr + (Z_STRLEN_PP(val) * 4) , strictConversion);
-                                utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string + 1)) * 2;
+                                utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string)) * 2;
                                 setDescrParm.sd_descriptor[param].ds_length = utf16_string_len; 
                                 efree(tmp_utf16_string);
                                 tmp_utf16_string = NULL;
@@ -4790,6 +4835,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             setDescrParm.sd_descriptor[param].ds_columnName = key;
                         }
                         break;
+#if defined (IIAPI_VERSION_3)
                     case 'n': /* nchar NFC/NFD UTF-16*/
                         setDescrParm.sd_descriptor[param].ds_precision = 0;
                         setDescrParm.sd_descriptor[param].ds_scale = 0;
@@ -4810,7 +4856,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 string_start = Z_STRVAL_PP(val);
                                 tmp_utf16_string_ptr = tmp_utf16_string;
                                 result = ConvertUTF8toUTF16((const UTF8 **) &string_start,  string_start + Z_STRLEN_PP(val) + 1, &tmp_utf16_string_ptr, tmp_utf16_string_ptr + (Z_STRLEN_PP(val) * 4) , strictConversion);
-                                utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string + 1)) * 2;
+                                utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string)) * 2;
                                 setDescrParm.sd_descriptor[param].ds_length = utf16_string_len; 
                                 efree(tmp_utf16_string);
                                 tmp_utf16_string = NULL;
@@ -4851,7 +4897,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 string_start = Z_STRVAL_PP(val);
                                 tmp_utf16_string_ptr = tmp_utf16_string + 2;
                                 result = ConvertUTF8toUTF16((const UTF8 **) &string_start,  string_start + Z_STRLEN_PP(val) + 1, &tmp_utf16_string_ptr, tmp_utf16_string_ptr + (Z_STRLEN_PP(val) * 4) , strictConversion);
-                                utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string + 1)) * 2;
+                                utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string)) * 2;
                                 *((II_INT2*)(tmp_utf16_string)) = utf16_string_len/2;
                                 efree(tmp_utf16_string);
                                 tmp_utf16_string = NULL;
@@ -4874,6 +4920,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             setDescrParm.sd_descriptor[param].ds_columnName = key;
                         }
                         break;
+#endif
                     case 'v': /* varchar */ 
                         convert_to_string_ex(val);
                         setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_VCH_TYPE;
@@ -5052,6 +5099,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                     {
                         switch (types[param - with_procedure] )
                         {
+#if defined (IIAPI_VERSION_3)
                             case 'N': /* NVARCHAR */
                                 if (IIG(utf8)) {
                                     /* Convert the UTF-8 data we have to UTF-16 so Ingres will store it */
@@ -5059,7 +5107,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                     string_start = Z_STRVAL_PP(val);
                                     tmp_utf16_string_ptr = tmp_utf16_string + 1;
                                     result = ConvertUTF8toUTF16((const UTF8 **) &string_start,  string_start + Z_STRLEN_PP(val) + 1, &tmp_utf16_string_ptr, tmp_utf16_string_ptr + (Z_STRLEN_PP(val) * 4) , strictConversion);
-                                    utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string + 1)) * 2;
+                                    utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string)) * 2;
                                     *((II_INT2*)(tmp_utf16_string)) = utf16_string_len/2;
                                     putParmParm.pp_parmData[0].dv_value = tmp_utf16_string;
                                     putParmParm.pp_parmData[0].dv_length = utf16_string_len + 2; 
@@ -5083,7 +5131,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                     string_start = Z_STRVAL_PP(val);
                                     tmp_utf16_string_ptr = tmp_utf16_string;
                                     result = ConvertUTF8toUTF16((const UTF8 **) &string_start,  string_start + Z_STRLEN_PP(val) + 1, &tmp_utf16_string_ptr, tmp_utf16_string_ptr + (Z_STRLEN_PP(val) * 4) , strictConversion);
-                                    utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string + 1)) * 2;
+                                    utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string)) * 2;
                                     putParmParm.pp_parmData[0].dv_value = (II_PTR *)tmp_utf16_string;
                                     putParmParm.pp_parmData[0].dv_length = utf16_string_len; 
                                 }
@@ -5093,6 +5141,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                     putParmParm.pp_parmData[0].dv_length = Z_STRLEN_PP(val); 
                                 }
                                 break;
+#endif
                             case 'v': /* VARCHAR */
                                 /* copy the data to a new buffer then set the size  */
                                 /* of the string at the begining of the buffer */
