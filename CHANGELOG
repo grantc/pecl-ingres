@@ -1,4 +1,5 @@
 CVS
+- Initialize value_long_long_str so as not to return a string for all LONG values
 - Fix a SEGV when freeing result-sets at different points in the II_LINK list
 - Return INTEGER8 values outside the range of LONG_MIN/LONG_MAX as a string
 - Restrict UNICODE operations to IIAPI_VERSION_3 or greater

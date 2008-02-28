@@ -24,7 +24,7 @@ else
 {
 	echo "Connection succeeded.";
 }
-$rc=ingres_query($conn,"select int8(9223372036854775806) as pos_int8, int8(-9223372036854775806) as neg_int8");
+$rc=ingres_query($conn,"select int8(9223372036854775806) as pos_int8, int8(-9223372036854775806) as neg_int8, int4(983188130) as pos_int4,  int2(9505) as pos_int2, int1(35) as pos_int1");
 
 if ( ingres_errno() ) {
 	$error_code=ingres_errno($conn);
@@ -41,10 +41,16 @@ else
 		echo $object->pos_int8;
         echo " ";
 		echo $object->neg_int8;
+        echo " ";
+		echo $object->pos_int4;
+        echo " ";
+		echo $object->pos_int2;
+        echo " ";
+		echo $object->pos_int1;
 	}
 }
 
 ingres_close($conn);
 ?>
 --EXPECT--
-Connection succeeded.9223372036854775806 -9223372036854775806
+Connection succeeded.9223372036854775806 -9223372036854775806 983188130 9505 35

@@ -2911,6 +2911,8 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
     /* array initialization */
     array_init(return_value);
+    /* init first char of array used to return BIG INT values as strings */
+    value_long_long_str[0] = '\0';
 
     if ( ii_result->procname != NULL ) /* look to see if there is a return value*/
     {
