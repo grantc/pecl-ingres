@@ -182,7 +182,9 @@ PHP_INI_BEGIN()
     STD_PHP_INI_ENTRY(INGRES_INI_TIMEOUT, "-1", PHP_INI_ALL, OnUpdateLong, connect_timeout, zend_ii_globals, ii_globals)
     STD_PHP_INI_ENTRY(INGRES_INI_ARRAY_INDEX_START, "1", PHP_INI_ALL, OnUpdateLong, array_index_start, zend_ii_globals, ii_globals)
     STD_PHP_INI_BOOLEAN(INGRES_INI_AUTO, "1", PHP_INI_ALL, OnUpdateBool, auto_multi, zend_ii_globals, ii_globals)
+#if defined (IIAPI_VERSION_3)
     STD_PHP_INI_BOOLEAN(INGRES_INI_UTF8, "1", PHP_INI_ALL, OnUpdateBool, utf8, zend_ii_globals, ii_globals)
+#endif
     STD_PHP_INI_BOOLEAN(INGRES_INI_REUSE_CONNECTION, "1", PHP_INI_ALL, OnUpdateBool, reuse_connection, zend_ii_globals, ii_globals)
     STD_PHP_INI_BOOLEAN(INGRES_INI_TRACE, "0", PHP_INI_ALL, OnUpdateBool, ingres_trace, zend_ii_globals, ii_globals)
 PHP_INI_END()
@@ -699,6 +701,7 @@ PHP_MINIT_FUNCTION(ingres)
     REGISTER_LONG_CONSTANT("INGRES_API_VERSION",        IIAPI_VERSION,          CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES_CURSOR_READONLY",    II_CURSOR_READONLY,     CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES_CURSOR_UPDATE",      II_CURSOR_UPDATE,       CONST_CS | CONST_PERSISTENT);
+#if defined (IIAPI_VERSION_2)
     REGISTER_LONG_CONSTANT("INGRES_DATE_US",            II_DATE_US,             CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES_DATE_MULTINATIONAL", II_DATE_MULTINATIONAL,  CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES_DATE_MULTINATIONAL4",II_DATE_MULTINATIONAL4, CONST_CS | CONST_PERSISTENT);
@@ -719,6 +722,8 @@ PHP_MINIT_FUNCTION(ingres)
     REGISTER_STRING_CONSTANT("INGRES_STRUCTURE_CHASH",  II_STRUCTURE_CHASH,     CONST_CS | CONST_PERSISTENT);
     REGISTER_STRING_CONSTANT("INGRES_STRUCTURE_HEAP",   II_STRUCTURE_HEAP,      CONST_CS | CONST_PERSISTENT);
     REGISTER_STRING_CONSTANT("INGRES_STRUCTURE_CHEAP",  II_STRUCTURE_CHEAP,     CONST_CS | CONST_PERSISTENT);
+#endif /* IIAPI_VERSION_2 */
+
 #else
     REGISTER_LONG_CONSTANT("INGRES2_ASSOC",              II_ASSOC,               CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_NUM",                II_NUM,                 CONST_CS | CONST_PERSISTENT);
@@ -727,6 +732,7 @@ PHP_MINIT_FUNCTION(ingres)
     REGISTER_LONG_CONSTANT("INGRES2_API_VERSION",        IIAPI_VERSION,          CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_CURSOR_READONLY",    II_CURSOR_READONLY,     CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_CURSOR_UPDATE",      II_CURSOR_UPDATE,       CONST_CS | CONST_PERSISTENT);
+#if defined (IIAPI_VERSION_2)
     REGISTER_LONG_CONSTANT("INGRES2_DATE_US",            II_DATE_US,             CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_DATE_MULTINATIONAL", II_DATE_MULTINATIONAL,  CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_DATE_MULTINATIONAL4",II_DATE_MULTINATIONAL4, CONST_CS | CONST_PERSISTENT);
@@ -747,6 +753,7 @@ PHP_MINIT_FUNCTION(ingres)
     REGISTER_STRING_CONSTANT("INGRES2_STRUCTURE_CHASH",  II_STRUCTURE_CHASH,     CONST_CS | CONST_PERSISTENT);
     REGISTER_STRING_CONSTANT("INGRES2_STRUCTURE_HEAP",   II_STRUCTURE_HEAP,      CONST_CS | CONST_PERSISTENT);
     REGISTER_STRING_CONSTANT("INGRES2_STRUCTURE_CHEAP",  II_STRUCTURE_CHEAP,     CONST_CS | CONST_PERSISTENT);
+#endif /* IIAPI_VERSION_2 */
 #endif
 
 
@@ -758,9 +765,9 @@ PHP_MINIT_FUNCTION(ingres)
 PHP_MSHUTDOWN_FUNCTION(ingres)
 {
     IIAPI_TERMPARM termParm;
+#if defined(IIAPI_VERSION_2)
     IIAPI_RELENVPARM   relEnvParm;
 
-#if defined(IIAPI_VERSION_2)
     relEnvParm.re_envHandle = IIG(envHandle);
     IIapi_releaseEnv(&relEnvParm);
 #endif
@@ -1112,7 +1119,9 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
             connParm.co_username = user;
             connParm.co_password = pass;
             connParm.co_timeout = -1;    /* -1 is no timeout */
+#if defined (IIAPI_VERSION_2)
             connParm.co_type = IIAPI_CT_SQL;
+#endif
             if ( ii_link->connHandle == NULL ) 
             {    
                 connParm.co_connHandle =  ii_link->envHandle;
@@ -1229,7 +1238,9 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
                 connParm.co_password = pass;
                 connParm.co_timeout = -1; /* no timeout */
                 connParm.co_tranHandle = NULL;
+#if defined (IIAPI_VERSION_2)
                 connParm.co_type = IIAPI_CT_SQL;
+#endif
 
                 if (IIG(trace_connect)) {
                     php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Start IIapi_connect()");
@@ -1335,7 +1346,9 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
         connParm.co_username = user;
         connParm.co_password = pass;
         connParm.co_timeout = -1;    /* -1 is no timeout */
+#if defined (IIAPI_VERSION_2)
         connParm.co_type = IIAPI_CT_SQL;
+#endif
         if ( ii_link->connHandle == NULL ) 
         {
             connParm.co_connHandle =  ii_link->envHandle;
@@ -2865,7 +2878,7 @@ static II_LONG php_ii_convert_data ( II_LONG destType, int destSize, int precisi
 
     IIapi_convertData(&convertParm);
 
-    if(convertParm.fd_status != IIAPI_ST_SUCCESS ) {
+    if(convertParm.cv_status != IIAPI_ST_SUCCESS ) {
       return convertParm.cv_status;
     }
 
@@ -2903,11 +2916,13 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
     short int null_column_name, mem;
     char *lob_segment, *lob_ptr, *lob_data;
 
+#if defined(IIAPI_VERSION_3)
     UTF8 *tmp_utf8_string_ptr = NULL;
     UTF8 *tmp_utf8_string = NULL;
     int utf8_string_len = 0;
     UTF16 *string_start;
     ConversionResult result;
+#endif
 
     /* array initialization */
     array_init(return_value);
@@ -4129,9 +4144,14 @@ static short int php_ii_set_environment_options (zval *options, II_LINK *ii_link
 
     setEnvPrmParm.se_envHandle = ii_link->envHandle;
 
-    for ( zend_hash_internal_pointer_reset(arr_hash); 
+#ifndef __VMS
+    for ( zend_hash_internal_pointer_reset(arr_hash);
           zend_hash_has_more_elements(arr_hash) == SUCCESS; 
           zend_hash_move_forward(arr_hash))
+#else
+    zend_hash_internal_pointer_reset(arr_hash);
+    while (zend_hash_move_forward(arr_hash) == SUCCESS)
+#endif
     {
         ignore = FALSE;
 
@@ -4290,9 +4310,14 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
 
     arr_hash = Z_ARRVAL_P(options);
 
-    for ( zend_hash_internal_pointer_reset(arr_hash); 
+#ifndef __VMS
+    for ( zend_hash_internal_pointer_reset(arr_hash);
           zend_hash_has_more_elements(arr_hash) == SUCCESS; 
           zend_hash_move_forward(arr_hash))
+#else
+    zend_hash_internal_pointer_reset(arr_hash);
+    while (zend_hash_move_forward(arr_hash) == SUCCESS)
+#endif
     {
         ignore = FALSE;
 
@@ -4549,11 +4574,13 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
     char *types;
     short unicode_lob = 0;
 
+#if defined (IIAPI_VERSION_3)
     UTF8 *string_start = NULL;
     UTF16 *tmp_utf16_string = NULL; 
     UTF16 *tmp_utf16_string_ptr;
     int  utf16_string_len = 0;
     ConversionResult result = conversionOK;
+#endif
 
     if ( ii_result->paramCount > 0 )
     {
@@ -4751,6 +4778,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             setDescrParm.sd_descriptor[param].ds_columnName = key;
                         }
                         break;
+#if defined (IIAPI_VERSION_3)
                     case 'M': /* long nvarchar */
                         convert_to_string_ex(val);
                         setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_LNVCH_TYPE;
@@ -4794,6 +4822,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             setDescrParm.sd_descriptor[param].ds_columnName = key;
                         }
                         break;                        
+#endif /* IIAPI_VERSION_3 */
                     case 'i': /* integer */
                         setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_INT_TYPE;
                         setDescrParm.sd_descriptor[param].ds_precision = 0;
@@ -5279,11 +5308,13 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                         efree (tmp_string);
                         tmp_string = NULL;
                     }
+#if defined (IIAPI_VERSION_3)
                     if ( tmp_utf16_string != NULL)
                     {
                         efree (tmp_utf16_string);
                         tmp_utf16_string = NULL;
                     }
+#endif
                 }
                 return II_FAIL;
             }
@@ -5292,11 +5323,13 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                 efree(tmp_string);
                 tmp_string = NULL;
             }
+#if defined (IIAPI_VERSION_3)
             if ( tmp_utf16_string != NULL)
             {
                 efree (tmp_utf16_string);
                 tmp_utf16_string = NULL;
             }
+#endif
         }
         /* Reset Parameter Count */ 
         putParmParm.pp_parmCount  = 0;
