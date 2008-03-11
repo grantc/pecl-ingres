@@ -14,18 +14,18 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grant.croker@ingres.com</email>
   <active>yes</active>
  </lead>
- <date>2007-09-11</date>
- <time>17:00:00</time>
+ <date>2008-03-11</date>
+ <time>18:00:00</time>
  <version>
   <release>2.0.0</release>
   <api>2.0.0</api>
  </version>
  <stability>
-  <release>beta</release>
-  <api>beta</api>
+  <release>stable</release>
+  <api>stable</api>
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
- <notes>A major overall for the Ingres extension including the following changes
+ <notes>A major overhall for the Ingres extension including the following changes
  - Support for multiple concurrent result-sets
  - Automatic coercion between UTF-8 and UTF-16 
  - Bi-directional scrolling cursors
@@ -33,6 +33,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
     - ingres_free_results() - free the memory associated with a given result set
     - ingres_autocommit_state() - return the current auto-commit state
     - ingres_next_error() - fetch additional errors if any
+ - Support for building on OpenVMS using HP's CSWS PHP source, README.VMS for
+   more information
  
  As previously noted in the ingres-1.x README(.html) file, the implementation
  of concurrent resultsets requred a backwards compatibility (bc) break. See 
@@ -80,17 +82,21 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file baseinstalldir="ingres" name="test_036.phpt" role="test" />
     <file baseinstalldir="ingres" name="test_037.phpt" role="test" />
    </dir> <!-- //tests -->
+   <file baseinstalldir="ingres" name="BUILD.COM" role="src" />
    <file baseinstalldir="ingres" name="CHANGELOG" role="doc" />
    <file baseinstalldir="ingres" name="config.m4" role="src" />
    <file baseinstalldir="ingres" name="config.w32" role="src" />
+   <file baseinstalldir="ingres" name="convertUTF.c" role="src" />
+   <file baseinstalldir="ingres" name="convertUTF.h" role="src" />
    <file baseinstalldir="ingres" name="CREDITS" role="doc" />
    <file baseinstalldir="ingres" name="ii.c" role="src" />
    <file baseinstalldir="ingres" name="ii.h" role="src" />
-   <file baseinstalldir="ingres" name="convertUTF.c" role="src" />
-   <file baseinstalldir="ingres" name="convertUTF.h" role="src" />
+   <file baseinstalldir="ingres" name="ingres.ini" role="doc" />
+   <file baseinstalldir="ingres" name="INGRES.OPT" role="src" />
    <file baseinstalldir="ingres" name="php_ii.h" role="src" />
    <file baseinstalldir="ingres" name="README" role="doc" />
    <file baseinstalldir="ingres" name="README.html" role="doc" />
+   <file baseinstalldir="ingres" name="README.VMS" role="doc" />
    <file baseinstalldir="ingres" name="TODO" role="doc" />
   </dir> <!-- / -->
  </contents>

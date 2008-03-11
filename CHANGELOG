@@ -1,4 +1,4 @@
-CVS
+2.0.0
 - Add support for building on OpenVMS
 - Initialize value_long_long_str so as not to return a string for all LONG values
 - Fix a SEGV when freeing result-sets at different points in the II_LINK list
