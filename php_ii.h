@@ -31,6 +31,8 @@
 extern zend_module_entry ingres_module_entry;
 #define phpext_ingres_ptr &ingres_module_entry
 
+#define PHP_INGRES2_VERSION "2.0.1-dev"
+
 #ifdef PHP_WIN32
 #define PHP_II_API __declspec(dllexport)
 #else
@@ -162,7 +164,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define II_ASSOC (1<<0)
 #define II_NUM   (1<<1)
 #define II_BOTH  (II_ASSOC|II_NUM)
-#define II_VERSION "2.0.0"
+#define II_VERSION PHP_INGRES2_VERSION
 
 #define II_CURSOR_UPDATE 0    /* default */
 #define II_CURSOR_READONLY 1
