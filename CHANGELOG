@@ -1,4 +1,5 @@
 CVS - 2.0.1-dev
+- Add the ability to generated php_ingres2.dll for windows
 - Fixed regression with IIAPI_CP_LOGIN_LOCAL being used at the wrong API level
 - Revised PECL_INGRES_VERSION to take in to consideration --enable-ingres2
 - Fixed LOB retrieval when used with scollable cursors Ingres 2006 release 3

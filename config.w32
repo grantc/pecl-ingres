@@ -1,54 +1,70 @@
 // $Id$
-// vim:ft=javascript ts=4 sw=4
+// vim:ft=javascript ts=4 sw=4 expandtab
 
-ARG_WITH("ingres2", "Ingres support", "no");
+ARG_WITH("ingres", "Ingres support", "no");
+ARG_ENABLE("ingres2","Allow for a separate ingres2 extension", "no");
 
-if (PHP_INGRES2 != "no") {
-    if (PHP_INGRES2 == "yes") { 
-		// no path was supplied to --with-ingres2
-		// Find Ingres header files and libaries through %II_SYSTEM%
-		var ii_system=WshShell.Environment("Process").Item("II_SYSTEM");
 
-		if (ii_system != "") {
-			if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", ii_system + "\\ingres\\files;" + PHP_INGRES2) &&
-				CHECK_LIB("iilibapi.lib", "ingres2", ii_system + "\\ingres\\lib;" + PHP_INGRES2)) {
-				// Ingres r3 
-				AC_DEFINE('HAVE_INGRES2', 1);
-				EXTENSION("ingres2","ii.c convertUTF.c");
-			} else if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", ii_system + "\\ingres\\files;" + PHP_INGRES2) &&
-				CHECK_LIB("oiapi.lib", "ingres2", ii_system + "\\ingres\\lib;" + PHP_INGRES2)) {
-				// Ingres 2.0/2.5/2.6
-				AC_DEFINE('HAVE_INGRES2', 1);
-				EXTENSION("ingres2","ii.c convertUTF.c");
-			} else {
-				// ingres is missing files
-				WARNING("Ingres not enabled; libraries and headers not found in " + ii_system);
-			}
-		} else {
-			// Check php_build dirs for headers
-			if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", PHP_PHP_BUILD + "\\include\\ingres") &&
-				CHECK_LIB("iilibapi.lib", "ingres2", PHP_PHP_BUILD + "\\lib")) {
-				AC_DEFINE('HAVE_INGRES2', 1);
-				EXTENSION("ingres2","ii.c convertUTF.c");
-			} else {				
-				// %II_SYSTEM% is not set
-				WARNING("Ingres not enabled; %II_SYSTEM% has not been defined");
-			}
-		}
-	} else { 
-		// path supplied to  --with-ingres2
-		if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", PHP_INGRES2 + "\\ingres\\files;") &&
-			CHECK_LIB("iilibapi.lib", "ingres2", PHP_INGRES2 + "\\ingres\\lib;"))  {
-			AC_DEFINE('HAVE_INGRES2', 1);
-			EXTENSION("ingres2","ii.c convertUTF.c");
-		} else if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", "CFLAGS_INGRES", PHP_INGRES2 + "\\ingres\\files;" + PHP_INGRES2) &&
-				CHECK_LIB("oiapi.lib", "ingres2", PHP_INGRES2 + "\\ingres\\lib;")) {
-				// Ingres 2.0/2.5/2.6
-				AC_DEFINE('HAVE_INGRES2', 1);
-				EXTENSION("ingres2","ii.c convertUTF.c");
-		} else {
-			// cannot find files in supplied path
-			WARNING("Ingres not enabled; libraries and headers not found");
-		}
-	} 
+if (PHP_INGRES != "no") {
+
+    var have_ingres_files = 0;
+
+    if (PHP_INGRES2 == "yes") {
+        // rename the extension to ingres2, i.e. php_ingres2.dll
+        extension_name = "ingres2";
+        extension_cflags = "CFLAGS_INGRES2";
+    } else {
+        extension_name = "ingres";
+        extension_cflags = "CFLAGS_INGRES";
+    }
+
+    if (PHP_INGRES == "yes") { 
+        // no path was supplied to --with-ingres
+        // Find Ingres header files and libaries through %II_SYSTEM%
+        var ii_system=WshShell.Environment("Process").Item("II_SYSTEM");
+
+        if (ii_system != "") {
+            if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", extension_cflags, ii_system + "\\ingres\\files;" + PHP_INGRES) &&
+                CHECK_LIB("iilibapi.lib", extension_name, ii_system + "\\ingres\\lib;" + PHP_INGRES)) {
+                // Ingres r3 
+                have_ingres_files = 1;
+            } else if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", extension_cflags, ii_system + "\\ingres\\files;" + PHP_INGRES) &&
+                CHECK_LIB("oiapi.lib", extension_name, ii_system + "\\ingres\\lib;" + PHP_INGRES)) {
+                // Ingres 2.0/2.5/2.6
+                have_ingres_files = 1;
+            } else {
+                // ingres is missing files
+                WARNING("Ingres not enabled; libraries and headers not found in " + ii_system);
+            }
+        } else {
+            // Check php_build dirs for headers
+            if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", extension_cflags, PHP_PHP_BUILD + "\\include\\ingres") &&
+                CHECK_LIB("iilibapi.lib", extension_name, PHP_PHP_BUILD + "\\lib")) {
+                have_ingres_files = 1;
+            } else {                
+                // %II_SYSTEM% is not set
+                WARNING("Ingres not enabled; %II_SYSTEM% has not been defined");
+            }
+        }
+    } else { 
+        // path supplied to  --with-ingres
+        if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", extension_cflags, PHP_INGRES + "\\ingres\\files;") &&
+            CHECK_LIB("iilibapi.lib", extension_name, PHP_INGRES + "\\ingres\\lib;"))  {
+                have_ingres_files = 1;
+        } else if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", extension_cflags, PHP_INGRES + "\\ingres\\files;" + PHP_INGRES) &&
+                CHECK_LIB("oiapi.lib", extension_name, PHP_INGRES + "\\ingres\\lib;")) {
+                // Ingres 2.0/2.5/2.6
+                have_ingres_files = 1;
+        } else {
+            // cannot find files in supplied path
+            WARNING("Ingres not enabled; libraries and headers not found");
+        }
+    } 
+    if  (have_ingres_files) {
+        AC_DEFINE('HAVE_INGRES', 1);
+        if (PHP_INGRES2 == "yes") {
+            AC_DEFINE('HAVE_INGRES2', 1);
+        }
+        EXTENSION(extension_name,"ii.c convertUTF.c");
+    }
 }
