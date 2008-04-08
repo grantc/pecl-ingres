@@ -1,3 +1,8 @@
+CVS - 2.0.1-dev
+- Fixed regression with IIAPI_CP_LOGIN_LOCAL being used at the wrong API level
+- Revised PECL_INGRES_VERSION to take in to consideration --enable-ingres2
+- Fixed LOB retrieval when used with scollable cursors Ingres 2006 release 3
+
 2.0.0
 - Add support for building on OpenVMS
 - Initialize value_long_long_str so as not to return a string for all LONG values

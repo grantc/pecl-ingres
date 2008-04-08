@@ -143,7 +143,11 @@ zend_module_entry ingres_module_entry = {
     PHP_RINIT(ingres),
     PHP_RSHUTDOWN(ingres),
     PHP_MINFO(ingres),
-    II_VERSION,
+#ifdef HAVE_INGRES2
+    PHP_INGRES2_VERSION,
+#else
+    PHP_INGRES_VERSION,
+#endif
     STANDARD_MODULE_PROPERTIES
 };
 
@@ -187,6 +191,9 @@ PHP_INI_BEGIN()
 #endif
     STD_PHP_INI_BOOLEAN(INGRES_INI_REUSE_CONNECTION, "1", PHP_INI_ALL, OnUpdateBool, reuse_connection, zend_ii_globals, ii_globals)
     STD_PHP_INI_BOOLEAN(INGRES_INI_TRACE, "0", PHP_INI_ALL, OnUpdateBool, ingres_trace, zend_ii_globals, ii_globals)
+#if defined (IIAPI_VERSION_6)
+    STD_PHP_INI_BOOLEAN(INGRES_INI_SCROLL, "1", PHP_INI_ALL, OnUpdateBool, scroll, zend_ii_globals, ii_globals)
+#endif
 PHP_INI_END()
 /* }}} */
 
@@ -671,6 +678,7 @@ static void php_ii_globals_init(zend_ii_globals *ii_globals)
     ii_globals->error_text = NULL;
     ii_globals->error_number = 0;
     ii_globals->reuse_connection = 1;
+    ii_globals->scroll = 1;
 }
 /* }}} */
 
@@ -698,7 +706,7 @@ PHP_MINIT_FUNCTION(ingres)
     REGISTER_LONG_CONSTANT("INGRES_NUM",                II_NUM,                 CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES_BOTH",               II_BOTH,                CONST_CS | CONST_PERSISTENT);
     REGISTER_STRING_CONSTANT("INGRES_EXT_VERSION",      II_VERSION,             CONST_CS | CONST_PERSISTENT);
-    REGISTER_LONG_CONSTANT("INGRES_API_VERSION",        IIAPI_VERSION,          CONST_CS | CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("INGRES_API_VERSION",        PHP_INGRES_VERSION,     CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES_CURSOR_READONLY",    II_CURSOR_READONLY,     CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES_CURSOR_UPDATE",      II_CURSOR_UPDATE,       CONST_CS | CONST_PERSISTENT);
 #if defined (IIAPI_VERSION_2)
@@ -728,7 +736,7 @@ PHP_MINIT_FUNCTION(ingres)
     REGISTER_LONG_CONSTANT("INGRES2_ASSOC",              II_ASSOC,               CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_NUM",                II_NUM,                 CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_BOTH",               II_BOTH,                CONST_CS | CONST_PERSISTENT);
-    REGISTER_STRING_CONSTANT("INGRES2_EXT_VERSION",      II_VERSION,             CONST_CS | CONST_PERSISTENT);
+    REGISTER_STRING_CONSTANT("INGRES2_EXT_VERSION",      PHP_INGRES2_VERSION,    CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_API_VERSION",        IIAPI_VERSION,          CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_CURSOR_READONLY",    II_CURSOR_READONLY,     CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_CURSOR_UPDATE",      II_CURSOR_UPDATE,       CONST_CS | CONST_PERSISTENT);
@@ -1748,9 +1756,12 @@ PHP_FUNCTION(ingres_query)
         {
             queryParm.qy_queryType  = IIAPI_QT_OPEN;
 #if defined(IIAPI_VERSION_6)
-            /* Enable scrolling cursor support */
-            queryParm.qy_flags  = IIAPI_QF_SCROLL;
-            ii_result->scrollable = 1;
+            if (IIG(scroll))
+            {
+                /* Enable scrolling cursor support */
+                queryParm.qy_flags  = IIAPI_QF_SCROLL;
+                ii_result->scrollable = 1;
+            }
 #endif
             if ( converted_query != NULL )
             {
@@ -4349,7 +4360,7 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
             {
                 parameter_id = IIAPI_CP_SECONDARY_INX;
             }
-#if defined(IIAPI_VERSION_3)
+#if defined(IIAPI_VERSION_4)
             else if ( strcmp("login_local", key) == 0 )
             {
                 parameter_id = IIAPI_CP_LOGIN_LOCAL;

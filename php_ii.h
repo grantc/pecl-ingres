@@ -31,7 +31,15 @@
 extern zend_module_entry ingres_module_entry;
 #define phpext_ingres_ptr &ingres_module_entry
 
-#define PHP_INGRES2_VERSION "2.0.1-dev"
+#define II_VERSION "2.0.1-dev"
+
+#ifdef HAVE_INGRES2
+#define PHP_INGRES2_VERSION II_VERSION
+#else
+#define PHP_INGRES_VERSION II_VERSION
+#endif
+
+
 
 #ifdef PHP_WIN32
 #define PHP_II_API __declspec(dllexport)
@@ -158,13 +166,13 @@ ZEND_BEGIN_MODULE_GLOBALS(ii)
     short auto_multi;   /* Enable multiple cursors when auto commit is enabled */
     short reuse_connection;   /* should ingres_connect() reuse existing connections? */
     short ingres_trace; /* enable E_NOTICE tracing - not suitable for production usage */
+    short scroll; /* enable/disable scrollable cursors */
 
 ZEND_END_MODULE_GLOBALS(ii)
 
 #define II_ASSOC (1<<0)
 #define II_NUM   (1<<1)
 #define II_BOTH  (II_ASSOC|II_NUM)
-#define II_VERSION PHP_INGRES2_VERSION
 
 #define II_CURSOR_UPDATE 0    /* default */
 #define II_CURSOR_READONLY 1
@@ -202,6 +210,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define INGRES_INI_UTF8 "ingres2.utf8"
 #define INGRES_INI_REUSE_CONNECTION "ingres2.reuse_connection"
 #define INGRES_INI_TRACE "ingres2.trace"
+#define INGRES_INI_SCROLL "ingres2.scrollable"
 
 #else
 
@@ -221,6 +230,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define INGRES_INI_UTF8 "ingres.utf8"
 #define INGRES_INI_REUSE_CONNECTION "ingres.reuse_connection"
 #define INGRES_INI_TRACE "ingres.trace"
+#define INGRES_INI_SCROLL "ingres.scrollable"
 
 #endif /* HAVE_INGRES2 */
 
