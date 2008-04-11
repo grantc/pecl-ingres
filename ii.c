@@ -2917,7 +2917,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
     int i, j, k, l;
     double value_double = 0;
     long value_long = 0;
-    long long int value_long_long = 0;
+    ingres_int64 value_long_long = 0;
     char value_long_long_str[21];
     int value_long_long_str_len=0;
     char *value_char_p;
@@ -3165,10 +3165,10 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                     /* PHP does not support BIGINT/INTEGER8 so we have to return */
                                     /* values greater/smaller than the max/min size of a LONG value as a string */
                                     /* Anyone wanting to manipulate this value can use PECL big_int */
-                                    if ((*((long long int *) columnData[k].dv_value) > LONG_MAX ) ||
-                                        (*((long long int *) columnData[k].dv_value) < LONG_MIN ))
+                                    if ((*((ingres_int64 *) columnData[k].dv_value) > LONG_MAX ) ||
+                                        (*((ingres_int64 *) columnData[k].dv_value) < LONG_MIN ))
                                     {
-                                        value_long_long = *((long long int *) columnData[k].dv_value);
+                                        value_long_long = *((ingres_int64 *) columnData[k].dv_value);
                                         sprintf(value_long_long_str, "%lld\0", value_long_long);
                                         value_long_long_str_len = strlen(value_long_long_str);
                                     }
@@ -4668,12 +4668,12 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                 efree(descriptorInfo);
                 return II_FAIL;
             }
-            if ((ii_result->procname) && ((*val)->is_ref )) {
+            if ((ii_result->procname) && (PZVAL_IS_REF(val))) {
                 php_error_docref(NULL TSRMLS_CC, E_ERROR,"Byref parameters can only be used against procedures");
                 return II_FAIL;
             }
 
-            if ((ii_result->procname != NULL) && ((*val)->is_ref)) {
+            if ((ii_result->procname != NULL) && (PZVAL_IS_REF(val))) {
                 columnType = IIAPI_COL_PROCBYREFPARM;
             }
 

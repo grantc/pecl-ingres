@@ -63,6 +63,14 @@ typedef struct _II_RESULT {
     int                 link_id;    /* the link to which this result belongs */
 } II_RESULT;
 
+/* The following was added to allow the extension to build on Windows using */
+/* Visual C++ 6.0 */
+#ifdef WIN32
+    typedef __int64 ingres_int64;
+#else
+    typedef long long int ingres_int64;
+#endif
+
 #define II_FAIL 0
 #define II_OK 1
 #define II_NO_DATA 2
