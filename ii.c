@@ -203,7 +203,6 @@ static int _close_statement(II_RESULT *ii_result TSRMLS_DC)
 {
     IIAPI_CANCELPARM   cancelParm;
     IIAPI_CLOSEPARM       closeParm;
-    IIAPI_GETEINFOPARM  error_info;
 
     if (ii_result->stmtHandle)
     {
@@ -385,7 +384,6 @@ static int _autocommit_transaction(II_LINK *ii_link  TSRMLS_DC)
 static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
 {
     IIAPI_DISCONNPARM disconnParm;
-    IIAPI_AUTOPARM autoParm;
     IIAPI_GETEINFOPARM error_info;
 
     /* clean up any un-freed statements/results */
@@ -567,11 +565,9 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
 {
     int ai_error = 0;
     IIAPI_DISCONNPARM disconnParm;
-    IIAPI_AUTOPARM autoParm;
 
     II_RESULT *ii_result = NULL;
     ii_result_entry *result_entry = NULL;
-    int type;
 
     /* if link as always been marked as broken do nothing */
     /* This because we call this function directly from close function */
@@ -976,13 +972,11 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
     int password_len = 0;
     zval *options = NULL;
     char *db, *user, *pass;
-    int  dblen;
     char *hashed_details;
     int hashed_details_length;
     IIAPI_CONNPARM connParm;
     II_LINK *ii_link;
     II_PTR    envHandle = (II_PTR)NULL;
-    char *z_type;
 
 #if defined(IIAPI_VERSION_2)
     IIAPI_SETENVPRMPARM    setEnvPrmParm;
@@ -1530,7 +1524,6 @@ PHP_FUNCTION(ingres_query)
     II_RESULT *ii_result;
     IIAPI_QUERYPARM     queryParm;
     IIAPI_GETDESCRPARM  getDescrParm;
-    IIAPI_CLOSEPARM     closeParm;
 
     HashTable *arr_hash;
     int elementCount;
@@ -1906,7 +1899,6 @@ PHP_FUNCTION(ingres_prepare)
 {
     zval  *link;
     char *query;
-    int cursor_mode;
     II_LINK *ii_link;
     II_RESULT *ii_result;
 
@@ -2239,7 +2231,6 @@ PHP_FUNCTION(ingres_num_rows)
     IIAPI_GETQINFOPARM getQInfoParm;
 #if defined(IIAPI_VERSION_6)
     IIAPI_SCROLLPARM scrollParm;
-    IIAPI_GETDESCRPARM  getDescrParm;
     long row_count=0;
 #endif 
 
@@ -2540,8 +2531,6 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result
   Return the name of a field in a query result */
 static char *php_ii_field_name(II_RESULT *ii_result, int index TSRMLS_DC)
 {
-
-    char *colname;
     char space;
     
     space = ' ';
@@ -2823,7 +2812,7 @@ static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_
 
 /* {{{static short php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_LINK *ii_link, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm TSRMLS_DC) */
 /* Convert complex Ingres data types to php-usable ones */
-static II_LONG php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_RESULT *ii_result, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC )
+static II_LONG php_ii_convert_data ( short destType, int destSize, int precision, II_RESULT *ii_result, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC )
 {
 #if defined (IIAPI_VERSION_2)
     IIAPI_FORMATPARM formatParm;
@@ -3632,7 +3621,6 @@ PHP_FUNCTION(ingres_commit)
 {
     zval *link;
     II_LINK *ii_link;
-    IIAPI_COMMITPARM commitParm;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r" , &link) == FAILURE) 
     {
@@ -3671,7 +3659,6 @@ PHP_FUNCTION(ingres_autocommit)
 {
     zval *link;
     II_LINK *ii_link;
-    IIAPI_AUTOPARM autoParm;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r" , &link) == FAILURE) 
     {
@@ -3726,7 +3713,6 @@ PHP_FUNCTION(ingres_autocommit_state)
 {
     zval *link;
     II_LINK *ii_link;
-    IIAPI_AUTOPARM autoParm;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r" , &link) == FAILURE) 
     {
@@ -3839,11 +3825,6 @@ PHP_FUNCTION(ingres_errsqlstate)
 static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode)
 {
     zval *value = NULL;
-    II_LINK *ii_link;
-    char *resource;
-    char *type_name;
-    IIAPI_GETEINFOPARM error_info;
-    int type;
     char empty_string = '\0';
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"|z" , &value) == FAILURE) 
@@ -4307,8 +4288,6 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
 {
     II_LONG parameter_id;
     IIAPI_SETCONPRMPARM    setConPrmParm;
-    IIAPI_CONNPARM connParm;
-    IIAPI_DISCONNPARM    disconnParm;
     zval **data;
     char *key;
     long index;
@@ -4317,7 +4296,6 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
     long temp_long;
     II_BOOL ignore;
     HashTable *arr_hash;
-    HashPosition pointer;
 
     arr_hash = Z_ARRVAL_P(options);
 
@@ -4473,12 +4451,11 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
 
 /* {{{ static char *php_ii_convert_param_markers (char *statement TSRMLS_DC) */
 /* takes a statement with ? param markers and converts them to ~V */
-static char *php_ii_convert_param_markers (char *query, char *converted_query TSRMLS_DC)
+static void php_ii_convert_param_markers (char *query, char *converted_query TSRMLS_DC)
 {
     char ch, tmp_ch;
     char *p, *tmp_p;
     long parameter_count;
-    long statement_length;
     int j;
 
 
@@ -4668,12 +4645,12 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                 efree(descriptorInfo);
                 return II_FAIL;
             }
-            if ((ii_result->procname) && (PZVAL_IS_REF(val))) {
+            if ((ii_result->procname) && (PZVAL_IS_REF(*val))) {
                 php_error_docref(NULL TSRMLS_CC, E_ERROR,"Byref parameters can only be used against procedures");
                 return II_FAIL;
             }
 
-            if ((ii_result->procname != NULL) && (PZVAL_IS_REF(val))) {
+            if ((ii_result->procname != NULL) && (PZVAL_IS_REF(*val))) {
                 columnType = IIAPI_COL_PROCBYREFPARM;
             }
 
