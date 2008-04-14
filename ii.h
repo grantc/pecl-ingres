@@ -27,7 +27,7 @@
 #define II_H
 
 #if HAVE_INGRES
-#include "php_ii.h"
+#include "php_ingres.h"
 #include "iiapi.h"
 
 typedef struct _ii_result_entry {

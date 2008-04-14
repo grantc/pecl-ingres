@@ -93,7 +93,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <file baseinstalldir="ingres" name="ii.h" role="src" />
    <file baseinstalldir="ingres" name="ingres.ini" role="doc" />
    <file baseinstalldir="ingres" name="INGRES.OPT" role="src" />
-   <file baseinstalldir="ingres" name="php_ii.h" role="src" />
+   <file baseinstalldir="ingres" name="php_ingres.h" role="src" />
+   <file baseinstalldir="ingres" name="php_ingres2.h" role="src" />
    <file baseinstalldir="ingres" name="README" role="doc" />
    <file baseinstalldir="ingres" name="README.html" role="doc" />
    <file baseinstalldir="ingres" name="README.VMS" role="doc" />

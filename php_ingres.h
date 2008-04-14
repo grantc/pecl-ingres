@@ -16,30 +16,22 @@
    |                http://www.eclips-software.com                        |
    |                mailto:idev@eclips-software.com                       |
    |                Ingres Corporation, http://ingres.com                 |
-   | Authors: David Hénot <henot@php.net>                                 |
+   | Authors: David HÃ©not <henot@php.net>                                 |
    |          Grant Croker <grantc@php.net>                               |
    +----------------------------------------------------------------------+
  */
 
 /* $Id$ */
 
-#ifndef PHP_II_H
-#define PHP_II_H
+#ifndef PHP_INGRES_H
+#define PHP_INGRES_H
 
 #if HAVE_INGRES
-#include<iiapi.h>
+#include <iiapi.h>
 extern zend_module_entry ingres_module_entry;
 #define phpext_ingres_ptr &ingres_module_entry
 
-#define II_VERSION "2.0.1-dev"
-
-#ifdef HAVE_INGRES2
-#define PHP_INGRES2_VERSION II_VERSION
-#else
-#define PHP_INGRES_VERSION II_VERSION
-#endif
-
-
+#define PHP_INGRES_VERSION "2.0.1-dev"
 
 #ifdef PHP_WIN32
 #define PHP_II_API __declspec(dllexport)
@@ -235,7 +227,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 #endif /* HAVE_INGRES2 */
 
 
-#endif	/* PHP_II_H */
+#endif	/* PHP_INGRES_H */
 
 /*
  * Local variables:

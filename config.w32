@@ -62,7 +62,7 @@ if (PHP_INGRES != "no") {
     } 
     if  (have_ingres_files) {
         AC_DEFINE('HAVE_INGRES', 1);
-        if (PHP_INGRES2 == "yes") {
+        if (PHP_INGRES2 != "no") {
             AC_DEFINE('HAVE_INGRES2', 1);
         }
         EXTENSION(extension_name,"ii.c convertUTF.c");

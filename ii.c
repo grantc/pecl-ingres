@@ -31,7 +31,7 @@
 #include "php_globals.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
-#include "php_ii.h"
+#include "php_ingres.h"
 #include "ii.h"
 #include "ext/standard/php_string.h"
 #if defined (IIAPI_VERSION_3)
@@ -143,11 +143,7 @@ zend_module_entry ingres_module_entry = {
     PHP_RINIT(ingres),
     PHP_RSHUTDOWN(ingres),
     PHP_MINFO(ingres),
-#ifdef HAVE_INGRES2
-    PHP_INGRES2_VERSION,
-#else
     PHP_INGRES_VERSION,
-#endif
     STANDARD_MODULE_PROPERTIES
 };
 
@@ -732,7 +728,7 @@ PHP_MINIT_FUNCTION(ingres)
     REGISTER_LONG_CONSTANT("INGRES2_ASSOC",              II_ASSOC,               CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_NUM",                II_NUM,                 CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_BOTH",               II_BOTH,                CONST_CS | CONST_PERSISTENT);
-    REGISTER_STRING_CONSTANT("INGRES2_EXT_VERSION",      PHP_INGRES2_VERSION,    CONST_CS | CONST_PERSISTENT);
+    REGISTER_STRING_CONSTANT("INGRES2_EXT_VERSION",      PHP_INGRES_VERSION,     CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_API_VERSION",        IIAPI_VERSION,          CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_CURSOR_READONLY",    II_CURSOR_READONLY,     CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("INGRES2_CURSOR_UPDATE",      II_CURSOR_UPDATE,       CONST_CS | CONST_PERSISTENT);
@@ -820,7 +816,7 @@ PHP_MINFO_FUNCTION(ingres)
 
     php_info_print_table_start();
     php_info_print_table_header(2, "Ingres Support", "enabled");
-    php_info_print_table_row(2, "Ingres Extension Version", II_VERSION);
+    php_info_print_table_row(2, "Ingres Extension Version", PHP_INGRES_VERSION);
     php_info_print_table_row(2, "Revision", "$Revision$");
     sprintf(buf, "%ld", IIAPI_VERSION );
     php_info_print_table_row(2, "Ingres OpenAPI Version", buf);

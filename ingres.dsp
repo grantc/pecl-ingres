@@ -161,7 +161,7 @@ SOURCE=.\ii.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\php_ii.h
+SOURCE=.\php_ingres.h
 # End Source File
 # End Group
 # End Target

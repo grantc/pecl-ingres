@@ -130,7 +130,8 @@ U pecl/ingres/ii.h
 U pecl/ingres/ingres.dsp
 U pecl/ingres/ingres.ini
 U pecl/ingres/package.xml
-U pecl/ingres/php_ii.h
+U pecl/ingres/php_ingres.h
+U pecl/ingres/php_ingres2.h
 cvs checkout: Updating pecl/ingres/tests
 U pecl/ingres/tests/connection.inc
 U pecl/ingres/tests/skipif.inc
