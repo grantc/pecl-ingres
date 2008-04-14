@@ -16,7 +16,7 @@
    |                http://www.eclips-software.com                        |
    |                mailto:idev@eclips-software.com                       |
    |                Ingres Corporation, http://ingres.com                 |
-   | Authors: David Hénot <henot@php.net>                                 |
+   | Authors: David HÃ©not <henot@php.net>                                 |
    |          Grant Croker <grantc@php.net>                               |
    +----------------------------------------------------------------------+
 */
@@ -32,7 +32,7 @@
 #include "php_ini.h"
 #include "ext/standard/info.h"
 #include "php_ingres.h"
-#include "ii.h"
+#include "ingres.h"
 #include "ext/standard/php_string.h"
 #if defined (IIAPI_VERSION_3)
 #include "convertUTF.h"

@@ -16,15 +16,15 @@
    |                http://www.eclips-software.com                        |
    |                mailto:idev@eclips-software.com                       |
    |                Ingres Corporation, http://ingres.com                 |
-   | Authors: David Hénot <henot@php.net>                                 |
+   | Authors: David HÃ©not <henot@php.net>                                 |
    |          Grant Croker <grantc@php.net>                               |
    +----------------------------------------------------------------------+
  */
 
 /* $Id$ */
 
-#ifndef II_H
-#define II_H
+#ifndef INGRES_H
+#define INGRES_H
 
 #if HAVE_INGRES
 #include "php_ingres.h"
@@ -193,7 +193,7 @@ static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_
 
 
 #endif  /* HAVE_II */
-#endif    /* II_H */
+#endif    /* INGRES_H */
 
 
 /*

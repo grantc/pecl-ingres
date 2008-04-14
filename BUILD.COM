@@ -31,14 +31,14 @@ $ CC convertUTF.c /NoDebug/NoWarn/Optimize/Machine_Code -
         /INCLUDE=(II_SYSTEM:[ingres.files ], PHP_INCLUDES) -
         /DEFINE=(COMPILE_DL_INGRES=1,HAVE_INGRES=1,_VMS_V6_SOURCE,__VMS_VER_OVERRIDE)
 $!
-$! Compile ii.c
+$! Compile ingres.c
 $II_C:
-$ IF F$SEARCH("II.OBJ") .NES. "" THEN $ object_time = f$time("ii.obj")
-$ source_time = f$time("ii.c")
+$ IF F$SEARCH("INGRES.OBJ") .NES. "" THEN $ object_time = f$time("ingres.obj")
+$ source_time = f$time("ingres.c")
 $ IF source_time .lts. object_time then GOTO CREATE_LIBRARY 
-$ WRITE SYS$OUTPUT "Compiling ii.c"
-$ IF F$SEARCH("II.OBJ") .NES. "" THEN DEL II.OBJ;*
-$ CC ii.c /NoDebug/NoWarn/Optimize/Machine_Code -
+$ WRITE SYS$OUTPUT "Compiling ingres.c"
+$ IF F$SEARCH("INGRES.OBJ") .NES. "" THEN DEL INGRES.OBJ;*
+$ CC ingres.c /NoDebug/NoWarn/Optimize/Machine_Code -
         /Show=EXPANSION/Prefix_Library_Entries=ALL -
         /INCLUDE=(II_SYSTEM:[ingres.files ], PHP_INCLUDES) -
         /DEFINE=(COMPILE_DL_INGRES=1,HAVE_INGRES=1,_VMS_V6_SOURCE,__VMS_VER_OVERRIDE)
@@ -47,7 +47,7 @@ $! Build the library
 $CREATE_LIBRARY
 $ IF F$SEARCH("LIBINGRES.OLB") .NES. "" THEN DEL LIBINGRES.OLB;*
 $ LIBRARY/CREATE/LOG LIBINGRES.OLB
-$ LIBRARY/INSERT/LOG/GLOBALS LIBINGRES.OLB convertUTF.obj, ii.obj
+$ LIBRARY/INSERT/LOG/GLOBALS LIBINGRES.OLB convertUTF.obj, ingres.obj
 $!
 $! Link
 $ WRITE SYS$OUTPUT "Linking shared image PHP_INGRES.EXE"

@@ -89,8 +89,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <file baseinstalldir="ingres" name="convertUTF.c" role="src" />
    <file baseinstalldir="ingres" name="convertUTF.h" role="src" />
    <file baseinstalldir="ingres" name="CREDITS" role="doc" />
-   <file baseinstalldir="ingres" name="ii.c" role="src" />
-   <file baseinstalldir="ingres" name="ii.h" role="src" />
+   <file baseinstalldir="ingres" name="ingres.c" role="src" />
+   <file baseinstalldir="ingres" name="ingres.h" role="src" />
    <file baseinstalldir="ingres" name="ingres.ini" role="doc" />
    <file baseinstalldir="ingres" name="INGRES.OPT" role="src" />
    <file baseinstalldir="ingres" name="php_ingres.h" role="src" />

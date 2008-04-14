@@ -11,7 +11,7 @@ PHP_ARG_ENABLE(ingres2, Use ingres2 as the extension name,
 
 if test "$PHP_INGRES" != "no" && test "$PHP_INGRES2" == "no"; then
   AC_DEFINE(HAVE_INGRES, 1, [Whether you have Ingres])
-  PHP_NEW_EXTENSION(ingres, ii.c convertUTF.c, $ext_shared)
+  PHP_NEW_EXTENSION(ingres, ingres.c convertUTF.c, $ext_shared)
   PHP_SUBST(II_SHARED_LIBADD)
 
   if test "$PHP_INGRES" = "yes"; then
@@ -43,7 +43,7 @@ fi
 if test "$PHP_INGRES2" != "no"; then
   AC_DEFINE(HAVE_INGRES, 1, [Whether you have Ingres])
   AC_DEFINE(HAVE_INGRES2, 1, [use ingres2 as the extension name])
-  PHP_NEW_EXTENSION(ingres2, ii.c convertUTF.c, $ext_shared)
+  PHP_NEW_EXTENSION(ingres2, ingres.c convertUTF.c, $ext_shared)
 
   PHP_SUBST(II_SHARED_LIBADD)
 

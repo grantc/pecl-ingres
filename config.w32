@@ -65,6 +65,6 @@ if (PHP_INGRES != "no") {
         if (PHP_INGRES2 != "no") {
             AC_DEFINE('HAVE_INGRES2', 1);
         }
-        EXTENSION(extension_name,"ii.c convertUTF.c");
+        EXTENSION(extension_name,"ingres.c convertUTF.c");
     }
 }

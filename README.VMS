@@ -125,8 +125,8 @@ U pecl/ingres/config.m4
 U pecl/ingres/config.w32
 U pecl/ingres/convertUTF.c
 U pecl/ingres/convertUTF.h
-U pecl/ingres/ii.c
-U pecl/ingres/ii.h
+U pecl/ingres/ingres.c
+U pecl/ingres/ingres.h
 U pecl/ingres/ingres.dsp
 U pecl/ingres/ingres.ini
 U pecl/ingres/package.xml
@@ -163,7 +163,7 @@ In the example below the Ingres PECL source is contained within DISK:[GRANT.SRC.
 $ SET DEF DISK:[GRANT.SRC.PECL.INGRES]
 $ @build.com
 Compiling convertUTF.c
-Compiling ii.c
+Compiling ingres.c
 %LIBRAR-S-INSERTED, module CONVERTUTF inserted in CLUS_DGA500:[GRANT.SRC.PECL.INGRES]LIBINGRES.OLB;1
 %LIBRAR-S-INSERTED, module II inserted in CLUS_DGA500:[GRANT.SRC.PECL.INGRES]LIBINGRES.OLB;1
 Linking shared image PHP_INGRES.EXE
