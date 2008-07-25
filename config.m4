@@ -9,7 +9,7 @@ PHP_ARG_ENABLE(ingres2, Use ingres2 as the extension name,
 [  --enable-ingres2]     Use ingres2 as the extension name  
                           allowing the driver to co-exist with the older ingres release, ,no)
 
-if test "$PHP_INGRES" != "no" && test "$PHP_INGRES2" == "no"; then
+if test "$PHP_INGRES" != "no" && test "$PHP_INGRES2" = "no"; then
   AC_DEFINE(HAVE_INGRES, 1, [Whether you have Ingres])
   PHP_NEW_EXTENSION(ingres, ingres.c convertUTF.c, $ext_shared)
   PHP_SUBST(II_SHARED_LIBADD)
