@@ -1,4 +1,6 @@
 CVS - 2.0.1-dev
+- Improved interoperability when working with older Ingres releases
+- Improved cleanup when a transaction/session is prematurely aborted
 - Replaced "long long int" with "__int64" to allow the extension to build with VC6
 - Use PZVAL_ISREF instead of pointing at (*val)->is_ref
 - Added --enable-ingres2 to generate php_ingres2.dll for Windows

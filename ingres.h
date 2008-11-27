@@ -36,7 +36,7 @@ typedef struct _ii_result_entry {
 } ii_result_entry;
 
 typedef struct _II_LINK {
-    II_PTR				connHandle;
+    II_PTR              connHandle;
     II_PTR              tranHandle;
     II_PTR              stmtHandle;
     II_PTR              envHandle;
@@ -44,6 +44,8 @@ typedef struct _II_LINK {
     int                 autocommit;
     ii_result_entry     *result_list_ptr; 
     int                 auto_multi;  /* Enable multiple cursors when autocommit is enabled */
+    II_LONG             apiLevel;    /* The API level of the DBMS server. Used to determine what the driver can/cannot do */
+                                     /* See $II_SYSTEM/ingres/files/iiapi.h for the list */
 } II_LINK;
 
 typedef struct _II_RESULT {
@@ -61,6 +63,8 @@ typedef struct _II_RESULT {
     int                 scrollable; /* is this a scrollable cursor */
 #endif
     int                 link_id;    /* the link to which this result belongs */
+    II_LONG             apiLevel;    /* The API level of the DBMS server. Used to determine what the driver can/cannot do */
+                                     /* See $II_SYSTEM/ingres/files/iiapi.h for the list */
 } II_RESULT;
 
 /* The following was added to allow the extension to build on Windows using */
