@@ -142,7 +142,7 @@ ZEND_BEGIN_MODULE_GLOBALS(ii)
 				     ii_success. Default is to have them on */
 
 	long cursor_no;
-	long cursor_mode;
+	int cursor_mode;
 
 	II_PTR *envHandle; /* environment handle */
 
@@ -166,8 +166,8 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define II_NUM   (1<<1)
 #define II_BOTH  (II_ASSOC|II_NUM)
 
-#define II_CURSOR_UPDATE 0    /* default */
-#define II_CURSOR_READONLY 1
+#define II_CURSOR_UPDATE 0    
+#define II_CURSOR_READONLY 1 /* default */
 
 #ifdef ZTS
 #define IIG(v) TSRMG(ii_globals_id, zend_ii_globals *, v)

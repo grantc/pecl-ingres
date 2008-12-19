@@ -63,8 +63,12 @@ typedef struct _II_RESULT {
     int                 scrollable; /* is this a scrollable cursor */
 #endif
     int                 link_id;    /* the link to which this result belongs */
-    II_LONG             apiLevel;    /* The API level of the DBMS server. Used to determine what the driver can/cannot do */
-                                     /* See $II_SYSTEM/ingres/files/iiapi.h for the list */
+    II_LONG             apiLevel;   /* The API level of the DBMS server. Used to determine what the driver can/cannot do */
+                                    /* See $II_SYSTEM/ingres/files/iiapi.h for the list */
+    IIAPI_DATAVALUE     *resultData; /* Buffer for IIapi_getColumn() fetches of multiple rows */
+    int                 rowsReturned;   /* Number of rows fetched into resultData */
+    int                 rowNumber;   /* Row in resultData being examined */
+    IIAPI_GETCOLPARM    getColParm; /* Column data for the resultset */
 } II_RESULT;
 
 /* The following was added to allow the extension to build on Windows using */
@@ -108,6 +112,9 @@ typedef struct _II_RESULT {
 #define II_STRUCTURE_CHASH IIAPI_CPV_CHASH
 #define II_STRUCTURE_HEAP IIAPI_CPV_HEAP
 #define II_STRUCTURE_CHEAP IIAPI_CPV_CHEAP
+
+/* The number of rows to pull back at a time when batching fetches */
+#define II_BUFFER_SIZE 100
 
 #define BOM_UTF16_LE "\xff\xfe" 
 #define BOM_UTF16_BE "\xfe\xff" 
@@ -160,6 +167,13 @@ static struct
     { "ALTER", INGRES_SQL_ALTER },
 };
 
+/* II 2.6/0305 should have IIAPI_CP_LOGIN_LOCAL defined but it's not */
+#if define (IIAPI_VERSION_3)
+#  ifndef IIAPI_CP_LOGIN_LOCAL
+#    define IIAPI_CP_LOGIN_LOCAL 38
+#  endif
+#endif
+
 
 static int ii_sync(IIAPI_GENPARM *genParm);
 static int ii_success(IIAPI_GENPARM *genParm, II_PTR *connHandle TSRMLS_DC);
@@ -188,12 +202,8 @@ static void _free_ii_link_result_list (II_LINK *ii_link TSRMLS_DC);
 static int php_ii_query_type(char *statement TSRMLS_DC);
 static int _rollback_transaction(II_LINK *ii_link  TSRMLS_DC);
 static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_DC );
-
-
-
-
-
-
+static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATAVALUE *columnData, II_RESULT *ii_result, int col_no, int result_type);
+static void _free_resultdata (II_RESULT *ii_result);
 
 
 #endif  /* HAVE_II */

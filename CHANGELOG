@@ -1,4 +1,5 @@
 CVS - 2.0.1-dev
+- Improved performance by batch fetching rows
 - Improved interoperability when working with older Ingres releases
 - Improved cleanup when a transaction/session is prematurely aborted
 - Replaced "long long int" with "__int64" to allow the extension to build with VC6

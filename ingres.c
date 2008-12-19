@@ -619,8 +619,6 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
     int ai_error = 0;
     IIAPI_DISCONNPARM disconnParm;
 
-    II_RESULT *ii_result = NULL;
-    ii_result_entry *result_entry = NULL;
 
     /* if link as always been marked as broken do nothing */
     /* This because we call this function directly from close function */
@@ -729,6 +727,10 @@ static void php_ii_globals_init(zend_ii_globals *ii_globals)
     ii_globals->error_number = 0;
     ii_globals->reuse_connection = 1;
     ii_globals->scroll = 1;
+#if defined (IIAPI_VERSION_3)
+    ii_globals->utf8 = 1;
+#endif
+
 }
 /* }}} */
 
@@ -1010,13 +1012,16 @@ static void _ii_init_result (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result,
     ii_result->paramCount = 0 ;
     ii_result->cursor_id = NULL;
     ii_result->procname = NULL;
-    ii_result->cursor_mode = -1;
+    ii_result->cursor_mode = II_CURSOR_READONLY;
     ii_result->errorHandle = NULL;
 #if defined(IIAPI_VERSION_6)
     ii_result->scrollable = 0;
 #endif
     ii_result->link_id = -1;
     ii_result->apiLevel = ii_link->apiLevel;
+    ii_result->resultData = NULL;
+    ii_result->rowsReturned = 0;
+    ii_result->rowNumber = 0;
 }
 /* }}} */
 
@@ -1037,7 +1042,6 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
     int hashed_details_length;
     IIAPI_CONNPARM connParm;
     II_LINK *ii_link;
-    II_PTR    envHandle = (II_PTR)NULL;
 
 #if defined(IIAPI_VERSION_2)
     IIAPI_SETENVPRMPARM    setEnvPrmParm;
@@ -1604,7 +1608,6 @@ PHP_FUNCTION(ingres_query)
 
     HashTable *arr_hash;
     int elementCount;
-    char *procname = NULL;
     char *query_ptr = NULL;
     char *converted_query = NULL;
     int query_type;
@@ -1612,7 +1615,6 @@ PHP_FUNCTION(ingres_query)
     ii_result_entry *result_ptr = NULL;
     short int result_resource = FALSE;
     int type = 0;
-    char *type_name = NULL;
 
     ii_result_entry *result_entry;
     
@@ -1903,6 +1905,7 @@ PHP_FUNCTION(ingres_query)
                 query_ptr = &(converted_query[query_len]);
             }
             sprintf (query_ptr," for readonly");
+            ii_result->cursor_mode = II_CURSOR_READONLY;
         }
         else
         {
@@ -2050,8 +2053,6 @@ PHP_FUNCTION(ingres_prepare)
 
     int cursor_id_len;
 
-    ii_result_entry *result_ptr = NULL;
-    short int result_resource = FALSE;
     ii_result_entry *result_entry;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"rs" , &link, &query, &query_len) == FAILURE) 
@@ -2899,6 +2900,7 @@ PHP_FUNCTION(ingres_free_result)
          RETURN_FALSE;
     }
 
+    _free_resultdata(ii_result);
     php_ii_result_remove (ii_result, Z_LVAL_P(result) TSRMLS_CC);
 
     zend_list_delete(Z_LVAL_P(result));
@@ -2983,7 +2985,7 @@ static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_
 }
 /* }}} */
 
-/* {{{static short php_ii_convert_data ( II_LONG destType, int destSize, int precision, II_LINK *ii_link, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm TSRMLS_DC) */
+/* {{{static II_LONG php_ii_convert_data ( short destType, int destSize, int precision, II_RESULT *ii_result, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC ) */
 /* Convert complex Ingres data types to php-usable ones */
 static II_LONG php_ii_convert_data ( short destType, int destSize, int precision, II_RESULT *ii_result, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC )
 {
@@ -3070,7 +3072,6 @@ static II_LONG php_ii_convert_data ( short destType, int destSize, int precision
 /* Fetch a row of result */
 static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int result_type, long row_position, II_INT2 row_count)
 {
-    IIAPI_GETCOLPARM getColParm;
     IIAPI_DATAVALUE *columnData;
     IIAPI_GETQINFOPARM getQInfoParm;
 #if defined(IIAPI_VERSION_6)
@@ -3086,14 +3087,15 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
     char *value_char_p;
     int len, should_copy, correct_length=0;
     int lob_len ;
-    short int lob_segment_len, found_lob;
+    short int lob_segment_len;
     short int null_column_name, mem;
     char *lob_segment, *lob_ptr, *lob_data;
+    II_BOOL have_lob = FALSE;
+    int cell, col_no;
 
 #if defined(IIAPI_VERSION_3)
     UTF8 *tmp_utf8_string_ptr = NULL;
     UTF8 *tmp_utf8_string = NULL;
-    int utf8_string_len = 0;
     UTF16 *string_start;
     ConversionResult result;
 #endif
@@ -3103,532 +3105,704 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
     /* init first char of array used to return BIG INT values as strings */
     value_long_long_str[0] = '\0';
 
-    if ( ii_result->procname != NULL ) /* look to see if there is a return value*/
-    {
-        if ( ii_result->fieldCount == 0 ) 
-        /* if > 0 then we are looking at a row producing procedure and don't want to call IIapi_getQueryInfo
-         * to nullify any results */
-        {
-            getQInfoParm.gq_genParm.gp_callback = NULL;
-            getQInfoParm.gq_genParm.gp_closure = NULL;
-            getQInfoParm.gq_stmtHandle = ii_result->stmtHandle;
-
-            IIapi_getQueryInfo( &getQInfoParm );
-            ii_sync(&(getQInfoParm.gq_genParm));
-
-            if (ii_success(&(getQInfoParm.gq_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
-            {
-                RETURN_FALSE;
-            } 
-
-            /* Check that the last query was for a procedure and there is a return value */
-            if ((getQInfoParm.gq_mask & IIAPI_GQ_PROCEDURE_ID) && 
-                    (getQInfoParm.gq_mask & IIAPI_GQ_PROCEDURE_RET)) 
-            {
-                if (result_type & II_NUM)
-                {
-                    add_index_long(return_value, 0, getQInfoParm.gq_procedureReturn);
-                }
-                if (result_type & II_ASSOC)
-                {
-                    add_assoc_long(return_value, "returnvalue", getQInfoParm.gq_procedureReturn);
-                }
-            }
-            else
-            {
-                RETURN_FALSE;
-            }
-        }
-    }
 
 #if defined(IIAPI_VERSION_6)
-    if (ii_result->scrollable)
+    /* For the time being if some one has requested a specific row we do not check to see
+       if we can satisfy that request from the buffer. For the time being we release 
+       the resultData buffer.
+       TODO : Check to see if we can satisfy the request from ii_result->resultData.
+       */
+    if (((ii_result->scrollable) && row_position != -1) &&  ii_result->resultData != NULL )
     {
-        if (row_position > 0) 
-        {
-            /* go to the requested row */
-            posParm.po_reference = IIAPI_POS_BEGIN;
-            posParm.po_offset = row_position;
-        } 
-        else
-        {
-            /* get next row */
-            posParm.po_reference = IIAPI_POS_CURRENT;
-            posParm.po_offset = 1;
-        }
-        posParm.po_genParm.gp_callback = NULL;
-        posParm.po_genParm.gp_closure = NULL;
-        posParm.po_stmtHandle = ii_result->stmtHandle;
-        posParm.po_rowCount = 1;
-
-        IIapi_position(&posParm);
-        ii_sync(&(posParm.po_genParm));
-
-        if (ii_success(&(posParm.po_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
-        {
-            RETURN_FALSE;
-        }
-    } 
-
-#else
-    if ( row_position > 0)
-    {
-        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Row positioning is not supported at this release level");
+        _free_resultdata(ii_result);
     }
 #endif
 
-    /* going through all fields */
-    for (i = 0; i < ii_result->fieldCount;)
+    if ( ii_result->resultData != NULL )
     {
-        j = 0;
-        k = 0;
-        found_lob = 0;
-
-        /* as long as there are no long byte or long varchar fields, Ingres is able to fetch 
-           many fields at a time, so try to find these types and stop if they're found. variable 
-           j will get number of fields to fetch */
-        while ((i + j) < ii_result->fieldCount ) 
+        /* If we have pre-fetched data available */
+        ii_result->rowNumber++;
+        if ( ii_result->rowNumber < ii_result->rowsReturned )
         {
-            if ((ii_result->descriptor[i+j]).ds_dataType != IIAPI_LBYTE_TYPE &&
-                (ii_result->descriptor[i+j]).ds_dataType != IIAPI_LVCH_TYPE 
-#if defined (IIAPI_VERSION_3)
-                && (ii_result->descriptor[i+j]).ds_dataType != IIAPI_LNVCH_TYPE 
-#endif
-               )
+            /* take from the existing buffer */
+            for (col_no = 0; col_no < ii_result->fieldCount; col_no++)
             {
-                j++;
-            }
-            else
-            {
-                /* break out of loop */
-                /* a lob needs to be processed separately */
-                found_lob = 1;
-                break;
+                php_ii_setup_return_value(INTERNAL_FUNCTION_PARAM_PASSTHRU, &ii_result->resultData[(ii_result->rowNumber * ii_result->fieldCount) + col_no], ii_result, col_no, result_type);
             }
         }
-
-        if ( j > 0 ) 
+        else
         {
-            /* process non LOB fields */
+            /* We have run out of rows in our buffer */
+            _free_resultdata(ii_result);
 
-            /* allocate memory for j fields */
-            columnData = (IIAPI_DATAVALUE *) safe_emalloc(sizeof(IIAPI_DATAVALUE), j, 0);
-            for (k = 0; k < j; k++)
+            /* go fetch some more rows */
+
+            ii_result->getColParm.gc_genParm.gp_callback = NULL;
+            ii_result->getColParm.gc_genParm.gp_closure = NULL;
+            ii_result->getColParm.gc_rowCount = II_BUFFER_SIZE; /* 100 rows by default */
+            ii_result->getColParm.gc_columnCount = ii_result->fieldCount;
+            ii_result->getColParm.gc_stmtHandle = ii_result->stmtHandle;
+            ii_result->getColParm.gc_moreSegments = 0;
+            /* Allocate the memory needed to retrieve the data */
+            ii_result->resultData = (IIAPI_DATAVALUE *) emalloc (sizeof(IIAPI_DATAVALUE) * ii_result->getColParm.gc_rowCount * ii_result->getColParm.gc_columnCount);
+            ii_result->getColParm.gc_columnData = ii_result->resultData;
+
+            /* Setup the buffer for receiving the results */
+            for( cell=0; cell < ( ii_result->fieldCount * ii_result->getColParm.gc_rowCount ); cell++)
             {
-                columnData[k].dv_value = (II_PTR) emalloc((ii_result->descriptor[i + k]).ds_length);
-            }
+                 ii_result->resultData[cell].dv_value = (II_PTR) emalloc((ii_result->descriptor[cell % ii_result->fieldCount]).ds_length);
+            }  
 
-            getColParm.gc_genParm.gp_callback = NULL;
-            getColParm.gc_genParm.gp_closure = NULL;
-            getColParm.gc_rowCount = 1;
-            getColParm.gc_columnCount = j;
-            getColParm.gc_columnData = columnData;
-            getColParm.gc_stmtHandle = ii_result->stmtHandle;
-            getColParm.gc_moreSegments = 0;
+            IIapi_getColumns(&ii_result->getColParm);
+            ii_sync(&(ii_result->getColParm.gc_genParm));
 
-            IIapi_getColumns(&getColParm);
-            ii_sync(&(getColParm.gc_genParm));
-
-            if (ii_success(&(getColParm.gc_genParm), &ii_result->errorHandle TSRMLS_CC) != II_OK)
+            if (ii_success(&(ii_result->getColParm.gc_genParm), &ii_result->errorHandle TSRMLS_CC) != II_OK)
             {
-                for (k = 0; k < j; k++)
-                {
-                    efree(columnData[k].dv_value);
-                }
+                _free_resultdata(ii_result);
                 zend_hash_destroy(return_value->value.ht);
                 efree(return_value->value.ht);
-                efree(columnData);
                 RETURN_FALSE;
             }
 
-            for (k = 0; k < j; k++)
-            {
+            /* Store the actual number of rows fetched from the server */
+            ii_result->rowsReturned = ii_result->getColParm.gc_rowsReturned;
 
+            /* Load the first row into the return value */
+            for (col_no = 0; col_no < ii_result->fieldCount; col_no++)
+            {
                 /* some releases of Ingres do not set a column name for row producing procedures */
                 /* set up some memory so we can roll our own column name */
-                if ( ii_result->procname != NULL && ii_result->descriptor[i + k].ds_columnName == NULL )
+                if ( ii_result->procname != NULL && ii_result->descriptor[col_no].ds_columnName == NULL )
                 {
-                    ii_result->descriptor[i+k].ds_columnName = emalloc(8);
+                    ii_result->descriptor[col_no].ds_columnName = emalloc(8);
                     for ( mem = 0 ; mem < 8 ; mem++ ) 
                     {
-                        ii_result->descriptor[i+k].ds_columnName[mem] = '\0';
+                        ii_result->descriptor[col_no].ds_columnName[mem] = '\0';
                     }
                     null_column_name = 1;
                 }
-                if (columnData[k].dv_null)
-                {    /* NULL value ? */
+                php_ii_setup_return_value(INTERNAL_FUNCTION_PARAM_PASSTHRU, &ii_result->resultData[(ii_result->rowNumber * ii_result->fieldCount) + col_no], ii_result, col_no, result_type);
 
+                if ( ii_result->procname != NULL && null_column_name == 1 )
+                {
+                    efree(ii_result->descriptor[col_no].ds_columnName);
+                    ii_result->descriptor[col_no].ds_columnName = NULL;
+                    null_column_name = 0;
+                }
+            }
+
+        }
+    }
+    else
+    {
+        if ( ii_result->procname != NULL ) /* look to see if there is a return value*/
+        {
+            if ( ii_result->fieldCount == 0 ) 
+            /* if > 0 then we are looking at a row producing procedure and don't want to call IIapi_getQueryInfo
+             * to nullify any results */
+            {
+                getQInfoParm.gq_genParm.gp_callback = NULL;
+                getQInfoParm.gq_genParm.gp_closure = NULL;
+                getQInfoParm.gq_stmtHandle = ii_result->stmtHandle;
+
+                IIapi_getQueryInfo( &getQInfoParm );
+                ii_sync(&(getQInfoParm.gq_genParm));
+
+                if (ii_success(&(getQInfoParm.gq_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+                {
+                    RETURN_FALSE;
+                } 
+
+                /* Check that the last query was for a procedure and there is a return value */
+                if ((getQInfoParm.gq_mask & IIAPI_GQ_PROCEDURE_ID) && 
+                        (getQInfoParm.gq_mask & IIAPI_GQ_PROCEDURE_RET)) 
+                {
                     if (result_type & II_NUM)
                     {
-                        add_index_null(return_value, i + k + IIG(array_index_start));
+                        add_index_long(return_value, 0, getQInfoParm.gq_procedureReturn);
                     }
                     if (result_type & II_ASSOC)
                     {
-                        add_assoc_null(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC));
+                        add_assoc_long(return_value, "returnvalue", getQInfoParm.gq_procedureReturn);
                     }
-
-                } else {    /* non NULL value */
-                    correct_length = 0;
-
-                    switch ((ii_result->descriptor[i + k]).ds_dataType)
-                    {
-
-                        case IIAPI_DEC_TYPE:    /* decimal (fixed point number) */
-                        case IIAPI_MNY_TYPE:    /* money */
-                            /* convert to floating point number */
-                            php_ii_convert_data ( IIAPI_FLT_TYPE, sizeof(II_FLOAT8), 53, ii_result, columnData, getColParm, i, k TSRMLS_CC );
-                            /* NO break */
-
-                        case IIAPI_FLT_TYPE:    /* floating point number */
-                            switch (columnData[k].dv_length)
-                            {
-
-                                case 4:
-                                    value_double = (double) *((II_FLOAT4 *) columnData[k].dv_value);
-                                    break;
-
-                                case 8:
-                                    value_double = (double) *((II_FLOAT8 *) columnData[k].dv_value);
-                                    break;
-
-                                default:
-                                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid size for IIAPI_FLT_TYPE data (%d)", columnData[k - 1].dv_length);
-                                    break;
-                            }
-
-                            if (result_type & II_NUM)
-                            {
-                                add_index_double(return_value, i + k + IIG(array_index_start), value_double);
-                            }
-
-                            if (result_type & II_ASSOC)
-                            {
-                                add_assoc_double(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_double);
-
-                            }
-                            break;
-
-                        case IIAPI_INT_TYPE:    /* integer */
-                            switch (columnData[k].dv_length)
-                            {
-
-                                case 1:
-                                    value_long = (long) *((II_INT1 *) columnData[k].dv_value);
-                                    break;
-
-                                case 2:
-                                    value_long = (long) *((II_INT2 *) columnData[k].dv_value);
-                                    break;
-        
-                                case 4:
-                                    value_long = (long) *((II_INT4 *) columnData[k].dv_value);
-                                    break;
-#if defined(IIAPI_VERSION_4)
-                                case 8:
-                                    /* PHP does not support BIGINT/INTEGER8 so we have to return */
-                                    /* values greater/smaller than the max/min size of a LONG value as a string */
-                                    /* Anyone wanting to manipulate this value can use PECL big_int */
-                                    if ((*((ingres_int64 *) columnData[k].dv_value) > LONG_MAX ) ||
-                                        (*((ingres_int64 *) columnData[k].dv_value) < LONG_MIN ))
-                                    {
-                                        value_long_long = *((ingres_int64 *) columnData[k].dv_value);
-                                        sprintf(value_long_long_str, "%lld\0", value_long_long);
-                                        value_long_long_str_len = strlen(value_long_long_str);
-                                    }
-                                    else
-                                    {
-                                        value_long = (long) *((II_INT4 *) columnData[k].dv_value);
-                                    }
-                                    break;
-#endif
-                                default:
-                                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid size for IIAPI_INT_TYPE data (%d)", columnData[k].dv_length);
-                                    break;
-                            }
-
-                            if (value_long_long_str[0] != '\0')
-                            {
-                                if (result_type & II_NUM)
-                                {
-                                    add_index_stringl(return_value, i + k + IIG(array_index_start), value_long_long_str, value_long_long_str_len, should_copy);
-                                }
-                                if (result_type & II_ASSOC)
-                                {
-                                    add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_long_long_str, value_long_long_str_len, should_copy);
-                                }
-                                /* Init the first char to '\0' for later reuse */
-                                value_long_long_str[0] = '\0';
-                            }
-                            else
-                            {
-                                if (result_type & II_NUM)
-                                {
-                                    add_index_long(return_value, i + k + IIG(array_index_start), value_long);
-                                }
-                                if (result_type & II_ASSOC)
-                                {
-                                    add_assoc_long(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_long);
-                                }
-                            }
-                            break;
-
-#if defined(IIAPI_VERSION_3)
-                        case IIAPI_NVCH_TYPE:    /* variable length unicode character string */
-                            columnData[k].dv_length = *((II_INT2 *) columnData[k].dv_value) * 2;
-                            columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value + 2;
-                            correct_length = 1;
-                        case IIAPI_NCHA_TYPE:    /* fixed length unicode character string */    
-                            /* use php_addslashes if asked to */
-                            if (PG(magic_quotes_runtime))
-                            {
-                                value_char_p = php_addslashes((char *) columnData[k].dv_value, columnData[k].dv_length, &len, 0 TSRMLS_CC);
-                                should_copy = 0;
-                            } else {
-                                value_char_p = (char *) columnData[k].dv_value;
-                                len = columnData[k].dv_length;
-                                should_copy = 1;
-                            }
-
-                            if (IIG(utf8)) {
-                                /* User has requested the output in UTF-8 */
-                                /* create a big enough buffer - each code point in UTF-16 can be upto 4 bytes in UTF-8 */
-                                tmp_utf8_string = emalloc((len * 4) + 1);
-                                for ( l = 0; l < len * 4 ; l++) {
-                                    tmp_utf8_string[l] = '\0';
-                                }
-                                string_start = (UTF16 *)columnData[k].dv_value;
-                                tmp_utf8_string_ptr = tmp_utf8_string;
-                                result = ConvertUTF16toUTF8((const UTF16 **) &string_start, string_start + len/2, &tmp_utf8_string_ptr, tmp_utf8_string_ptr + (len * 4), strictConversion);
-                                len = tmp_utf8_string_ptr - tmp_utf8_string;
-                                tmp_utf8_string[len] = '\0';
-                                value_char_p = (char *)tmp_utf8_string;
-                            }
-
-                            if (result_type & II_NUM)
-                            {
-                                add_index_stringl(return_value, i + k + IIG(array_index_start), value_char_p, len, should_copy);
-                            }
-                            if (result_type & II_ASSOC)
-                            {
-                                add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
-                            }
-                            if (tmp_utf8_string) {
-                                efree(tmp_utf8_string);
-                                tmp_utf8_string = NULL;
-                            }
-                            break;
-#endif                                
-                        case IIAPI_TXT_TYPE:    /* variable length character string */
-                        case IIAPI_VBYTE_TYPE:    /* variable length binary string */
-                        case IIAPI_VCH_TYPE:    /* variable length character string */
-                            /* real length is stored in first 2 bytes of data, so adjust
-                               length variable and data pointer */
-                            columnData[k].dv_length = *((II_INT2 *) columnData[k].dv_value);
-                            columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value + 2;
-                            correct_length = 1;
-                            /* NO break */
-
-                        case IIAPI_BYTE_TYPE:    /* fixed length binary string */
-                        case IIAPI_CHA_TYPE:    /* fixed length character string */
-                        case IIAPI_CHR_TYPE:    /* fixed length character string */
-                        case IIAPI_LOGKEY_TYPE:    /* value unique to database */
-                        case IIAPI_TABKEY_TYPE:    /* value unique to table */
-                        case IIAPI_DTE_TYPE:    /* Ingres date */
-#if defined(IIAPI_VERSION_5) 
-                        case IIAPI_ADATE_TYPE:  /* SQL Date (aka ANSI DATE) */
-                        case IIAPI_TIME_TYPE: /* Ingres Time */
-                        case IIAPI_TMWO_TYPE: /* Time without Timezone */
-                        case IIAPI_TMTZ_TYPE: /* Time with Timezone */
-                        case IIAPI_TS_TYPE: /* Ingres Timestamp */
-                        case IIAPI_TSWO_TYPE: /* Timestamp without Timezone */
-                        case IIAPI_TSTZ_TYPE: /* Timestamp with Timezone */
-                        case IIAPI_INTYM_TYPE: /* Interval Year to Month */
-                        case IIAPI_INTDS_TYPE: /* Interval Day to Second */
-#endif
-                            /* convert date to variable length string */
-                            if ((ii_result->descriptor[i + k]).ds_dataType == IIAPI_DTE_TYPE 
-#if defined(IIAPI_VERSION_5) 
-                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_ADATE_TYPE
-                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TIME_TYPE 
-                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TMWO_TYPE
-                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TMTZ_TYPE
-                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TS_TYPE
-                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TSWO_TYPE
-                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TSTZ_TYPE
-                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_INTYM_TYPE
-                                || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_INTDS_TYPE
-#endif
-                                )
-                            {
-                                php_ii_convert_data ( IIAPI_VCH_TYPE, 32, 0, ii_result, columnData, getColParm, i, k TSRMLS_CC );
-                                columnData[k].dv_length = *((II_INT2 *) columnData[k].dv_value);
-                                columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value + 2;
-                                correct_length = 1;
-                            }
-
-                            /* use php_addslashes if asked to */
-                            if (PG(magic_quotes_runtime))
-                            {
-                                value_char_p = php_addslashes((char *) columnData[k].dv_value, columnData[k].dv_length, &len, 0 TSRMLS_CC);
-                                should_copy = 0;
-                            }
-                            else 
-                            {
-                                value_char_p = (char *) columnData[k].dv_value;
-                                len = columnData[k].dv_length;
-                                should_copy = 1;
-                            }
-
-                            if (result_type & II_NUM)
-                            {
-                                add_index_stringl(return_value, i + k + IIG(array_index_start), value_char_p, len, should_copy);
-                            }
-
-                            if (result_type & II_ASSOC)
-                            {
-                                add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
-                            }
-
-                            break;
-        
-                        default:
-                            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid SQL data type in fetched field (%d -- length : %d)", (ii_result->descriptor[i + k]).ds_dataType, columnData[k].dv_length);
-                            break;
-                    }
-                    /* eventually restore data pointer state for variable length data types */
-                    if (correct_length)
-                    {
-                        columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value - 2;
-                    }
-                }
-                if ( ii_result->procname != NULL && null_column_name == 1 )
-                {
-                    efree(ii_result->descriptor[i+k].ds_columnName);
-                    ii_result->descriptor[i+k].ds_columnName = NULL;
-                    null_column_name = 0;
-                }
-
-            }
-
-            /* free the memory buffers */
-            for (k = 0; k < j; k++)
-            {
-                efree(columnData[k].dv_value);
-            }
-            efree(columnData);
-            columnData = NULL;
-        }
-
-        if (found_lob) 
-        {
-
-            /* alloc memory for the size of the segment we need */
-
-            columnData = (IIAPI_DATAVALUE *) safe_emalloc(sizeof(IIAPI_DATAVALUE), 1, 0);
-            lob_segment = (char *) emalloc (IIG(blob_segment_length));
-            lob_len = 0;
-            do
-            {
-                getColParm.gc_genParm.gp_callback = NULL;
-                getColParm.gc_genParm.gp_closure = NULL;
-                getColParm.gc_rowCount = 1;
-                getColParm.gc_columnCount = 1; /* just the lob */
-                getColParm.gc_columnData = columnData;
-                getColParm.gc_columnData[0].dv_value = lob_segment;
-                getColParm.gc_stmtHandle = ii_result->stmtHandle;
-
-                IIapi_getColumns(&getColParm);
-                ii_sync(&(getColParm.gc_genParm));
-
-                switch (ii_success(&(getColParm.gc_genParm), &ii_result->errorHandle TSRMLS_CC)) 
-                {
-                    case II_OK:
-                        break;
-                    case II_NO_DATA:
-                        efree(lob_segment);
-                        efree(columnData);
-                        RETURN_FALSE;
-                        break;
-                    default:
-                        efree(lob_segment);
-                        efree(columnData);
-                        php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured whilst fetching a BLOB");
-                        RETURN_FALSE;
-                        break;
-                }
-
-                if (columnData[0].dv_null)
-                {
-                    break;
-                }
-
-                /* length of the segment fetched is in the first 2 bytes of
-                   lob_segment */
-                memcpy( (char *)&lob_segment_len, lob_segment, 2 );
-
-                if ( lob_len == 0 )
-                {
-                    lob_data = (char *) emalloc (lob_segment_len + 1);
                 }
                 else
                 {
-                    /* extend existing lob buffer by the size of the new segment */
-                    lob_data = erealloc (lob_data, lob_len + lob_segment_len + 16);
-                }
-
-                /* copy segement in to buffer. First two bytes contain the length of the segment. */
-
-
-                lob_segment += 2;
-                lob_ptr = lob_data + lob_len;
-                memcpy(lob_ptr, lob_segment, lob_segment_len);
-
-                /* move on dv_length and add to the total length of the lob fetched 
-                so far */
-                lob_segment -= 2;
-                lob_len += lob_segment_len;
-
-            } 
-            while ( getColParm.gc_moreSegments );
-
-            if (columnData[0].dv_null)
-            {    /* NULL value ? */
-
-                if (result_type & II_NUM)
-                {
-                    add_index_null(return_value, i + k + IIG(array_index_start));
-                }
-                if (result_type & II_ASSOC)
-                {
-                    add_assoc_null(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC));
+                    RETURN_FALSE;
                 }
             }
+        }
+
+#if defined(IIAPI_VERSION_6)
+        if (ii_result->scrollable)
+        {
+            if (row_position > 0) 
+            {
+                /* go to the requested row */
+                posParm.po_reference = IIAPI_POS_BEGIN;
+                posParm.po_offset = row_position;
+            } 
             else
             {
-                if (result_type & II_NUM)
-                {
-                    add_index_stringl(return_value, i + k + IIG(array_index_start), lob_data, lob_len, 1);
-                }
-
-                if (result_type & II_ASSOC)
-                {
-                    add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), lob_data, lob_len, 1);
-                }
+                /* get next row */
+                posParm.po_reference = IIAPI_POS_CURRENT;
+                posParm.po_offset = 1;
             }
+            posParm.po_genParm.gp_callback = NULL;
+            posParm.po_genParm.gp_closure = NULL;
+            posParm.po_stmtHandle = ii_result->stmtHandle;
+            posParm.po_rowCount = 1;
 
-            efree(lob_segment);
-            efree(columnData);
-            if (lob_len != 0)
+            IIapi_position(&posParm);
+            ii_sync(&(posParm.po_genParm));
+
+            if (ii_success(&(posParm.po_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
             {
-                efree(lob_data);
+                RETURN_FALSE;
             }
-            
         } 
-    
+
+#else
+        if ( row_position > 0)
+        {
+            php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Row positioning is not supported at this release level");
+        }
+#endif
+
+        /* Ingres OpenAPI/GCA can fetch mulitple rows at a time if and only if:   
+           - There are no LONG types in the result set                         
+           - If the result is from a cursor that the cursor is readonly         
+           Assuming the above to be true we can batch fetch rows from the server  */
+
+        for (col_no = 0; col_no < ii_result->fieldCount; col_no++)
+        {
+            if ((ii_result->descriptor[col_no]).ds_dataType == IIAPI_LBYTE_TYPE ||
+                (ii_result->descriptor[col_no]).ds_dataType == IIAPI_LVCH_TYPE 
+#if defined (IIAPI_VERSION_3)
+                || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_LNVCH_TYPE 
+#endif
+               )
+            {
+                have_lob = TRUE;
+            }
+        }
+
+        /* If we do not have a lob and the query is not an update cursor we can fetch */
+        /* blocks of rows */
+        if (!have_lob && (ii_result->cursor_mode = II_CURSOR_READONLY))
+        {
+            ii_result->getColParm.gc_genParm.gp_callback = NULL;
+            ii_result->getColParm.gc_genParm.gp_closure = NULL;
+            ii_result->getColParm.gc_rowCount = II_BUFFER_SIZE; /* 100 rows by default */
+            ii_result->getColParm.gc_columnCount = ii_result->fieldCount;
+            ii_result->getColParm.gc_stmtHandle = ii_result->stmtHandle;
+            ii_result->getColParm.gc_moreSegments = 0;
+            /* Allocate the memory needed to retrieve the data */
+            ii_result->resultData = (IIAPI_DATAVALUE *) emalloc (sizeof(IIAPI_DATAVALUE) * ii_result->getColParm.gc_rowCount * ii_result->getColParm.gc_columnCount);
+            ii_result->getColParm.gc_columnData = ii_result->resultData;
+
+            /* Setup the buffer for receiving the results */
+            for( cell=0; cell < ( ii_result->fieldCount * ii_result->getColParm.gc_rowCount ); cell++)
+            {
+                 ii_result->resultData[cell].dv_value = (II_PTR) emalloc((ii_result->descriptor[cell % ii_result->fieldCount]).ds_length);
+            }  
+
+            IIapi_getColumns(&ii_result->getColParm);
+            ii_sync(&(ii_result->getColParm.gc_genParm));
+
+            if (ii_success(&(ii_result->getColParm.gc_genParm), &ii_result->errorHandle TSRMLS_CC) != II_OK)
+            {
+                _free_resultdata(ii_result);
+                zend_hash_destroy(return_value->value.ht);
+                efree(return_value->value.ht);
+                RETURN_FALSE;
+            }
+
+            /* Store the actual number of rows fetched from the server */
+            ii_result->rowsReturned = ii_result->getColParm.gc_rowsReturned;
+
+            /* Load the first row into the return value */
+            for (col_no = 0; col_no < ii_result->fieldCount; col_no++)
+            {
+                /* some releases of Ingres do not set a column name for row producing procedures */
+                /* set up some memory so we can roll our own column name */
+                if ( ii_result->procname != NULL && ii_result->descriptor[col_no].ds_columnName == NULL )
+                {
+                    ii_result->descriptor[col_no].ds_columnName = emalloc(8);
+                    for ( mem = 0 ; mem < 8 ; mem++ ) 
+                    {
+                        ii_result->descriptor[col_no].ds_columnName[mem] = '\0';
+                    }
+                    null_column_name = 1;
+                }
+                php_ii_setup_return_value(INTERNAL_FUNCTION_PARAM_PASSTHRU, &ii_result->resultData[(ii_result->rowNumber * ii_result->fieldCount) + col_no], ii_result, col_no, result_type);
+
+                if ( ii_result->procname != NULL && null_column_name == 1 )
+                {
+                    efree(ii_result->descriptor[col_no].ds_columnName);
+                    ii_result->descriptor[col_no].ds_columnName = NULL;
+                    null_column_name = 0;
+                }
+            }
+
+
+        }
+        else
+        {
+            /* Look to see if we have a LOB ( LONG VARCHAR/BYTE/NVARCHAR ) in the resultset */
+            for (i = 0; i < ii_result->fieldCount;)
+            {
+                j = 0;
+                k = 0;
+
+                /* as long as there are no long byte or long varchar fields, Ingres is able to fetch 
+                   many fields at a time, so try to find these types and stop if they're found. variable 
+                   j will get number of fields to fetch */
+                while ((i + j) < ii_result->fieldCount) 
+                {
+                    if ((ii_result->descriptor[i + j]).ds_dataType != IIAPI_LBYTE_TYPE &&
+                        (ii_result->descriptor[i + j]).ds_dataType != IIAPI_LVCH_TYPE 
+#if defined (IIAPI_VERSION_3)
+                        && (ii_result->descriptor[i + j]).ds_dataType != IIAPI_LNVCH_TYPE 
+#endif
+                       )
+                    {
+                        j++;
+                    }
+                    else
+                    {
+                        /* break out of loop */
+                        /* a lob needs to be processed separately */
+                        have_lob = 1;
+                        break;
+                    }
+                }
+
+                if ( j > 0 ) 
+                {
+                    /* process non LOB fields */
+
+                    /* allocate memory for j fields */
+                    columnData = (IIAPI_DATAVALUE *) safe_emalloc(sizeof(IIAPI_DATAVALUE), j, 0);
+                    for (k = 0; k < j; k++)
+                    {
+                        columnData[k].dv_value = (II_PTR) emalloc((ii_result->descriptor[i + k]).ds_length);
+                    }
+
+                    ii_result->getColParm.gc_genParm.gp_callback = NULL;
+                    ii_result->getColParm.gc_genParm.gp_closure = NULL;
+                    ii_result->getColParm.gc_rowCount = 1;
+                    ii_result->getColParm.gc_columnCount = j;
+                    ii_result->getColParm.gc_columnData = columnData;
+                    ii_result->getColParm.gc_stmtHandle = ii_result->stmtHandle;
+                    ii_result->getColParm.gc_moreSegments = 0;
+
+                    IIapi_getColumns(&ii_result->getColParm);
+                    ii_sync(&(ii_result->getColParm.gc_genParm));
+
+                    if (ii_success(&(ii_result->getColParm.gc_genParm), &ii_result->errorHandle TSRMLS_CC) != II_OK)
+                    {
+                        for (k = 0; k < j; k++)
+                        {
+                            efree(columnData[k].dv_value);
+                        }
+                        zend_hash_destroy(return_value->value.ht);
+                        efree(return_value->value.ht);
+                        efree(columnData);
+                        RETURN_FALSE;
+                    }
+
+                    for (k = 0; k < j; k++)
+                    {
+
+                        /* some releases of Ingres do not set a column name for row producing procedures */
+                        /* set up some memory so we can roll our own column name */
+                        if ( ii_result->procname != NULL && ii_result->descriptor[i + k].ds_columnName == NULL )
+                        {
+                            ii_result->descriptor[i+k].ds_columnName = emalloc(8);
+                            for ( mem = 0 ; mem < 8 ; mem++ ) 
+                            {
+                                ii_result->descriptor[i+k].ds_columnName[mem] = '\0';
+                            }
+                            null_column_name = 1;
+                        }
+                        if (columnData[k].dv_null)
+                        {    /* NULL value ? */
+
+                            if (result_type & II_NUM)
+                            {
+                                add_index_null(return_value, i + k + IIG(array_index_start));
+                            }
+                            if (result_type & II_ASSOC)
+                            {
+                                add_assoc_null(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC));
+                            }
+
+                        } else {    /* non NULL value */
+                            correct_length = 0;
+
+                            switch ((ii_result->descriptor[i + k]).ds_dataType)
+                            {
+
+                                case IIAPI_DEC_TYPE:    /* decimal (fixed point number) */
+                                case IIAPI_MNY_TYPE:    /* money */
+                                    /* convert to floating point number */
+                                    php_ii_convert_data ( IIAPI_FLT_TYPE, sizeof(II_FLOAT8), 53, ii_result, columnData, ii_result->getColParm, i, k TSRMLS_CC );
+                                    /* NO break */
+
+                                case IIAPI_FLT_TYPE:    /* floating point number */
+                                    switch (columnData[k].dv_length)
+                                    {
+
+                                        case 4:
+                                            value_double = (double) *((II_FLOAT4 *) columnData[k].dv_value);
+                                            break;
+
+                                        case 8:
+                                            value_double = (double) *((II_FLOAT8 *) columnData[k].dv_value);
+                                            break;
+
+                                        default:
+                                            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid size for IIAPI_FLT_TYPE data (%d)", columnData[k - 1].dv_length);
+                                            break;
+                                    }
+
+                                    if (result_type & II_NUM)
+                                    {
+                                        add_index_double(return_value, i + k + IIG(array_index_start), value_double);
+                                    }
+
+                                    if (result_type & II_ASSOC)
+                                    {
+                                        add_assoc_double(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_double);
+
+                                    }
+                                    break;
+
+                                case IIAPI_INT_TYPE:    /* integer */
+                                    switch (columnData[k].dv_length)
+                                    {
+
+                                        case 1:
+                                            value_long = (long) *((II_INT1 *) columnData[k].dv_value);
+                                            break;
+
+                                        case 2:
+                                            value_long = (long) *((II_INT2 *) columnData[k].dv_value);
+                                            break;
+                
+                                        case 4:
+                                            value_long = (long) *((II_INT4 *) columnData[k].dv_value);
+                                            break;
+#if defined(IIAPI_VERSION_4)
+                                        case 8:
+                                            /* PHP does not support BIGINT/INTEGER8 so we have to return */
+                                            /* values greater/smaller than the max/min size of a LONG value as a string */
+                                            /* Anyone wanting to manipulate this value can use PECL big_int */
+                                            if ((*((ingres_int64 *) columnData[k].dv_value) > LONG_MAX ) ||
+                                                (*((ingres_int64 *) columnData[k].dv_value) < LONG_MIN ))
+                                            {
+                                                value_long_long = *((ingres_int64 *) columnData[k].dv_value);
+                                                sprintf(value_long_long_str, "%lld\0", value_long_long);
+                                                value_long_long_str_len = strlen(value_long_long_str);
+                                            }
+                                            else
+                                            {
+                                                value_long = (long) *((II_INT4 *) columnData[k].dv_value);
+                                            }
+                                            break;
+#endif
+                                        default:
+                                            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid size for IIAPI_INT_TYPE data (%d)", columnData[k].dv_length);
+                                            break;
+                                    }
+
+                                    if (value_long_long_str[0] != '\0')
+                                    {
+                                        should_copy = 1;
+                                        if (result_type & II_NUM)
+                                        {
+                                            add_index_stringl(return_value, i + k + IIG(array_index_start), value_long_long_str, value_long_long_str_len, should_copy);
+                                        }
+                                        if (result_type & II_ASSOC)
+                                        {
+                                            add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_long_long_str, value_long_long_str_len, should_copy);
+                                        }
+                                        /* Init the first char to '\0' for later reuse */
+                                        value_long_long_str[0] = '\0';
+                                    }
+                                    else
+                                    {
+                                        if (result_type & II_NUM)
+                                        {
+                                            add_index_long(return_value, i + k + IIG(array_index_start), value_long);
+                                        }
+                                        if (result_type & II_ASSOC)
+                                        {
+                                            add_assoc_long(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_long);
+                                        }
+                                    }
+                                    break;
+
+#if defined(IIAPI_VERSION_3)
+                                case IIAPI_NVCH_TYPE:    /* variable length unicode character string */
+                                    columnData[k].dv_length = *((II_INT2 *) columnData[k].dv_value) * 2;
+                                    columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value + 2;
+                                    correct_length = 1;
+                                case IIAPI_NCHA_TYPE:    /* fixed length unicode character string */    
+                                    /* use php_addslashes if asked to */
+                                    if (PG(magic_quotes_runtime))
+                                    {
+                                        value_char_p = php_addslashes((char *) columnData[k].dv_value, columnData[k].dv_length, &len, 0 TSRMLS_CC);
+                                        should_copy = 0;
+                                    } else {
+                                        value_char_p = (char *) columnData[k].dv_value;
+                                        len = columnData[k].dv_length;
+                                        should_copy = 1;
+                                    }
+
+                                    if (IIG(utf8)) {
+                                        /* User has requested the output in UTF-8 */
+                                        /* create a big enough buffer - each code point in UTF-16 can be upto 4 bytes in UTF-8 */
+                                        tmp_utf8_string = emalloc((len * 4) + 1);
+                                        for ( l = 0; l < len * 4 ; l++) {
+                                            tmp_utf8_string[l] = '\0';
+                                        }
+                                        string_start = (UTF16 *)columnData[k].dv_value;
+                                        tmp_utf8_string_ptr = tmp_utf8_string;
+                                        result = ConvertUTF16toUTF8((const UTF16 **) &string_start, string_start + len/2, &tmp_utf8_string_ptr, tmp_utf8_string_ptr + (len * 4), strictConversion);
+                                        len = tmp_utf8_string_ptr - tmp_utf8_string;
+                                        tmp_utf8_string[len] = '\0';
+                                        value_char_p = (char *)tmp_utf8_string;
+                                    }
+
+                                    if (result_type & II_NUM)
+                                    {
+                                        add_index_stringl(return_value, i + k + IIG(array_index_start), value_char_p, len, should_copy);
+                                    }
+                                    if (result_type & II_ASSOC)
+                                    {
+                                        add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
+                                    }
+                                    if (tmp_utf8_string) {
+                                        efree(tmp_utf8_string);
+                                        tmp_utf8_string = NULL;
+                                    }
+                                    break;
+#endif                                
+                                case IIAPI_TXT_TYPE:    /* variable length character string */
+                                case IIAPI_VBYTE_TYPE:    /* variable length binary string */
+                                case IIAPI_VCH_TYPE:    /* variable length character string */
+                                    /* real length is stored in first 2 bytes of data, so adjust
+                                       length variable and data pointer */
+                                    columnData[k].dv_length = *((II_INT2 *) columnData[k].dv_value);
+                                    columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value + 2;
+                                    correct_length = 1;
+                                    /* NO break */
+
+                                case IIAPI_BYTE_TYPE:    /* fixed length binary string */
+                                case IIAPI_CHA_TYPE:    /* fixed length character string */
+                                case IIAPI_CHR_TYPE:    /* fixed length character string */
+                                case IIAPI_LOGKEY_TYPE:    /* value unique to database */
+                                case IIAPI_TABKEY_TYPE:    /* value unique to table */
+                                case IIAPI_DTE_TYPE:    /* Ingres date */
+#if defined(IIAPI_VERSION_5) 
+                                case IIAPI_ADATE_TYPE:  /* SQL Date (aka ANSI DATE) */
+                                case IIAPI_TIME_TYPE: /* Ingres Time */
+                                case IIAPI_TMWO_TYPE: /* Time without Timezone */
+                                case IIAPI_TMTZ_TYPE: /* Time with Timezone */
+                                case IIAPI_TS_TYPE: /* Ingres Timestamp */
+                                case IIAPI_TSWO_TYPE: /* Timestamp without Timezone */
+                                case IIAPI_TSTZ_TYPE: /* Timestamp with Timezone */
+                                case IIAPI_INTYM_TYPE: /* Interval Year to Month */
+                                case IIAPI_INTDS_TYPE: /* Interval Day to Second */
+#endif
+                                    /* convert date to variable length string */
+                                    if ((ii_result->descriptor[i + k]).ds_dataType == IIAPI_DTE_TYPE 
+#if defined(IIAPI_VERSION_5) 
+                                        || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_ADATE_TYPE
+                                        || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TIME_TYPE 
+                                        || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TMWO_TYPE
+                                        || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TMTZ_TYPE
+                                        || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TS_TYPE
+                                        || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TSWO_TYPE
+                                        || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TSTZ_TYPE
+                                        || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_INTYM_TYPE
+                                        || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_INTDS_TYPE
+#endif
+                                        )
+                                    {
+                                        php_ii_convert_data ( IIAPI_VCH_TYPE, 32, 0, ii_result, columnData, ii_result->getColParm, i, k TSRMLS_CC );
+                                        columnData[k].dv_length = *((II_INT2 *) columnData[k].dv_value);
+                                        columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value + 2;
+                                        correct_length = 1;
+                                    }
+
+                                    /* use php_addslashes if asked to */
+                                    if (PG(magic_quotes_runtime))
+                                    {
+                                        value_char_p = php_addslashes((char *) columnData[k].dv_value, columnData[k].dv_length, &len, 0 TSRMLS_CC);
+                                        should_copy = 0;
+                                    }
+                                    else 
+                                    {
+                                        value_char_p = (char *) columnData[k].dv_value;
+                                        len = columnData[k].dv_length;
+                                        should_copy = 1;
+                                    }
+
+                                    if (result_type & II_NUM)
+                                    {
+                                        add_index_stringl(return_value, i + k + IIG(array_index_start), value_char_p, len, should_copy);
+                                    }
+
+                                    if (result_type & II_ASSOC)
+                                    {
+                                        add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
+                                    }
+
+                                    break;
+                
+                                default:
+                                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid SQL data type in fetched field (%d -- length : %d)", (ii_result->descriptor[i + k]).ds_dataType, columnData[k].dv_length);
+                                    break;
+                            }
+                            /* eventually restore data pointer state for variable length data types */
+                            if (correct_length)
+                            {
+                                columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value - 2;
+                            }
+                        }
+                        if ( ii_result->procname != NULL && null_column_name == 1 )
+                        {
+                            efree(ii_result->descriptor[i+k].ds_columnName);
+                            ii_result->descriptor[i+k].ds_columnName = NULL;
+                            null_column_name = 0;
+                        }
+
+                    }
+
+                    /* free the memory buffers */
+                    for (k = 0; k < j; k++)
+                    {
+                        efree(columnData[k].dv_value);
+                    }
+                    efree(columnData);
+                    columnData = NULL;
+                }
+
+                if (have_lob) 
+                {
+
+                    /* alloc memory for the size of the segment we need */
+
+                    columnData = (IIAPI_DATAVALUE *) safe_emalloc(sizeof(IIAPI_DATAVALUE), 1, 0);
+                    lob_segment = (char *) emalloc (IIG(blob_segment_length));
+                    lob_len = 0;
+                    do
+                    {
+                        ii_result->getColParm.gc_genParm.gp_callback = NULL;
+                        ii_result->getColParm.gc_genParm.gp_closure = NULL;
+                        ii_result->getColParm.gc_rowCount = 1;
+                        ii_result->getColParm.gc_columnCount = 1; /* just the lob */
+                        ii_result->getColParm.gc_columnData = columnData;
+                        ii_result->getColParm.gc_columnData[0].dv_value = lob_segment;
+                        ii_result->getColParm.gc_stmtHandle = ii_result->stmtHandle;
+
+                        IIapi_getColumns(&ii_result->getColParm);
+                        ii_sync(&(ii_result->getColParm.gc_genParm));
+
+                        switch (ii_success(&(ii_result->getColParm.gc_genParm), &ii_result->errorHandle TSRMLS_CC)) 
+                        {
+                            case II_OK:
+                                break;
+                            case II_NO_DATA:
+                                efree(lob_segment);
+                                efree(columnData);
+                                RETURN_FALSE;
+                                break;
+                            default:
+                                efree(lob_segment);
+                                efree(columnData);
+                                php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occured whilst fetching a BLOB");
+                                RETURN_FALSE;
+                                break;
+                        }
+
+                        if (columnData[0].dv_null)
+                        {
+                            break;
+                        }
+
+                        /* length of the segment fetched is in the first 2 bytes of
+                           lob_segment */
+                        memcpy( (char *)&lob_segment_len, lob_segment, 2 );
+
+                        if ( lob_len == 0 )
+                        {
+                            lob_data = (char *) emalloc (lob_segment_len + 1);
+                        }
+                        else
+                        {
+                            /* extend existing lob buffer by the size of the new segment */
+                            lob_data = erealloc (lob_data, lob_len + lob_segment_len + 16);
+                        }
+
+                        /* copy segement in to buffer. First two bytes contain the length of the segment. */
+
+
+                        lob_segment += 2;
+                        lob_ptr = lob_data + lob_len;
+                        memcpy(lob_ptr, lob_segment, lob_segment_len);
+
+                        /* move on dv_length and add to the total length of the lob fetched 
+                        so far */
+                        lob_segment -= 2;
+                        lob_len += lob_segment_len;
+
+                    } 
+                    while ( ii_result->getColParm.gc_moreSegments );
+
+                    if (columnData[0].dv_null)
+                    {    /* NULL value ? */
+
+                        if (result_type & II_NUM)
+                        {
+                            add_index_null(return_value, i + k + IIG(array_index_start));
+                        }
+                        if (result_type & II_ASSOC)
+                        {
+                            add_assoc_null(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC));
+                        }
+                    }
+                    else
+                    {
+                        if (result_type & II_NUM)
+                        {
+                            add_index_stringl(return_value, i + k + IIG(array_index_start), lob_data, lob_len, 1);
+                        }
+
+                        if (result_type & II_ASSOC)
+                        {
+                            add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), lob_data, lob_len, 1);
+                        }
+                    }
+
+                    efree(lob_segment);
+                    efree(columnData);
+                    if (lob_len != 0)
+                    {
+                        efree(lob_data);
+                    }
+                    
+                } 
             
-        /* increase field pointer by number of fetched fields */
-        /* include any LOB data fetched */
-        i += j + found_lob;
+                    
+                /* increase field pointer by number of fetched fields */
+                /* include any LOB data fetched */
+                i += j + have_lob;
+            }
+        }
     }
 }
 /* }}} */
@@ -3999,7 +4173,6 @@ PHP_FUNCTION(ingres_errsqlstate)
 static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode)
 {
     zval *value = NULL;
-    char empty_string = '\0';
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"|z" , &value) == FAILURE) 
     {
@@ -5567,6 +5740,299 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
     }
 
     return II_OK;
+}
+/* }}} */
+
+/* {{{ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATAVALUE *columnData, II_RESULT *ii_result, int result_type) */
+/* Binds and sends data for parameters passed via queryParams */
+static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATAVALUE *columnData, II_RESULT *ii_result, int col_no, int result_type)
+{
+    double value_double = 0;
+    long value_long = 0;
+    ingres_int64 value_long_long = 0;
+    char value_long_long_str[21];
+    int value_long_long_str_len=0;
+    char *value_char_p;
+    int len, should_copy, correct_length=0;
+
+#if defined(IIAPI_VERSION_3)
+    UTF8 *tmp_utf8_string = NULL;
+    UTF8 *tmp_utf8_string_ptr = NULL;
+    UTF16 *string_start;
+    ConversionResult result;
+#endif
+
+    int i = 0 , k = 0 , l = 0;
+    value_long_long_str[0] = '\0';
+
+    if (columnData->dv_null)
+    {    /* NULL value ? */
+
+        if (result_type & II_NUM)
+        {
+            add_index_null(return_value, col_no + IIG(array_index_start));
+        }
+        if (result_type & II_ASSOC)
+        {
+            add_assoc_null(return_value, php_ii_field_name(ii_result, col_no + IIG(array_index_start) TSRMLS_CC));
+        }
+
+    } else {    /* non NULL value */
+        correct_length = 0;
+
+        switch ((ii_result->descriptor[col_no]).ds_dataType)
+        {
+
+            case IIAPI_DEC_TYPE:    /* decimal (fixed point number) */
+            case IIAPI_MNY_TYPE:    /* money */
+                /* convert to floating point number */
+                php_ii_convert_data ( IIAPI_FLT_TYPE, sizeof(II_FLOAT8), 53, ii_result, &ii_result->resultData[(ii_result->rowNumber * ii_result->fieldCount)], ii_result->getColParm, col_no, k TSRMLS_CC );
+                /* NO break */
+
+            case IIAPI_FLT_TYPE:    /* floating point number */
+                switch (columnData->dv_length)
+                {
+
+                    case 4:
+                        value_double = (double) *((II_FLOAT4 *) columnData->dv_value);
+                        break;
+
+                    case 8:
+                        value_double = (double) *((II_FLOAT8 *) columnData->dv_value);
+                        break;
+
+                    default:
+                        php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid size for IIAPI_FLT_TYPE data (%d)", columnData->dv_length);
+                        break;
+                }
+
+                if (result_type & II_NUM)
+                {
+                    add_index_double(return_value, col_no + IIG(array_index_start), value_double);
+                }
+
+                if (result_type & II_ASSOC)
+                {
+                    add_assoc_double(return_value, php_ii_field_name(ii_result, col_no + IIG(array_index_start) TSRMLS_CC), value_double);
+
+                }
+                break;
+
+            case IIAPI_INT_TYPE:    /* integer */
+                switch (columnData->dv_length)
+                {
+
+                    case 1:
+                        value_long = (long) *((II_INT1 *) columnData->dv_value);
+                        break;
+
+                    case 2:
+                        value_long = (long) *((II_INT2 *) columnData->dv_value);
+                        break;
+
+                    case 4:
+                        value_long = (long) *((II_INT4 *) columnData->dv_value);
+                        break;
+#if defined(IIAPI_VERSION_4)
+                    case 8:
+                        /* PHP does not support BIGINT/INTEGER8 so we have to return */
+                        /* values greater/smaller than the max/min size of a LONG value as a string */
+                        /* Anyone wanting to manipulate this value can use PECL big_int */
+                        if ((*((ingres_int64 *) columnData->dv_value) > LONG_MAX ) ||
+                            (*((ingres_int64 *) columnData->dv_value) < LONG_MIN ))
+                        {
+                            value_long_long = *((ingres_int64 *) columnData->dv_value);
+                            sprintf(value_long_long_str, "%lld\0", value_long_long);
+                            value_long_long_str_len = strlen(value_long_long_str);
+                        }
+                        else
+                        {
+                            value_long = (long) *((II_INT4 *) columnData->dv_value);
+                        }
+                        break;
+#endif
+                    default:
+                        php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid size for IIAPI_INT_TYPE data (%d)", columnData->dv_length);
+                        break;
+                }
+
+                if (value_long_long_str[0] != '\0')
+                {
+                    should_copy = 1;
+                    if (result_type & II_NUM)
+                    {
+                        add_index_stringl(return_value, col_no + IIG(array_index_start), value_long_long_str, value_long_long_str_len, should_copy);
+                    }
+                    if (result_type & II_ASSOC)
+                    {
+                        add_assoc_stringl(return_value, php_ii_field_name(ii_result, col_no + IIG(array_index_start) TSRMLS_CC), value_long_long_str, value_long_long_str_len, should_copy);
+                    }
+                    /* Init the first char to '\0' for later reuse */
+                    value_long_long_str[0] = '\0';
+                }
+                else
+                {
+                    if (result_type & II_NUM)
+                    {
+                        add_index_long(return_value, col_no + IIG(array_index_start), value_long);
+                    }
+                    if (result_type & II_ASSOC)
+                    {
+                        add_assoc_long(return_value, php_ii_field_name(ii_result, col_no + IIG(array_index_start) TSRMLS_CC), value_long);
+                    }
+                }
+                break;
+
+#if defined(IIAPI_VERSION_3)
+            case IIAPI_NVCH_TYPE:    /* variable length unicode character string */
+                columnData->dv_length = *((II_INT2 *) columnData->dv_value) * 2;
+                columnData->dv_value = (II_CHAR *)columnData->dv_value + 2;
+                correct_length = 1;
+            case IIAPI_NCHA_TYPE:    /* fixed length unicode character string */    
+                /* use php_addslashes if asked to */
+                if (PG(magic_quotes_runtime))
+                {
+                    value_char_p = php_addslashes((char *) columnData->dv_value,  columnData->dv_length, &len, 0 TSRMLS_CC);
+                    should_copy = 0;
+                } else {
+                    value_char_p = (char *) columnData->dv_value;
+                    len = columnData->dv_length;
+                    should_copy = 1;
+                }
+
+                if (IIG(utf8)) {
+                    /* User has requested the output in UTF-8 */
+                    /* create a big enough buffer - each code point in UTF-16 can be upto 4 bytes in UTF-8 */
+                    tmp_utf8_string = emalloc((len * 4) + 1);
+                    for ( l = 0; l < len * 4 ; l++) {
+                        tmp_utf8_string[l] = '\0';
+                    }
+                    string_start = (UTF16 *)columnData->dv_value;
+                    tmp_utf8_string_ptr = tmp_utf8_string;
+                    result = ConvertUTF16toUTF8((const UTF16 **) &string_start, string_start + len/2, &tmp_utf8_string_ptr, tmp_utf8_string_ptr + (len * 4), strictConversion);
+                    len = tmp_utf8_string_ptr - tmp_utf8_string;
+                    tmp_utf8_string[len] = '\0';
+                    value_char_p = (char *)tmp_utf8_string;
+                }
+
+                if (result_type & II_NUM)
+                {
+                    add_index_stringl(return_value, col_no + IIG(array_index_start), value_char_p, len, should_copy);
+                }
+                if (result_type & II_ASSOC)
+                {
+                    add_assoc_stringl(return_value, php_ii_field_name(ii_result, col_no + IIG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
+                }
+                if (tmp_utf8_string) {
+                    efree(tmp_utf8_string);
+                    tmp_utf8_string = NULL;
+                }
+                break;
+#endif                                
+            case IIAPI_TXT_TYPE:    /* variable length character string */
+            case IIAPI_VBYTE_TYPE:    /* variable length binary string */
+            case IIAPI_VCH_TYPE:    /* variable length character string */
+                /* real length is stored in first 2 bytes of data, so adjust
+                   length variable and data pointer */
+
+                columnData->dv_length = *((II_INT2 *) columnData->dv_value);
+                columnData->dv_value = (II_CHAR *)columnData->dv_value + 2;
+                correct_length = 1;
+                /* NO break */
+
+            case IIAPI_BYTE_TYPE:    /* fixed length binary string */
+            case IIAPI_CHA_TYPE:    /* fixed length character string */
+            case IIAPI_CHR_TYPE:    /* fixed length character string */
+            case IIAPI_LOGKEY_TYPE:    /* value unique to database */
+            case IIAPI_TABKEY_TYPE:    /* value unique to table */
+            case IIAPI_DTE_TYPE:    /* Ingres date */
+#if defined(IIAPI_VERSION_5) 
+            case IIAPI_ADATE_TYPE:  /* SQL Date (aka ANSI DATE) */
+            case IIAPI_TIME_TYPE: /* Ingres Time */
+            case IIAPI_TMWO_TYPE: /* Time without Timezone */
+            case IIAPI_TMTZ_TYPE: /* Time with Timezone */
+            case IIAPI_TS_TYPE: /* Ingres Timestamp */
+            case IIAPI_TSWO_TYPE: /* Timestamp without Timezone */
+            case IIAPI_TSTZ_TYPE: /* Timestamp with Timezone */
+            case IIAPI_INTYM_TYPE: /* Interval Year to Month */
+            case IIAPI_INTDS_TYPE: /* Interval Day to Second */
+#endif
+                /* convert date to variable length string */
+                if ((ii_result->descriptor[col_no]).ds_dataType == IIAPI_DTE_TYPE 
+#if defined(IIAPI_VERSION_5) 
+                    || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_ADATE_TYPE
+                    || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TIME_TYPE 
+                    || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TMWO_TYPE
+                    || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TMTZ_TYPE
+                    || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TS_TYPE
+                    || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TSWO_TYPE
+                    || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TSTZ_TYPE
+                    || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_INTYM_TYPE
+                    || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_INTDS_TYPE
+#endif
+                    )
+                {
+                    php_ii_convert_data ( IIAPI_VCH_TYPE, 32, 0, ii_result, &ii_result->resultData[(ii_result->rowNumber * ii_result->fieldCount)], ii_result->getColParm, k, col_no TSRMLS_CC );
+                    columnData->dv_length = *((II_INT2 *) columnData->dv_value);
+                    columnData->dv_value = (II_CHAR *)columnData->dv_value + 2;
+                    correct_length = 1;
+                }
+
+                /* use php_addslashes if asked to */
+                if (PG(magic_quotes_runtime))
+                {
+                    value_char_p = php_addslashes((char *) columnData->dv_value,  columnData->dv_length, &len, 0 TSRMLS_CC);
+                    should_copy = 0;
+                }
+                else 
+                {
+                    value_char_p = (char *) columnData->dv_value;
+                    len = columnData->dv_length;
+                    should_copy = 1;
+                }
+
+                if (result_type & II_NUM)
+                {
+                    add_index_stringl(return_value, col_no + IIG(array_index_start), value_char_p, len, should_copy);
+                }
+
+                if (result_type & II_ASSOC)
+                {
+                    add_assoc_stringl(return_value, php_ii_field_name(ii_result, col_no + IIG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
+                }
+
+                break;
+
+            default:
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid SQL data type in fetched field (%d -- length : %d)", (ii_result->descriptor[col_no]).ds_dataType, columnData->dv_length);
+                break;
+        }
+        /* eventually restore data pointer state for variable length data types */
+        if (correct_length)
+        {
+            columnData->dv_value = (II_CHAR *)columnData->dv_value - 2;
+        }
+    }
+}
+/* }}} */
+
+/* {{{ static void _free_resultdata (II_RESULT *ii_result) */
+/* Free the memory associated with ii_result->resultData */
+static void _free_resultdata (II_RESULT *ii_result)
+{
+    int cell;
+    if ( ii_result->resultData )
+    {
+        for( cell=0; cell < ( ii_result->fieldCount * II_BUFFER_SIZE ); cell++ )
+        {
+            /* free up the memory assigned to hold the return data */
+            efree(ii_result->resultData[cell].dv_value);
+        }  
+        efree(ii_result->resultData);
+        ii_result->resultData = NULL;
+        ii_result->rowsReturned = 0;
+        ii_result->rowNumber = 0;
+    }
 }
 /* }}} */
 
