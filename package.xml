@@ -14,8 +14,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grant.croker@ingres.com</email>
   <active>yes</active>
  </lead>
- <date>2008-12-19</date>
- <time>18:00:00</time>
+ <date>2008-12-20</date>
+ <time>10:00:00</time>
  <version>
   <release>2.0.1</release>
   <api>2.0.1</api>
@@ -34,7 +34,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  - Added --enable-ingres2 to generate php_ingres2.dll for Windows
  - Fixed regression with IIAPI_CP_LOGIN_LOCAL being used at the wrong API level
  - Revised PECL_INGRES_VERSION to take in to consideration --enable-ingres2
- - Fixed LOB retrieval when used with scollable cursors Ingres 2006 release 3</notes>
+ - Fixed LOB retrieval when used with scollable cursors with Ingres 9.2.0</notes>
  <contents>
   <dir name="/">
    <dir name="tests">
