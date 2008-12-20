@@ -168,7 +168,7 @@ static struct
 };
 
 /* II 2.6/0305 should have IIAPI_CP_LOGIN_LOCAL defined but it's not */
-#if define (IIAPI_VERSION_3)
+#ifdef IIAPI_VERSION_3
 #  ifndef IIAPI_CP_LOGIN_LOCAL
 #    define IIAPI_CP_LOGIN_LOCAL 38
 #  endif
