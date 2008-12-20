@@ -1,22 +1,41 @@
 
 
+
 Ingres extension for PHP
 
 -------------------------------------------------------------------------------
 
-Contents
+  1. Introduction
+  2. Platform_support
 
-1._Introduction
-2._Platform_support
-3._Function_support
-4._Installing_the_extension
-5._Known_issues
-6._Future_direction
-7._Comments/suggestions/credits
+       1. Ingres_Releases
+       2. PHP_Releases
+       3. Operating_System_Compatibility
+
+  3. Function_support
+
+       1. Project_home_page
+       2. Configuration_Options
+
+  4. Installing_the_extension
+
+       1. Windows_Installation
+       2. UNIX/Linux_Installation
+       3. Ingres_with_the_Apache_web_server_on_UNIX/Linux
+       4. Activating_the_Ingres_PECL_extension
+
+  5. Known_issues
+
+       1. Bugs
+       2. Multi-threaded_web_servers
+
+  6. Future_direction
+  7. Support
+  8. Comments/suggestions/credits
 
 -------------------------------------------------------------------------------
 
-1. Introduction
+Introduction
 
 This extension is designed to provide access to the Ingres Enterprise
 Relational Database Management System. Native or direct access is provided for
@@ -32,7 +51,8 @@ an additional download is required.
 
 -------------------------------------------------------------------------------
 
-2. Platform support
+Platform support
+
 
 
 Ingres Releases
@@ -42,8 +62,13 @@ This extension has been written to support the following versions of Ingres:
 * Ingres II 2.0/OpenIngres 2.0
 * Ingres II 2.5
 * Advantage Ingres 2.6
-* Ingres r3
-* Ingres 2006
+* Ingres r3 / 3.0.x
+* Ingres 2006 / 9.0.0
+* Ingres 2006 Release 2 / 9.1.0
+* Ingres 2006 Release 2 Service Pack 1 / 9.1.1
+* Ingres 9.2.0
+* Ingres 9.3.0
+
 
 
 PHP Releases
@@ -53,14 +78,14 @@ PHP, i.e. 4.0.x - 5.0.x, contain an earlier version of the Ingres extension.
 Building the extension with earlier versions requires the deletion of the
 ingres_ii directory under ext.
 
+
 Operating System Compatibility
 
 The extension should work against any platform where the above Ingres releases
 are supported. In practice the extension has been developed on Windows XP using
-Visual Studio .Net 2003 (VC7) and SuSE 9.3/Fedora Core 3 using GCC 3.3.x. There
-has been limited testing on Solaris 9 Sparc. If you find the extension does not
-work, please log a bug via the project_home_page with the following
-information:
+Visual Studio .Net 2003 (VC7) and openSuSE 11 using GCC 4.3. There has been
+limited testing on Solaris 10 Sparc. If you find the extension does not work,
+please log a bug via the project_home_page with the following information:
 
 * operating system and patches/service pack installed
 * compiler + version used to build the extension
@@ -70,14 +95,14 @@ information:
   INGRES_EXT_VERSION and INGRES_API_VERSION:
 
     <?php
-    	echo INGRES_EXT_VERSION + " " + INGRES_API_VERSION;
+            echo INGRES_EXT_VERSION + " " + INGRES_API_VERSION;
     ?>
 
 
 
 -------------------------------------------------------------------------------
 
-3. Function support
+Function support
 
 The extension provides the following functionality:
 
@@ -111,12 +136,13 @@ ingres_set_environment   Set one or more Ingres environment variables
 ingres_rollback          Rollback a transaction
 
 
+
 Project home page
 
 The latest tar ball for this extension can be downloaded from http://
 pecl.php.net/project/ingres. At the moment only source code is available for
 download via this page. Development snapshot builds of the PECL extension for
-Windows can be downloaded from http://pecl4win.php.net/ext.php/php_ingres.dll.
+Windows can be downloaded from http://esd.ingres.com/product/drivers/PHP.
 Binary releases for certain operating systems will be provided in due course.
 
 Configuration Options
@@ -125,68 +151,111 @@ The following options configure the behaviour of the Ingres extension:
  _____________________________________________________________________________
 |Setting___________________|Description_____________|Default|php.ini|ini_set()|
 |ingres.allow_persistent___|Allow_persistent_links__|On_____|Yes____|No_______|
-|ingres.max_persistent     |Maximum number of       |-1     |Yes    |No       |
-|__________________________|persistent_links_allowed|_______|_______|_________|
-|ingres.max_links          |Maximum number of links |-1     |Yes    |No       |
-|__________________________|allowed_________________|_______|_______|_________|
-|ingres.default_database___|Default_database_name___|_______|Yes____|Yes______|
-|ingres.default_user_______|Default_user_name_______|_______|Yes____|Yes______|
-|ingres.default_password___|Default_password________|_______|Yes____|Yes______|
-|ingres.report_db_warnings_|Suppress_DB_warnings____|On_____|Yes____|Yes______|
-|                          |Size of the memory      |       |       |         |
-|ingres.blob_segment_length|buffer in bytes to be   |4096   |Yes    |Yes      |
-|                          |used when chunking BLOB |       |       |         |
-|__________________________|data____________________|_______|_______|_________|
-|                          |Trace the ingres_connect|       |       |         |
-|ingres.trace_connect      |() / ingres_pconnect()  |Off    |Yes    |Yes      |
-|__________________________|functions_______________|_______|_______|_________|
-|                          |Time in ms the OpenAPI  |       |       |         |
-|ingres.timeout            |IIapi_initialize        |-1     |Yes    |Yes      |
-|                          |function will wait      |       |       |         |
-|__________________________|before_failing__________|_______|_______|_________|
 |                          |Start index from which  |       |       |         |
 |ingres.array_index_start  |arrays return by        |1      |Yes    |Yes      |
 |                          |ingres_fetch_array()    |       |       |         |
 |__________________________|should_use______________|_______|_______|_________|
+|ingres.auto               |Emulate AUTO COMMIT when|On     |Yes    |Yes      |
+|__________________________|working_with_cursors____|_______|_______|_________|
+|                          |Size of the memory      |       |       |         |
+|ingres.blob_segment_length|buffer in bytes to be   |4096   |Yes    |Yes      |
+|                          |used when chunking BLOB |       |       |         |
+|__________________________|data____________________|_______|_______|_________|
+|ingres.default_database___|Default_database_name___| _____|Yes____|Yes______|
+|ingres.default_user_______|Default_user_name_______| _____|Yes____|Yes______|
+|ingres.default_password___|Default_password________| _____|Yes____|Yes______|
+|ingres.max_links          |Maximum number of links |-1     |Yes    |No       |
+|__________________________|allowed_________________|_______|_______|_________|
+|ingres.max_persistent     |Maximum number of       |-1     |Yes    |No       |
+|__________________________|persistent_links_allowed|_______|_______|_________|
+|ingres.report_db_warnings_|Suppress_DB_warnings____|On_____|Yes____|Yes______|
+|                          |When connecting with    |       |       |         |
+|                          |ingres_connect()/       |       |       |         |
+|ingres.reuse_connection   |ingres_pconnect(), use  |On     |Yes    |Yes      |
+|                          |an active connection to |       |       |         |
+|                          |the database if the     |       |       |         |
+|__________________________|username_is_the_same____|_______|_______|_________|
+|                          |Use scrollable cursors  |       |       |         |
+|                          |or not. With Ingres 9.2 |       |       |         |
+|ingres.scrollable         |this needs to be disable|On     |Yes    |Yes      |
+|                          |for queries that fetch  |       |       |         |
+|__________________________|LOB_data________________|_______|_______|_________|
+|                          |Time in ms the OpenAPI  |       |       |         |
+|ingres.timeout            |IIapi_initialize        |-1     |Yes    |Yes      |
+|                          |function will wait      |       |       |         |
+|__________________________|before_failing__________|_______|_______|_________|
+|                          |Enable some basic query |       |       |         |
+|ingres.trace              |tracing in ingres_query |Off    |Yes    |Yes      |
+|__________________________|()______________________|_______|_______|_________|
+|                          |Trace the ingres_connect|       |       |         |
+|ingres.trace_connect      |() / ingres_pconnect()  |Off    |Yes    |Yes      |
+|__________________________|functions_______________|_______|_______|_________|
+|                          |Assume all strings      |       |       |         |
+|ingres.utf8               |passed to NVARCHAR/NCHAR|On     |Yes    |Yes      |
+|__________________________|columns_are_in_UTF-8____|_______|_______|_________|
+
 
 
 -------------------------------------------------------------------------------
 
-4. Installing the extension
+Installing the extension
+
 
 
 Windows Installation
 
 The latest binaries for the Ingres extension can be downloaded from http://
-pecl4win.php.net/ext.php/php_ingres.dll. Direct links are provided below for
-different PHP releases:
-
-* http://pecl4win.php.net/download.php/ext/5_0/5.0.5/php_ingres.dll
-* http://pecl4win.php.net/download.php/ext/5_1/5.1.6/php_ingres.dll
-* http://pecl4win.php.net/download.php/ext/5_2/5.2.1/php_ingres.dll
-
-To install the extension copy php_ingres.dll into the extension_dir configured
-in php.ini.
+esd.ingres.com/product/drivers/PHP. To install the extension copy
+php_ingres.dll into the extension_dir configured in php.ini.
 
 UNIX/Linux Installation
 
 The installation of the extension on UNIX/Linux will require a C complilation
-environment.
+environment. If you have built and installed PHP from source code obtained via
+CVS or an archive, you will already have the necessary files. If however you
+are using Linux and have installed PHP using the operating system package
+manager (Synaptic, Package Kit, yum, aptitude or zypper) then it is probable
+you will also need to install the "development" package for PHP. This
+additional package contains the necessary files needed for building and
+installing PHP extensions, such as ingres. Below is a list of the PHP
+development packages for Redhat, SuSE and Ubuntu/Debian:
+
+* SuSE Linux Enterprise Server / openSuSE - php4-devel - for PHP 4.x
+* SuSE Linux Enterprise Server / openSuSE - php5-devel - for PHP 5.x
+* Redhat Enterprise Linux/Centos/Fedora - php-devel
+* Debian/Ubuntu Linux - php-dev
+
+Please refer to the operating system documentation for more information on how
+to install the necessary packages.
+
+Installing with pecl
+
+The Ingres extension can be downloaded an installed using just one command:
+
+   pecl install ingres
+
+When prompted:
+
+  1. Enter 'all'
+  2. Provide the value for $II_SYSTEM
+  3. Press enter
+  4. Follow the instructions at the end of the build for activating the
+     extension
+
+
+Installing from source
+
 The latest source code can be downloaded manually from http://pecl.php.net/get/
-ingres. Or by using the pecl command:
-
-      pecl download ingres-1.4.3
-
-Once you have the source archive run through the following steps to build and
-install, note that $II_SYSTEM needs to be defined beforehand:
+ingres Once you have the source archive run through the following steps to
+build and install, note that $II_SYSTEM needs to be defined beforehand:
 
   1. Extract the archive, adapt the version number accordingly:
 
-       tar -zxvf ingres-1.4.3.tgz
+       tar -zxvf ingres-2.0.1.tgz
 
   2. Enter the newly created directory:
 
-       cd ingres-1.4.3
+       cd ingres-2.0.1
 
   3. Generate the configuration file for the extension:
 
@@ -216,32 +285,19 @@ install, note that $II_SYSTEM needs to be defined beforehand:
 Ingres with the Apache web server on UNIX/Linux
 
 This extension, like other Ingres applications, requires knowledge of a local
-Ingres installation. Providing Apache with this information can be done two
-ways both of which require mod_env. The following assumes Ingres was installed
-to /opt/Ingres/II:
+Ingres installation. The Apache extension, mod_env is required for this to
+work. The following assumes Ingres was installed to /opt/Ingres/II:
 
-  1. Using PassEnv:
+* In the script that starts Apache add the following lines:
 
-     o In the script that starts Apache add the following lines:
+    II_SYSTEM=/opt/Ingres/II
+    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$II_SYSTEM/ingres/lib
+    export II_SYSTEM LD_LIBRARY_PATH
 
-         II_SYSTEM=/opt/Ingres/II
-         LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$II_SYSTEM/ingres/lib
-         export II_SYSTEM LD_LIBRARY_PATH
+* Add the following lines to the apache configuration script httpd.conf (or
+  equivalent):
 
-     o Add the following lines to the apache configuration script httpd.conf
-       (or equivalent):
-
-         PassEnv II_SYSTEM LD_LIBRARY_PATH
-
-
-  2. Using SetEnv:
-
-     o Add the following lines to the apache configuration script httpd.conf
-       (or equivalent):
-
-         SetEnv II_SYSTEM /opt/Ingres/II
-         SetEnv LD_LIBRARY_PATH /opt/Ingres/II/ingres/lib
-
+    PassEnv II_SYSTEM LD_LIBRARY_PATH
 
 
 
@@ -268,7 +324,7 @@ Ingres extension.
 
 -------------------------------------------------------------------------------
 
-5. Known issues
+Known issues
 
 
 Bugs
@@ -278,54 +334,42 @@ For a list of known bugs go to pecl.php.net.
 Multi-threaded web servers
 
 When working with multi-threaded web servers certain considerations need to be
-made. Each server thread that can service an HTTP request could potentially
-connect to an Ingres server, either directly or via Ingres/NET. Depending on
-the number of server threads configured this could exceed the number of
-sessions allowed by Ingres. With Apache HTTPd's mpm-winnt module this is
-configured using ThreadsPerChild and with the worker module this is controlled
-using the MaxSpareThreads (with Apache HTTPd worker MaxSpareThreads controls
-the overall number threads across all child processes).
+made. Each HTTP server thread represents a single DBMS server connection, that
+could potentially connect to an Ingres server, either directly or via Ingres/
+NET. Depending on the number of server threads configured this could exceed the
+number of sessions allowed by Ingres. With Apache HTTPd's mpm-winnt module this
+is configured using ThreadsPerChild and with the worker module this is
+controlled using the MaxSpareThreads (with Apache HTTPd worker MaxSpareThreads
+controls the overall number threads across all child processes). Verify that
+the number of threads in the HTTP server does not exceed the number of GCC
+sessions or DBMS server sessions.
 
 -------------------------------------------------------------------------------
 
-6. Future direction
+Support
 
-Since the code has been relatively stable for a number of years, all current
-development efforts have tried to avoid, where possible, changing syntax of any
-existing function. The TODO file covers the items that are on the list to be
-implemented.
-There are, however, some things that would be nice to have but might prove
-difficult to implement without breaking backwards compatibility, either with
-versions of Ingres or with existing Ingres based PHP code.
-The current extension maintains a single statement handle. Whenever a query is
-executed via ingres_query() or ingres_prepare(), any existing statement is
-terminated/closed. For multiple resultsets to work, the ingres_fetch_*()
-statements will need to be able to accept a resource that represents an Ingres
-resultset. Such that:
-
-    ingres_fetch_row( [resource link] )
-
-would have to change to:
-
-    ingres_fetch_row( resource result )
-
-Note '[]' means anything contained within is optional. Apart from passing a
-result resource instead of a link resource, the main difference is the
-parameter passed would be a mandatory parameter rather than optional as it is
-at the moment. This is more in keeping with how other PHP database interfaces
-work. Link resource parameters that are currently optional would become
-mandatory. Implementing this would make the extension incompatible with
-existing scripts that use Ingres.
-It is possible for the code to be branched such that any future versions that
-break backwards compatibility are clearly marked as doing so. This will be done
-according to demand.
-
+Support for the PECL Ingres interface is available from a number of different
+sources. Users with a support contract can either raise an issue via https://
+servicedesk.ingres.com/ or through their local technical support department.
+See http://ingres.com/support for a complete list of locations, primary service
+hours, and telephone numbers. Users without a support contract can post
+questions or problems to the Ingres Community Forums (http://
+community.ingres.com/forum/php), to comp.databases.ingres (http://
+groups.google.com/group/comp.databases.ingres), or to the PECL developer
+mailing list (http://www.php.net/mailing-lists.php).
 -------------------------------------------------------------------------------
 
-7. Comments/suggestions/credits
+Future direction
+
+New features planned for the Ingres PECL extension are documented in the TODO
+file that is shipped with the source code or via PHP's_CVS_source_code
+repository.
+-------------------------------------------------------------------------------
+
+Comments/suggestions/credits
 
 The architecture for the Ingres extension is based on code written by David
-H�not (henot@php.net) from 2000-2004. Since February 2005, Grant Croker,
+Hénot (henot@php.net) from 2000-2004. Since February 2005, Grant Croker,
 (grantc@php.net), took over the maintenance and development of the extension.
 If you have any comments, features or if you wish to assist in some way with
 coding, testing or documentation please contact grantc@php.net.

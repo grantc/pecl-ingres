@@ -1,473 +1,1017 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-<HTML><HEAD><TITLE>Ingres extension for PHP</TITLE>
-<META http-equiv=Content-Type content="text/html; charset=iso-8859-1">
-<STYLE type=text/css>A:link {
-	FONT-WEIGHT: bold; FONT-SIZE: 12px; COLOR: #336699; TEXT-DECORATION: underline
-}
-A:visited {
-	FONT-WEIGHT: bold; FONT-SIZE: 12px; COLOR: #336699; TEXT-DECORATION: underline
-}
-BODY, OL, LI {
-	FONT-WEIGHT: normal; FONT-SIZE: 13px; FONT-FAMILY: arial, helvetica
-}
-P {
-	FONT-WEIGHT: normal; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: arial, helvetica
-}
-TD {
-	FONT-WEIGHT: normal; FONT-SIZE: 13px; VERTICAL-ALIGN: top;/ COLOR: #000000; FONT-FAMILY: arial, helvetica
-}
-TH {
-	FONT-WEIGHT: bold; FONT-SIZE: 13px; VERTICAL-ALIGN: top; COLOR:
-	#000000; FONT-FAMILY: arial, helvetica; TEXT-ALIGN:left;
-}
-H1 {
-	FONT-WEIGHT: bold; FONT-SIZE: 23px; COLOR: #336699
-}
-H2 {
-	FONT-WEIGHT: normal; FONT-SIZE: 20px; COLOR: #336699; FONT-FAMILY: arial, helvetica
-}
-H3 {
-	FONT-WEIGHT: bold; FONT-SIZE: 16px; COLOR: #336699; FONT-FAMILY: arial, helvetica
-}
-H4 {
-	FONT-WEIGHT: bold; FONT-SIZE: 14px; COLOR: #336699; FONT-FAMILY: arial, helvetica
-}
-B {
-	FONT-WEIGHT: bold
-}
-STRONG {
-	FONT-WEIGHT: bold
-}
-I {
-	FONT-STYLE: italic
-}
-EM {
-	FONT-STYLE: italic
-}
-INPUT {
-	FONT-SIZE: 10px; COLOR: #336699; FONT-FAMILY: arial
-}
-TEXTAREA {
-	FONT-SIZE: 10px; COLOR: #336699; FONT-FAMILY: arial
-}
-BLOCKQUOTE {
-	FONT-SIZE: 10px
-}
-PRE {
-	FONT-SIZE: 13px; FONT-FAMILY: "courier new", courier, monospace
-}
-</STYLE>
+<!--
+    To generate the text README file, use the following command:
 
-<BODY>
-<H1>Ingres extension for PHP</H1>
-<HR>
+    html2text -nobs -utf8 -style pretty README.html
 
-<H2>Contents</H2>
+    See http://www.mbayer.de/html2text/ for information on obtaining html2text
+-->
 
-<A href="#Introduction">1. Introduction</A><BR>
-<A href="#Platform support">2. Platform support</A><BR>
-<A href="#Function support">3. Function support</A><BR>
-<A href="#Installing the extension">4. Installing the extension</A><BR>
-<A href="#Known issues">5. Known issues</A><BR>
-<A href="#Future direction">6. Future direction</A><BR>
-<A href="#Comments/suggestions/credits">7. Comments/suggestions/credits</A><BR>
-<BR><HR>
-<A NAME="Introduction"><H2>1. Introduction</H2>
+<html>
+<head>
+  <meta name="generator" content=
+  "HTML Tidy for Linux/x86 (vers 14 October 2008), see www.w3.org">
 
-<P>
-This extension is designed to provide access to the Ingres Enterprise
-Relational Database Management System. Native or direct access is provided
-for Ingres II 2.0, Ingres II 2.5, Advantage Ingres 2.6 and Ingres r3. To
-access older versions, a supported client environment can be used with 
-Ingres/NET.
-</P>
+  <title>Ingres extension for PHP</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <style type="text/css">
+<!--
+            BODY
+            {
+                font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+                font-size: 80%;
+                font-weight: normal;
+                counter-reset: h1_no;
+            }
+            TABLE
+            {
+                font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+                font-size: 100%;
+                color: 000000;
 
-<P>
-In 2005, the Ingres extension was moved to the PHP extension community
-library (PECL) to resolve a build conflict with Windows and UNIX/Linux
-platforms. One advantage of this move is it allows the extension to be
-developed with its own release cycle. This permits new functionality to be
-released when possible instead of waiting for the next official
-PHP release. Rather than being available via the main PHP tarball/zip
-archive (<A HREF="http://www.php.net/downloads">http://www.php.net/downloads</A>), an additional download is required.
-</P>
+            }
+            P
+            {
+                font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+                font-weight: normal;
+      
+            }
+            H2:before 
+            {
+                content: counter(h1_no) ".0 ";
+                counter-increment: h1_no;  /* Add 1 to h1_no */
+            }
+            H3:before 
+            {
+                content: counter(h1_no) "." counter(h2_no) " ";
+                counter-increment: h2_no;
+            }
+            H1
+            {
+                font-size: 180%;
+                font-weight: bold;
+                color: #336699;
+            }
+            H2
+            {
+                font-size: 155%;
+                font-weight: normal;
+                font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+                color: #336699 ;
+                counter-reset: h2_no;
+            }
+            H3                           
+            {
+                font-size: 130%;
+                font-weight: bold;
+                font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+                color: #336699 ;
+                counter-reset: h3_no;
+            }
+            H4                           
+            {
+                font-size: 130%;
+                font-weight: bold;
+                font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+                color: #336699;
+            }
+            A:link                       {
+                text-decoration: underline;
+                font-weight: bold;
+                color: #336699;
+            }
+            A:visited                    {
+                text-decoration: underline;
+                font-weight: bold;
+                color: #336699;
+            }
+            ol 
+            {
+                list-style-type: decimal;
+                font-family:"Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+            }
+            ol.toc_l1 
+            {
+                counter-reset: toc_l1 
+            }
+            ol.toc_l2 
+            {
+                counter-reset: toc_l2 
+            }
+            ul
+            {
+                list-style-type: disc;
+                font-family:"Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+            }
+            li                           
+            {
+                font-family:"Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+            }
+            li.toc_l1:before
+            {
+                content: counter(toc_l1) ".0 "; counter-increment: toc_l1
+            }
+            li.toc_l2:before
+            {
+                content: counter(toc_l1) "." counter(toc_l2) " " ; counter-increment: toc_l2
+            }
+            li.toc_l1, li.toc_l2                       
+            {
+                font-family:"Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+                color:#336699;
+                font-weight:bold;
+                display: block;
+            }
+            B                            
+            {
+                font-weight: bold  
+            }
+            STRONG                       
+            {
+                font-weight: bold  
+            }
+            I                            
+            {
+                font-style: italic  
+            }
+            EM                           
+            {
+                font-style: italic  
+            }
+            INPUT                        
+            {
+                color: #336699;
+                 font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+                 font-size: 90%;
+            } /* Special */
+            TEXTAREA                     
+            {
+                color: #336699;
+                font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+                font-size: 90%;
+            } /* Special */
+            BLOCKQUOTE                   
+            {
+                font-size: 80%;
+            }
+            PRE, CODE
+            {
+                font-family: "courier new", courier, monospace;
+                font-size: 100%  
+            }
+            table, td                    
+            {
+                font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+                font-weight: normal;
+                color: #000000;
+                vertical-align: top;
+                border: 1px solid #EBEBEB;
+                border-collapse: collapse;
+                font-size: 12px;
+                padding: 2px;
+            }
+            table.invis, td.invis
+            {
+                font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+                font-weight: normal;
+                color: #000000;
+                vertical-align: middle;
+                border: 0px;
+                border-collapse: collapse;
+                font-size: 12px;
+                padding: 2px;
+            }
+            th
+            {
+                font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+                font-weight: bold;
+                color: #000000;
+                vertical-align: top;
+                border: 1px solid #FFFFFF;
+                background-color: #006699;
+                color:#FFFFFF;
+                text-align: left;
+                padding: 2px;
+            }
+            tr.alt
+            {
+                background-color : #F1F5FA;
+            }
+            .ingrescorp               {
+                font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif;
+                color: #FFFFFF;
+                text-decoration: none;
+                background-color: #336699;
+                font-size: 130%;
+                font-weight: bold;
+            }
+            hr
+            {
+                color: #CCCCCC; height:1px;
+            }
+            td.inisetting
+            {
+                text-align:center;
+            }
+        -->
+  </style>
+</head>
 
-<BR><HR>
-<A NAME="Platform support"><H2>2. Platform support</H2>
+<body>
+  <h1>Ingres extension for PHP</h1>
+  <hr>
 
-<H3>Ingres Releases</H3>
-<P>
-This extension has been written to support the following versions of
-Ingres:
-</P>
-<UL>
-<LI>Ingres II 2.0/OpenIngres 2.0</LI>
-  
-<LI>Ingres II 2.5 </LI>
-  
-<LI>Advantage Ingres 2.6</LI>
-  
-<LI>Ingres r3</LI>
+  <ol class="toc_l1">
+    <li class="toc_l1"><a href="#Introduction">Introduction</a></li>
 
-<LI>Ingres 2006</LI>
+    <li class="toc_l1">
+      <a href="#Platform%20support">Platform support</a>
 
-</UL>
+      <ol class="toc_l2">
+        <li class="toc_l2"><a href="#ingres_releases">Ingres Releases</a></li>
 
-<H3>PHP Releases</H3>
+        <li class="toc_l2"><a href="#php_releases">PHP Releases</a></li>
 
-<P>
-This extension has been written against PHP 5.1 and PHP 5.2. Prior versions of
-PHP, i.e. 4.0.x - 5.0.x, contain an earlier version of the Ingres
-extension. Building the extension with earlier versions requires the
-deletion of the <I>ingres_ii</I> directory under <I>ext</I>.
-</P>
+        <li class="toc_l2"><a href="#os_compat">Operating System
+        Compatibility</a></li>
+      </ol>
+    </li>
 
-<H3>Operating System Compatibility</H3>
-<P>
-The extension should work against any platform where the above
-Ingres releases are supported. In practice the extension has been developed
-on Windows XP using Visual Studio .Net 2003 (VC7) and SuSE 9.3/Fedora Core
-3 using GCC 3.3.x. There has been limited testing on Solaris 9 Sparc. If you
-find the extension does not work, please log a bug via the <A HREF="http://pecl.php.net/package/ingres">project home page</A>
-with the following information:
-</P>
-<UL>
-<LI>operating system and patches/service pack installed 
-  
-<LI>compiler + version used to build the extension 
-  
-<LI>version of PHP being used 
-  
-<LI>version of Ingres being used 
-  
-<LI>if you managed to get the extension built, the value of the constants
-INGRES_EXT_VERSION and INGRES_API_VERSION:
-<PRE>
+    <li class="toc_l1">
+      <a href="#Function%20support">Function support</a>
+
+      <ol class="toc_l2">
+        <li class="toc_l2"><a href="#Project_home_page">Project home
+        page</a></li>
+
+        <li class="toc_l2"><a href="#config_options">Configuration
+        Options</a></li>
+      </ol>
+    </li>
+
+    <li class="toc_l1">
+      <a href="#Installing%20the%20extension">Installing the extension</a>
+
+      <ol class="toc_l2">
+        <li class="toc_l2"><a href="#windows">Windows Installation</a></li>
+
+        <li class="toc_l2"><a href="#unix">UNIX/Linux Installation</a></li>
+
+        <li class="toc_l2"><a href="#apache">Ingres with the Apache web server
+        on UNIX/Linux</a></li>
+
+        <li class="toc_l2"><a href="#activating">Activating the Ingres PECL
+        extension</a></li>
+      </ol>
+    </li>
+
+    <li class="toc_l1">
+      <a href="#Known%20issues">Known issues</a>
+
+      <ol class="toc_l2">
+        <li class="toc_l2"><a href="#bugs">Bugs</a></li>
+
+        <li class="toc_l2"><a href="#threads">Multi-threaded web
+        servers</a></li>
+      </ol>
+    </li>
+
+    <li class="toc_l1"><a href="#Future%20direction">Future direction</a></li>
+
+    <li class="toc_l1"><a href="#support">Support</a></li>
+
+    <li class="toc_l1"><a href=
+    "#Comments/suggestions/credits">Comments/suggestions/credits</a></li>
+  </ol>
+  <hr>
+  <a name="Introduction" id="Introduction"></a>
+
+  <h2><a name="Introduction" id="Introduction">Introduction</a></h2>
+
+  <p><a name="Introduction" id="Introduction">This extension is designed to
+  provide access to the Ingres Enterprise Relational Database Management
+  System. Native or direct access is provided for Ingres II 2.0, Ingres II 2.5,
+  Advantage Ingres 2.6 and Ingres r3. To access older versions, a supported
+  client environment can be used with Ingres/NET.</a></p>
+
+  <p><a name="Introduction" id="Introduction">In 2005, the Ingres extension was
+  moved to the PHP extension community library (PECL) to resolve a build
+  conflict with Windows and UNIX/Linux platforms. One advantage of this move is
+  it allows the extension to be developed with its own release cycle. This
+  permits new functionality to be released when possible instead of waiting for
+  the next official PHP release. Rather than being available via the main PHP
+  tarball/zip archive (</a><a href=
+  "http://www.php.net/downloads">http://www.php.net/downloads</a>), an
+  additional download is required.</p><br>
+  <hr>
+  <a name="Platform support"></a>
+
+  <h2><a name="Platform support">Platform support</a></h2><a name=
+  "Platform support"></a> <a name="ingres_releases" id="ingres_releases"></a>
+
+  <h3><a name="Platform support">Ingres Releases</a></h3>
+
+  <p><a name="Platform support">This extension has been written to support the
+  following versions of Ingres:</a></p>
+
+  <ul>
+    <li><a name="Platform support">Ingres II 2.0/OpenIngres 2.0</a></li>
+
+    <li><a name="Platform support">Ingres II 2.5</a></li>
+
+    <li><a name="Platform support">Advantage Ingres 2.6</a></li>
+
+    <li><a name="Platform support">Ingres r3 / 3.0.x</a></li>
+
+    <li><a name="Platform support">Ingres 2006 / 9.0.0</a></li>
+
+    <li><a name="Platform support">Ingres 2006 Release 2 / 9.1.0</a></li>
+
+    <li><a name="Platform support">Ingres 2006 Release 2 Service Pack 1 /
+    9.1.1</a></li>
+
+    <li><a name="Platform support">Ingres 9.2.0</a></li>
+
+    <li><a name="Platform support">Ingres 9.3.0</a></li>
+  </ul><a name="Platform support"></a> <a name="php_releases" id=
+  "php_releases"></a>
+
+  <h3><a name="Platform support">PHP Releases</a></h3>
+
+  <p><a name="Platform support">This extension has been written against PHP 5.1
+  and PHP 5.2. Prior versions of PHP, i.e. 4.0.x - 5.0.x, contain an earlier
+  version of the Ingres extension. Building the extension with earlier versions
+  requires the deletion of the <i>ingres_ii</i> directory under
+  <i>ext</i>.</a></p><a name="Platform support"></a> <a name="os_compat" id=
+  "os_compat"></a>
+
+  <h3><a name="Platform support">Operating System Compatibility</a></h3>
+
+  <p><a name="Platform support">The extension should work against any platform
+  where the above Ingres releases are supported. In practice the extension has
+  been developed on Windows XP using Visual Studio .Net 2003 (VC7) and openSuSE
+  11 using GCC 4.3. There has been limited testing on Solaris 10 Sparc. If you
+  find the extension does not work, please log a bug via the</a> <a href=
+  "http://pecl.php.net/package/ingres">project home page</a> with the following
+  information:</p>
+
+  <ul>
+    <li>operating system and patches/service pack installed</li>
+
+    <li>compiler + version used to build the extension</li>
+
+    <li>version of PHP being used</li>
+
+    <li>version of Ingres being used</li>
+
+    <li>if you managed to get the extension built, the value of the constants
+    INGRES_EXT_VERSION and INGRES_API_VERSION:
+      <pre>
 &lt;?php
-	echo INGRES_EXT_VERSION + " " + INGRES_API_VERSION;
+        echo INGRES_EXT_VERSION + " " + INGRES_API_VERSION;
 ?&gt; 
-</PRE></LI>
-</UL>
+</pre>
+    </li>
+  </ul><br>
+  <hr>
+  <a name="Function support"></a>
 
-<BR><HR>
-<A NAME="Function support"><H2>3. Function support</H2>
+  <h2><a name="Function support">Function support</a></h2>
 
-<P>
-The extension provides the following functionality:
-</P>
-<TABLE>
-<TR><TH>Function</TH><TH>Description</TH></TR>
-<TR><TD>ingres_autocommit</TD><TD>Switch autocommit on or off</TD></TR>
-<TR><TD>ingres_close</TD><TD>Close an Ingres database connection</TD></TR>
-<TR><TD>ingres_commit</TD><TD>Commit a transaction</TD></TR>
-<TR><TD>ingres_connect</TD><TD>Open a connection to an Ingres database</TD></TR>
-<TR><TD>ingres_cursor</TD><TD>Get the name of the cursor in use</TD></TR>
-<TR><TD>ingres_error</TD><TD>Get the error text</TD></TR>
-<TR><TD>ingres_errno</TD><TD>Get the error code</TD></TR>
-<TR><TD>ingres_errsqlstate</TD><TD>Get the SQLState</TD></TR>
-<TR><TD>ingres_execute</TD><TD>Execute a cursor prepared by <code>ingres_prepare</code></TD></TR>
-<TR><TD>ingres_fetch_array</TD><TD>Fetch a row of result into an array</TD></TR>
-<TR><TD>ingres_fetch_object</TD><TD>Fetch a row of result into an object</TD></TR>
-<TR><TD>ingres_fetch_proc_return</TD><TD>Get the return value from a procedure call</TD></TR>
-<TR><TD>ingres_fetch_row</TD><TD>Fetch a row of result into an enumerated array</TD></TR>
-<TR><TD>ingres_field_length</TD><TD>Get the length of a field</TD></TR>
-<TR><TD>ingres_field_name</TD><TD>Get the name of a field in a query result</TD></TR>
-<TR><TD>ingres_field_nullable</TD><TD>Test if a field is nullable</TD></TR>
-<TR><TD>ingres_field_precision</TD><TD>Get the precision of a field</TD></TR>
-<TR><TD>ingres_field_scale</TD><TD>Get the scale of a field</TD></TR>
-<TR><TD>ingres_field_type</TD><TD>Get the type of a field in a query result</TD></TR>
-<TR><TD>ingres_num_fields</TD><TD>Get the number of fields returned by the last query</TD></TR>
-<TR><TD>ingres_num_rows</TD><TD>Get the number of rows affected or returned by the last query</TD></TR>
-<TR><TD>ingres_pconnect</TD><TD>Open a persistent connection to an Ingres database</TD></TR>
-<TR><TD>ingres_prepare</TD><TD>Prepares a query for execution by<code>ingres_execute</code></TD></TR>
-<TR><TD>ingres_query</TD><TD>Send a SQL query to Ingres</TD></TR>
-<TR><TD>ingres_set_environment</TD><TD>Set one or more Ingres environment variables</TD></TR>
-<TR><TD>ingres_rollback</TD><TD>Rollback a transaction</TD></TR>
-</TABLE>
+  <p><a name="Function support">The extension provides the following
+  functionality:</a></p>
 
-<A NAME="Project home page"><H3>Project home page</H3>
+  <table>
+    <tr>
+      <th>Function</th>
 
-<P>
-The latest tar ball for this extension can be downloaded from
-<A HREF="http://pecl.php.net/project/ingres">http://pecl.php.net/project/ingres</A>. At the moment only source code is
-available for download via this page. Development snapshot builds of
-the PECL extension for Windows can be downloaded from
-<A HREF="http://pecl4win.php.net/ext.php/php_ingres.dll">http://pecl4win.php.net/ext.php/php_ingres.dll</A>. Binary releases for certain operating systems
-will be provided in due course.
-</P>
+      <th>Description</th>
+    </tr>
 
-<H3>Configuration Options</H3>
+    <tr>
+      <td>ingres_autocommit</td>
 
-<P>The following options configure the behaviour of the Ingres extension:</P>
+      <td>Switch autocommit on or off</td>
+    </tr>
 
-<TABLE BORDER="1">
-  <TR>
-  	<TH>Setting</TH>
-  	<TH>Description</TH>
-  	<TH>Default</TH>
-  	<TH>php.ini</TH>
-  	<TH>ini_set()</TH>
-  </TR>
-  <TR>
-  	<TD>ingres.allow_persistent</TD>
-  	<TD>Allow persistent links</TD>
-  	<TD>On</TD>
-  	<TD>Yes</TD>
-  	<TD>No</TD>
-  </TR>
-  <TR>
-  	<TD>ingres.max_persistent</TD>
-  	<TD>Maximum number of persistent links allowed</TD>
-  	<TD>-1</TD>
-  	<TD>Yes</TD>
-  	<TD>No</TD>
-  </TR>
-  <TR>
-  	<TD>ingres.max_links</TD>
-  	<TD>Maximum number of links allowed</TD>
-  	<TD>-1</TD>
-  	<TD>Yes</TD>
-  	<TD>No</TD>
-  </TR>
-  <TR>
-  	<TD>ingres.default_database</TD>
-  	<TD>Default database name</TD>
-  	<TD>&nbsp;</TD>
-  	<TD>Yes</TD>
-  	<TD>Yes</TD>
-  </TR>
-  <TR>
-  	<TD>ingres.default_user</TD>
-  	<TD>Default user name</TD>
-  	<TD>&nbsp;</TD>
-  	<TD>Yes</TD>
-  	<TD>Yes</TD>
-  </TR>
-  <TR>
-  	<TD>ingres.default_password</TD>
-  	<TD>Default password</TD>
-  	<TD>&nbsp;</TD>
-  	<TD>Yes</TD>
-  	<TD>Yes</TD>
-  </TR>
-  <TR>
-  	<TD>ingres.report_db_warnings</TD>
-  	<TD>Suppress DB warnings</TD>
-  	<TD>On</TD>
-  	<TD>Yes</TD>
-  	<TD>Yes</TD>
-  </TR>
-  <TR>
-  	<TD>ingres.blob_segment_length</TD>
-  	<TD>Size of the memory buffer in bytes to be used when chunking BLOB data</TD>
-  	<TD>4096</TD>
-  	<TD>Yes</TD>
-  	<TD>Yes</TD>
-  </TR>
-  <TR>
-  	<TD>ingres.trace_connect</TD>
-  	<TD>Trace the ingres_connect() / ingres_pconnect() functions</TD>
-  	<TD>Off</TD>
-  	<TD>Yes</TD>
-  	<TD>Yes</TD>
-  </TR>
-  <TR>
-  	<TD>ingres.timeout</TD>
-  	<TD>Time in ms the OpenAPI IIapi_initialize function will wait before failing
-</TD>
-  	<TD>-1</TD>
-  	<TD>Yes</TD>
-  	<TD>Yes</TD>
-  </TR>
-  <TR>
-  	<TD>ingres.array_index_start</TD>
-  	<TD>Start index from which arrays return by ingres_fetch_array() should use</TD>
-  	<TD>1</TD>
-  	<TD>Yes</TD>
-  	<TD>Yes</TD>
-  </TR>
-</TABLE>
+    <tr>
+      <td>ingres_close</td>
 
+      <td>Close an Ingres database connection</td>
+    </tr>
 
-<BR><HR>
-<A NAME="Installing the extension"><H2>4. Installing the extension</H2>
+    <tr>
+      <td>ingres_commit</td>
 
-<H3>Windows Installation</H3>
+      <td>Commit a transaction</td>
+    </tr>
 
-<P>The latest binaries for the Ingres extension can be downloaded from <A
- HREF="http://pecl4win.php.net/ext.php/php_ingres.dll">http://pecl4win.php.net/ext.php/php_ingres.dll</A>. Direct links are
-provided below for different PHP releases:
+    <tr>
+      <td>ingres_connect</td>
 
-<UL>
-<LI><A HREF="http://pecl4win.php.net/download.php/ext/5_0/5.0.5/php_ingres.dll">http://pecl4win.php.net/download.php/ext/5_0/5.0.5/php_ingres.dll</A>
-<LI><A HREF="http://pecl4win.php.net/download.php/ext/5_1/5.1.6/php_ingres.dll">http://pecl4win.php.net/download.php/ext/5_1/5.1.6/php_ingres.dll</A>
-<LI><A HREF="http://pecl4win.php.net/download.php/ext/5_2/5.2.1/php_ingres.dll">http://pecl4win.php.net/download.php/ext/5_2/5.2.1/php_ingres.dll</A>
-</UL>
+      <td>Open a connection to an Ingres database</td>
+    </tr>
 
-To install the extension copy <i>php_ingres.dll</i> into the extension_dir configured in <i>php.ini</i>. </P>
+    <tr>
+      <td>ingres_cursor</td>
 
-<H3>UNIX/Linux Installation</H3>
+      <td>Get the name of the cursor in use</td>
+    </tr>
 
-<P>The installation of the extension on UNIX/Linux will require a C
-complilation environment.
-</P>
+    <tr>
+      <td>ingres_error</td>
 
-<P>The latest source code can be downloaded manually from <A HREF="http://pecl.php.net/get/ingres">http://pecl.php.net/get/ingres</A>.
-Or by using the <i>pecl</i> command:
-</P>
+      <td>Get the error text</td>
+    </tr>
 
-<PRE>
-    pecl download ingres-1.4.3
-</PRE>
+    <tr>
+      <td>ingres_errno</td>
 
-Once you have the source archive run through the following steps to
-build and install, note that <i>$II_SYSTEM</i> needs to be defined
-beforehand:
+      <td>Get the error code</td>
+    </tr>
 
-<OL>
-<LI>Extract the archive, adapt the version number accordingly:<PRE>tar -zxvf ingres-1.4.3.tgz</PRE>
-<LI>Enter the newly created directory:<PRE>cd ingres-1.4.3</PRE>
-<LI>Generate the configuration file for the extension:<PRE>phpize</PRE>
-<LI>Generate the Makefile needed to build the extension:<PRE>./configure</PRE>
-<LI>Build the extension:<PRE>make</PRE>
-<LI>Install the extension, N.B. this may require <i>root</i> access :<PRE>make install</PRE></LI>
-<LI>If your PHP build environment is not the same as the target PHP environment then use the following command, N.B. this may require <i>root</i> access :<PRE>cp -v modules/ingres.so `php -r 'echo ini_get("extension_dir");'`</PRE>Where php is the PHP executable for your target environment.</LI> 
-</OL>
+    <tr>
+      <td>ingres_errsqlstate</td>
 
-<H3>Ingres with the Apache web server on UNIX/Linux</H3>
+      <td>Get the SQLState</td>
+    </tr>
 
-<P>This extension, like other Ingres applications, requires knowledge of a local Ingres installation. 
-Providing Apache with this information can be done two ways both of which require 
-<A HREF="http://httpd.apache.org/docs/2.2/mod/mod_env.html">mod_env</A>. The following assumes Ingres was installed to /opt/Ingres/II:
+    <tr>
+      <td>ingres_execute</td>
 
-<OL>
-	<LI>Using PassEnv:</LI>
-	<UL>
-		<LI>In the script that starts Apache add the following lines:<PRE>II_SYSTEM=/opt/Ingres/II
+      <td>Execute a cursor prepared by <code>ingres_prepare</code></td>
+    </tr>
+
+    <tr>
+      <td>ingres_fetch_array</td>
+
+      <td>Fetch a row of result into an array</td>
+    </tr>
+
+    <tr>
+      <td>ingres_fetch_object</td>
+
+      <td>Fetch a row of result into an object</td>
+    </tr>
+
+    <tr>
+      <td>ingres_fetch_proc_return</td>
+
+      <td>Get the return value from a procedure call</td>
+    </tr>
+
+    <tr>
+      <td>ingres_fetch_row</td>
+
+      <td>Fetch a row of result into an enumerated array</td>
+    </tr>
+
+    <tr>
+      <td>ingres_field_length</td>
+
+      <td>Get the length of a field</td>
+    </tr>
+
+    <tr>
+      <td>ingres_field_name</td>
+
+      <td>Get the name of a field in a query result</td>
+    </tr>
+
+    <tr>
+      <td>ingres_field_nullable</td>
+
+      <td>Test if a field is nullable</td>
+    </tr>
+
+    <tr>
+      <td>ingres_field_precision</td>
+
+      <td>Get the precision of a field</td>
+    </tr>
+
+    <tr>
+      <td>ingres_field_scale</td>
+
+      <td>Get the scale of a field</td>
+    </tr>
+
+    <tr>
+      <td>ingres_field_type</td>
+
+      <td>Get the type of a field in a query result</td>
+    </tr>
+
+    <tr>
+      <td>ingres_num_fields</td>
+
+      <td>Get the number of fields returned by the last query</td>
+    </tr>
+
+    <tr>
+      <td>ingres_num_rows</td>
+
+      <td>Get the number of rows affected or returned by the last query</td>
+    </tr>
+
+    <tr>
+      <td>ingres_pconnect</td>
+
+      <td>Open a persistent connection to an Ingres database</td>
+    </tr>
+
+    <tr>
+      <td>ingres_prepare</td>
+
+      <td>Prepares a query for execution by<code>ingres_execute</code></td>
+    </tr>
+
+    <tr>
+      <td>ingres_query</td>
+
+      <td>Send a SQL query to Ingres</td>
+    </tr>
+
+    <tr>
+      <td>ingres_set_environment</td>
+
+      <td>Set one or more Ingres environment variables</td>
+    </tr>
+
+    <tr>
+      <td>ingres_rollback</td>
+
+      <td>Rollback a transaction</td>
+    </tr>
+  </table><a name="Function support"></a> <a name="Project_home_page" id=
+  "Project_home_page"></a>
+
+  <h3><a name="Function support">Project home page</a></h3>
+
+  <p><a name="Function support">The latest tar ball for this extension can be
+  downloaded from</a> <a href=
+  "http://pecl.php.net/project/ingres">http://pecl.php.net/project/ingres</a>.
+  At the moment only source code is available for download via this page.
+  Development snapshot builds of the PECL extension for Windows can be
+  downloaded from <a href=
+  "http://esd.ingres.com/product/drivers/PHP">http://esd.ingres.com/product/drivers/PHP</a>.
+  Binary releases for certain operating systems will be provided in due
+  course.</p><a name="config_options" id="config_options"></a>
+
+  <h3><a name="config_options" id="config_options">Configuration
+  Options</a></h3>
+
+  <p><a name="config_options" id="config_options">The following options
+  configure the behaviour of the Ingres extension:</a></p>
+
+  <table border="1">
+    <tr>
+      <th>Setting</th>
+
+      <th>Description</th>
+
+      <th>Default</th>
+
+      <th>php.ini</th>
+
+      <th>ini_set()</th>
+    </tr>
+
+    <tr>
+      <td>ingres.allow_persistent</td>
+
+      <td>Allow persistent links</td>
+
+      <td class="inisetting">On</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">No</td>
+    </tr>
+
+    <tr>
+      <td>ingres.array_index_start</td>
+
+      <td>Start index from which arrays return by ingres_fetch_array() should
+      use</td>
+
+      <td class="inisetting">1</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">Yes</td>
+    </tr>
+
+    <tr>
+      <td>ingres.auto</td>
+
+      <td>Emulate AUTO COMMIT when working with cursors</td>
+
+      <td class="inisetting">On</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">Yes</td>
+    </tr>
+
+    <tr>
+      <td>ingres.blob_segment_length</td>
+
+      <td>Size of the memory buffer in bytes to be used when chunking BLOB
+      data</td>
+
+      <td class="inisetting">4096</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">Yes</td>
+    </tr>
+
+    <tr>
+      <td>ingres.default_database</td>
+
+      <td>Default database name</td>
+
+      <td class="inisetting">&nbsp;</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">Yes</td>
+    </tr>
+
+    <tr>
+      <td>ingres.default_user</td>
+
+      <td>Default user name</td>
+
+      <td class="inisetting">&nbsp;</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">Yes</td>
+    </tr>
+
+    <tr>
+      <td>ingres.default_password</td>
+
+      <td>Default password</td>
+
+      <td class="inisetting">&nbsp;</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">Yes</td>
+    </tr>
+
+    <tr>
+      <td>ingres.max_links</td>
+
+      <td>Maximum number of links allowed</td>
+
+      <td class="inisetting">-1</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">No</td>
+    </tr>
+
+    <tr>
+      <td>ingres.max_persistent</td>
+
+      <td>Maximum number of persistent links allowed</td>
+
+      <td class="inisetting">-1</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">No</td>
+    </tr>
+
+    <tr>
+      <td>ingres.report_db_warnings</td>
+
+      <td>Suppress DB warnings</td>
+
+      <td class="inisetting">On</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">Yes</td>
+    </tr>
+
+    <tr>
+      <td>ingres.reuse_connection</td>
+
+      <td>When connecting with ingres_connect()/ingres_pconnect(), use an
+      active connection to the database if the username is the same</td>
+
+      <td class="inisetting">On</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">Yes</td>
+    </tr>
+
+    <tr>
+      <td>ingres.scrollable</td>
+
+      <td>Use scrollable cursors or not. With Ingres 9.2 this needs to be
+      disable for queries that fetch LOB data</td>
+
+      <td class="inisetting">On</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">Yes</td>
+    </tr>
+
+    <tr>
+      <td>ingres.timeout</td>
+
+      <td>Time in ms the OpenAPI IIapi_initialize function will wait before
+      failing</td>
+
+      <td class="inisetting">-1</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">Yes</td>
+    </tr>
+
+    <tr>
+      <td>ingres.trace</td>
+
+      <td>Enable some basic query tracing in ingres_query()</td>
+
+      <td class="inisetting">Off</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">Yes</td>
+    </tr>
+
+    <tr>
+      <td>ingres.trace_connect</td>
+
+      <td>Trace the ingres_connect() / ingres_pconnect() functions</td>
+
+      <td class="inisetting">Off</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">Yes</td>
+    </tr>
+
+    <tr>
+      <td>ingres.utf8</td>
+
+      <td>Assume all strings passed to NVARCHAR/NCHAR columns are in UTF-8</td>
+
+      <td class="inisetting">On</td>
+
+      <td class="inisetting">Yes</td>
+
+      <td class="inisetting">Yes</td>
+    </tr>
+  </table><a name="config_options" id="config_options"><br></a>
+  <hr>
+
+  <h2><a name="Installing the extension">Installing the
+  extension</a></h2><a name="Installing the extension"></a> <a name="windows"
+  id="windows"></a>
+
+  <h3><a name="Installing the extension">Windows Installation</a></h3>
+
+  <p><a name="Installing the extension">The latest binaries for the Ingres
+  extension can be downloaded from</a> <a href=
+  "http://esd.ingres.com/product/drivers/PHP">http://esd.ingres.com/product/drivers/PHP</a>.
+  To install the extension copy <i>php_ingres.dll</i> into the extension_dir
+  configured in <i>php.ini</i>.</p><a name="unix" id="unix"></a>
+
+  <h3><a name="unix" id="unix">UNIX/Linux Installation</a></h3>
+
+  <p>The installation of the extension on UNIX/Linux will require a C
+  complilation environment. If you have built and installed PHP from source
+  code obtained via CVS or an archive, you will already have the necessary
+  files. If however you are using Linux and have installed PHP using the
+  operating system package manager (Synaptic, Package Kit, yum, aptitude or
+  zypper) then it is probable you will also need to install the "development"
+  package for PHP. This additional package contains the necessary files needed
+  for building and installing PHP extensions, such as <em>ingres</em>. Below is
+  a list of the PHP development packages for Redhat, SuSE and
+  Ubuntu/Debian:</p>
+
+  <ul>
+    <li><a name="unix" id="unix"><strong>SuSE Linux Enterprise Server /
+    openSuSE</strong> - php4-devel - for PHP 4.x</a></li>
+
+    <li><a name="unix" id="unix"><strong>SuSE Linux Enterprise Server /
+    openSuSE</strong> - php5-devel - for PHP 5.x</a></li>
+
+    <li><a name="unix" id="unix"><strong>Redhat Enterprise
+    Linux/Centos/Fedora</strong> - php-devel</a></li>
+
+    <li><a name="unix" id="unix"><strong>Debian/Ubuntu Linux</strong> -
+    php-dev</a></li>
+  </ul>
+
+  <p><a name="unix" id="unix">Please refer to the operating system
+  documentation for more information on how to install the necessary
+  packages.</a></p>
+
+  <h4><a name="unix" id="unix">Installing with <em>pecl</em></a></h4>
+
+  <p><a name="unix" id="unix">The Ingres extension can be downloaded an
+  installed using just one command:</a></p>
+  <pre>
+ pecl install ingres
+</pre>When prompted:
+
+  <ol>
+    <li>Enter 'all'</li>
+
+    <li>Provide the value for <i>$II_SYSTEM</i></li>
+
+    <li>Press enter</li>
+
+    <li>Follow the instructions at the end of the build for activating the
+    extension</li>
+  </ol>
+
+  <h4>Installing from source</h4>
+
+  <p>The latest source code can be downloaded manually from <a href=
+  "http://pecl.php.net/get/ingres">http://pecl.php.net/get/ingres</a> Once you
+  have the source archive run through the following steps to build and install,
+  note that <i>$II_SYSTEM</i> needs to be defined beforehand:</p>
+
+  <ol>
+    <li>Extract the archive, adapt the version number accordingly:
+      <pre>
+tar -zxvf ingres-2.0.1.tgz
+</pre>
+    </li>
+
+    <li>Enter the newly created directory:
+      <pre>
+cd ingres-2.0.1
+</pre>
+    </li>
+
+    <li>Generate the configuration file for the extension:
+      <pre>
+phpize
+</pre>
+    </li>
+
+    <li>Generate the Makefile needed to build the extension:
+      <pre>
+./configure
+</pre>
+    </li>
+
+    <li>Build the extension:
+      <pre>
+make
+</pre>
+    </li>
+
+    <li>Install the extension, N.B. this may require <i>root</i> access :
+      <pre>
+make install
+</pre>
+    </li>
+
+    <li>If your PHP build environment is not the same as the target PHP
+    environment then use the following command, N.B. this may require
+    <i>root</i> access :
+      <pre>
+cp -v modules/ingres.so `php -r 'echo ini_get("extension_dir");'`
+</pre>Where php is the PHP executable for your target environment.
+    </li>
+  </ol><a name="apache" id="apache"></a>
+
+  <h3><a name="apache" id="apache">Ingres with the Apache web server on
+  UNIX/Linux</a></h3>
+
+  <p><a name="apache" id="apache">This extension, like other Ingres
+  applications, requires knowledge of a local Ingres installation. The Apache
+  extension,</a> <a href=
+  "http://httpd.apache.org/docs/2.2/mod/mod_env.html">mod_env</a> is required
+  for this to work. The following assumes Ingres was installed to
+  /opt/Ingres/II:</p>
+
+  <ul>
+    <li>In the script that starts Apache add the following lines:
+      <pre>
+II_SYSTEM=/opt/Ingres/II
 LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$II_SYSTEM/ingres/lib
 export II_SYSTEM LD_LIBRARY_PATH
-</PRE></LI>
-		<LI>Add the following lines to the apache configuration script httpd.conf (or equivalent):<PRE>
+</pre>
+    </li>
+
+    <li>Add the following lines to the apache configuration script httpd.conf
+    (or equivalent):
+      <pre>
 PassEnv II_SYSTEM LD_LIBRARY_PATH
-</PRE></LI>
-	</UL>
-	<LI>Using SetEnv:</LI>
-	<UL>
-		<LI>Add the following lines to the apache configuration script httpd.conf (or equivalent):<PRE>
-SetEnv II_SYSTEM /opt/Ingres/II
-SetEnv LD_LIBRARY_PATH /opt/Ingres/II/ingres/lib
-</PRE></LI>
-	</UL>
-</OL>
-</P>
+</pre>
+    </li>
+  </ul><a name="activating" id="activating"></a>
 
-<H3>Activating the Ingres PECL extension</H3>
+  <h3><a name="activating" id="activating">Activating the Ingres PECL
+  extension</a></h3>
 
-<H4>Windows</H4>
+  <h4><a name="activating" id="activating">Windows</a></h4>
 
-<P>Add the following line to the <i>php.ini</i> configuration file:
+  <p><a name="activating" id="activating">Add the following line to the
+  <i>php.ini</i> configuration file:</a></p>
+  <pre>
+<a name="activating" id="activating">extension = php_ingres.dll
+</a>
+</pre><a name="activating" id="activating">If a web server is being used to
+serve PHP scripts, restart it to activate the Ingres extension.</a>
 
-<PRE>
-extension = php_ingres.dll
-</PRE>
+  <h4><a name="activating" id="activating">UNIX/Linux</a></h4>
 
-If a web server is being used to serve PHP scripts, restart it to activate the Ingres extension.</P>
+  <p><a name="activating" id="activating">Add the following line to the
+  <i>php.ini</i> configuration file:</a></p>
+  <pre>
+<a name="activating" id="activating">extension = ingres.so
+</a>
+</pre><a name="activating" id="activating">If a web server is being used to
+serve PHP scripts, restart it to activate the Ingres extension.<br></a>
+  <hr>
+  <a name="Known issues"></a>
 
-<H4>UNIX/Linux</H4>
+  <h2>Known issues</h2><a name="bugs" id="bugs"></a>
 
-<P>Add the following line to the <i>php.ini</i> configuration file:
+  <h3><a name="bugs" id="bugs">Bugs</a></h3>
 
-<PRE>
-extension = ingres.so
-</PRE>
+  <p><a name="Known issues">For a list of known bugs go to</a> <a href=
+  "http://pecl.php.net/bugs/search.php?cmd=display&amp;status=Open&amp;package_name[]=ingres">
+  pecl.php.net</a>.</p><a name="threads" id="threads"></a>
 
-If a web server is being used to serve PHP scripts, restart it to activate the Ingres extension.</P>
+  <h3><a name="threads" id="threads">Multi-threaded web servers</a></h3>
 
+  <p>When working with multi-threaded web servers certain considerations need
+  to be made. Each HTTP server thread represents a single DBMS server
+  connection, that could potentially connect to an Ingres server, either
+  directly or via Ingres/NET. Depending on the number of server threads
+  configured this could exceed the number of sessions allowed by Ingres. With
+  Apache HTTPd's <a href=
+  "http://httpd.apache.org/docs/2.2/mod/mpm_winnt.html">mpm-winnt</a> module
+  this is configured using <i>ThreadsPerChild</i> and with the <a href=
+  "http://httpd.apache.org/docs/2.2/mod/worker.html">worker</a> module this is
+  controlled using the <i>MaxSpareThreads</i> (with Apache HTTPd worker
+  <i>MaxSpareThreads</i> controls the overall number threads across all child
+  processes). Verify that the number of threads in the HTTP server does not
+  exceed the number of GCC sessions or DBMS server sessions.</p><br>
+  <hr>
 
-<BR><HR>
-<A NAME="Known issues"><H2>5. Known issues</H2>
+  <h2><a name="support" id="support">Support</a></h2>
 
-<H3>Bugs</H3>
+  <p>Support for the PECL Ingres interface is available from a number of
+  different sources. Users with a support contract can either raise an issue
+  via <a href=
+  "https://servicedesk.ingres.com/">https://servicedesk.ingres.com/</a> or
+  through their local technical support department. See <a href=
+  "http://ingres.com/support" target="_blank">http://ingres.com/support</a> for
+  a complete list of locations, primary service hours, and telephone numbers.
+  Users without a support contract can post questions or problems to the Ingres
+  Community Forums (<a href=
+  "http://community.ingres.com/forum/php">http://community.ingres.com/forum/php</a>),
+  to comp.databases.ingres (<a href=
+  "http://groups.google.com/group/comp.databases.ingres">http://groups.google.com/group/comp.databases.ingres</a>),
+  or to the PECL developer mailing list (<a href=
+  "http://www.php.net/mailing-lists.php">http://www.php.net/mailing-lists.php</a>).</p>
+  <hr>
+  <a name="Future direction"></a>
 
-<P>For a list of known bugs go to <A HREF="http://pecl.php.net/bugs/search.php?cmd=display&status=Open&package_name[]=ingres">pecl.php.net</a>.</P>
+  <h2><a name="Future direction">Future direction</a></h2>
 
-<H3>Multi-threaded web servers</H3>
+  <p><a name="Future direction">New features planned for the Ingres PECL
+  extension are documented in the</a> <a href=
+  "http://cvs.php.net/viewvc.cgi/pecl/ingres/TODO?view=co">TODO</a> file that
+  is shipped with the source code or via <a href=
+  "http://cvs.php.net/viewvc.cgi/pecl/ingres/TODO?view=co">PHP's CVS source
+  code repository</a>.<br></p>
+  <hr>
+  <a name="Comments/suggestions/credits"></a>
 
-<P>When working with multi-threaded web servers certain 
-considerations need to be made. Each server thread that can service an HTTP 
-request could potentially connect to an Ingres server, either directly or via 
-Ingres/NET. Depending on the number of server threads configured this could 
-exceed the number of sessions allowed by Ingres. With Apache HTTPd's 
-<A HREF="http://httpd.apache.org/docs/2.2/mod/mpm_winnt.html">mpm-winnt</A> 
-module this is configured using <I>ThreadsPerChild</I> and with the 
-<A HREF="http://httpd.apache.org/docs/2.2/mod/worker.html">worker</A> module 
-this is controlled using the <I>MaxSpareThreads</I> (with Apache HTTPd worker 
-<I>MaxSpareThreads</I> controls the overall number threads across all child processes).</P>
+  <h2><a name=
+  "Comments/suggestions/credits">Comments/suggestions/credits</a></h2>
 
+  <p><a name="Comments/suggestions/credits">The architecture for the Ingres
+  extension is based on code written by David HÃ©not (</a><a href=
+  "mailto:henot@php.net">henot@php.net</a>) from 2000-2004. Since February
+  2005, Grant Croker, (<a href="mailto:grantc@php.net">grantc@php.net</a>),
+  took over the maintenance and development of the extension.</p>
 
-<BR><HR>
-<A NAME="Future direction"><H2>6. Future direction</H2>
-
-<P>
-Since the code has been relatively stable for a number of years, all current
-development efforts have tried to avoid, where possible, changing syntax of 
-any existing function. The TODO file covers the items that are on the list 
-to be implemented. 
-</P>
-
-<P>
-There are, however, some things that would be nice to have but might prove 
-difficult to implement without breaking backwards compatibility, either 
-with versions of Ingres or with existing Ingres based PHP code.
-</P>
-
-The current extension maintains a single statement handle. Whenever a
-query is executed via ingres_query() or ingres_prepare(), any existing
-statement is terminated/closed. For multiple resultsets to work, the
-ingres_fetch_*() statements will need to be able to accept a resource
-that represents an Ingres resultset. Such that:
-</P>
-<PRE>
-  ingres_fetch_row( [resource link] ) 
-</PRE>
-<P>
-would have to change to:
-</P>
-<PRE>
-  ingres_fetch_row( resource result )
-</PRE>
-<P>
-Note '[]' means anything contained within is optional. Apart from 
-passing a result resource instead of a link resource, the main 
-difference is the parameter passed would be a mandatory parameter 
-rather than optional as it is at the moment. This is more in keeping 
-with how other PHP database interfaces work. Link resource
-parameters that are currently optional would become mandatory.  
-Implementing this would make the extension incompatible with existing 
-scripts that use Ingres.
-</P>
-<P>
-It 
-is possible for the code to be branched such that any future versions that
-break backwards compatibility are clearly marked as doing so. This will
-be done according to demand.
-</P>
-
-<BR><HR>
-<A NAME="Comments/suggestions/credits"><H2>7. Comments/suggestions/credits</H2>
-
-<P>
-The architecture for the Ingres extension is based on code written by David
-Hénot (<A href="mailto:henot@php.net">henot@php.net</A>) from 2000-2004. Since February 2005, Grant Croker, (<A href="mailto:grantc@php.net">grantc@php.net</A>), took over the maintenance and development of the extension.
-</P>
-
-<P>
-If you have any comments, features or if you wish to assist in some way 
-with coding, testing or documentation please contact <A href="mailto:grantc@php.net">grantc@php.net</A>.
-</P>
-<!--
+  <p>If you have any comments, features or if you wish to assist in some way
+  with coding, testing or documentation please contact <a href=
+  "mailto:grantc@php.net">grantc@php.net</a>.</p><!--
 please keep the line below
-vim: autoindent sw=4 ts=4 ff=unix fileencoding=latin1
+vim: autoindent sw=4 ts=4 ff=unix fileencoding=utf8
 -->
-</BODY>
-</HTML>
+</body>
+</html>
