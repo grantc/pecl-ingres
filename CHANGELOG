@@ -1,4 +1,4 @@
-CVS - 2.0.1-dev
+2.0.1
 - Improved performance by batch fetching rows
 - Improved interoperability when working with older Ingres releases
 - Improved cleanup when a transaction/session is prematurely aborted
