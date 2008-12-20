@@ -24,7 +24,7 @@ else
 {	
 	echo "Connection succeeded.";
 }
-$rc=ingres_query("select varchar(money(1.99)) as money");
+$rc=ingres_query($conn, "select varchar(money(1.99)) as money");
 
 if ( ingres_errno() ) {
 	$error_code=ingres_errno($conn);

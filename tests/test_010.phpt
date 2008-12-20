@@ -11,11 +11,11 @@ $conn = ingres_connect($database,$user,$password);
 if ($conn) {
     echo "Connection succeeded.";
         $param = array(1,1.1,"Row 1");
-	$rc=ingres_query("insert into param_tests values (?,?,?)",$conn,$param);
+	$rc=ingres_query($conn, "insert into param_tests values (?,?,?)",$param);
 	if ($rc) {
 		echo "Insert succeeded.";
 		$param = array ("col2"=>2.2,"col3"=>"Row 2","col1"=> 1);
-		$rc=ingres_query("update param_tests set col2=?, col3=? where col1=?",$conn,$param);
+		$rc=ingres_query($conn, "update param_tests set col2=?, col3=? where col1=?",$param);
 
 			if (ingres_errno() != 0)
 			{
@@ -26,7 +26,7 @@ if ($conn) {
 				echo "Update succeeded.";
 			}
 		$param = array(1);
-		$rc=ingres_query("select * from param_tests where col1 = ?",$conn,$param);
+		$rc=ingres_query($conn, "select * from param_tests where col1 = ?",$param);
 		if ($rc) {
 			while ( $object = ingres_fetch_object($rc)) {
 				echo $object->col1 . " " . $object->col2 . " " . $object->col3 .".";

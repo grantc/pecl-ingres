@@ -24,7 +24,7 @@ else
 {
 	echo "Connection succeeded.";
 }
-$rc=ingres_query("select * from timezone_test");
+$rc=ingres_query($conn, "select * from timezone_test");
 
 if ( ingres_errno() ) {
 	$error_code=ingres_errno($conn);

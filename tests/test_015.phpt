@@ -24,7 +24,7 @@ else
 {
 	echo "Connection succeeded.";
 }
-$rc=ingres_query("create table table_structure as select * from iirelation");
+$rc=ingres_query($conn, "create table table_structure as select * from iirelation");
 
 if ( ingres_errno() ) {
 	$error_code=ingres_errno($conn);
@@ -36,7 +36,7 @@ if ( ingres_errno() ) {
 	die("i died");
 } 
 
-$rc=ingres_query("select * from iitables where table_name = 'table_structure'");
+$rc=ingres_query($conn, "select * from iitables where table_name = 'table_structure'");
 
 if ( ingres_errno() ) {
 	$error_code=ingres_errno($conn);

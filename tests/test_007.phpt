@@ -12,7 +12,7 @@ $conn = ingres_connect($database,$user,$password);
 if ($conn) {
     echo "Connection succeeded.";
         $param = array("iirelation");
-	$rc=ingres_query("select * from iirelation where relid=?",$conn,$param);
+	$rc=ingres_query($conn, "select * from iirelation where relid=?",$param);
 	if ($rc) {
 		echo "Query succeeded.";
 		while ($object=ingres_fetch_object($rc)) {

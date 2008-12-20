@@ -24,7 +24,7 @@ else
 {
 	echo "Connection succeeded.";
 }
-$rc=ingres_query("select dbmsinfo('role') as role");
+$rc=ingres_query($conn, "select dbmsinfo('role') as role");
 
 if ( ingres_errno() ) {
 	$error_code=ingres_errno($conn);

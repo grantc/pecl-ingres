@@ -24,7 +24,7 @@ else
 {
 	echo "Connection succeeded.";
 }
-$rc=ingres_query("select dbmsinfo('system_user') as system_user, dbmsinfo('group') as group");
+$rc=ingres_query($conn, "select dbmsinfo('system_user') as system_user, dbmsinfo('group') as group");
 
 if ( ingres_errno() ) {
 	$error_code=ingres_errno($conn);

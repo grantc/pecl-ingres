@@ -24,7 +24,7 @@ else
 {
 	echo "Connection succeeded.";
 }
-$rc=ingres_query("select date('01/01/70') as date1,date('01/01/20') as date2");
+$rc=ingres_query($conn, "select date('01/01/70') as date1,date('01/01/20') as date2");
 
 if ( ingres_errno() ) {
 	$error_code=ingres_errno($conn);
