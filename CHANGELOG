@@ -1,3 +1,8 @@
+CVS - 2.0.2-dev
+- Reduce the number of emalloc calls in php_ii_fetch()
+- Clean up proto entries in ingres.c
+- Make ingres_conn_*() and ingres_stmt_* aliases for their ingres_err*() counterparts
+
 2.0.1
 - Improved performance by batch fetching rows
 - Improved interoperability when working with older Ingres releases

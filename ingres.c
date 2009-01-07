@@ -71,12 +71,6 @@ function_entry ingres_functions[] = {
     PHP_FE(ingres2_rollback,            NULL)
     PHP_FE(ingres2_commit,            NULL)
     PHP_FE(ingres2_autocommit,        NULL)
-    PHP_FE(ingres2_conn_errno,            NULL)
-    PHP_FE(ingres2_conn_error,            NULL)
-    PHP_FE(ingres2_conn_errsqlstate,        NULL)
-    PHP_FE(ingres2_stmt_errno,            NULL)
-    PHP_FE(ingres2_stmt_error,            NULL)
-    PHP_FE(ingres2_stmt_errsqlstate,        NULL)
     PHP_FE(ingres2_prepare,            NULL)
     PHP_FE(ingres2_execute,            NULL)
     PHP_FE(ingres2_cursor,            NULL)
@@ -87,6 +81,12 @@ function_entry ingres_functions[] = {
     PHP_FE(ingres2_errno,            NULL)
     PHP_FE(ingres2_error,            NULL)
     PHP_FE(ingres2_errsqlstate,        NULL)
+    PHP_FALIAS(ingres2_conn_errno, ingres2_errno,            NULL)
+    PHP_FALIAS(ingres2_stmt_errno, ingres2_errno,          NULL)
+    PHP_FALIAS(ingres2_conn_error, ingres2_error,        NULL)
+    PHP_FALIAS(ingres2_stmt_error, ingres2_error,         NULL)
+    PHP_FALIAS(ingres2_stmt_errsqlstate,  ingres2_errsqlstate,       NULL)
+    PHP_FALIAS(ingres2_conn_errsqlstate,  ingres2_errsqlstate,       NULL)
     PHP_FE(ingres2_next_error,        NULL)
 #else
     PHP_FE(ingres_connect,            NULL)
@@ -107,12 +107,6 @@ function_entry ingres_functions[] = {
     PHP_FE(ingres_rollback,            NULL)
     PHP_FE(ingres_commit,            NULL)
     PHP_FE(ingres_autocommit,        NULL)
-    PHP_FE(ingres_conn_errno,            NULL)
-    PHP_FE(ingres_conn_error,            NULL)
-    PHP_FE(ingres_conn_errsqlstate,        NULL)
-    PHP_FE(ingres_stmt_errno,            NULL)
-    PHP_FE(ingres_stmt_error,            NULL)
-    PHP_FE(ingres_stmt_errsqlstate,        NULL)
     PHP_FE(ingres_prepare,            NULL)
     PHP_FE(ingres_execute,            NULL)
     PHP_FE(ingres_cursor,            NULL)
@@ -123,6 +117,12 @@ function_entry ingres_functions[] = {
     PHP_FE(ingres_errno,            NULL)
     PHP_FE(ingres_error,            NULL)
     PHP_FE(ingres_errsqlstate,        NULL)
+    PHP_FALIAS(ingres_conn_errno, ingres_errno,           NULL)
+    PHP_FALIAS(ingres_stmt_errno, ingres_errno,          NULL)
+    PHP_FALIAS(ingres_conn_error, ingres_error,         NULL)
+    PHP_FALIAS(ingres_stmt_error, ingres_error,          NULL)
+    PHP_FALIAS(ingres_stmt_errsqlstate,  ingres_errsqlstate,       NULL)
+    PHP_FALIAS(ingres_conn_errsqlstate,  ingres_errsqlstate,       NULL)
     PHP_FE(ingres_next_error,        NULL)
 #endif
 
@@ -1019,9 +1019,10 @@ static void _ii_init_result (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result,
 #endif
     ii_result->link_id = -1;
     ii_result->apiLevel = ii_link->apiLevel;
-    ii_result->resultData = NULL;
+    ii_result->metaData = NULL;
     ii_result->rowsReturned = 0;
     ii_result->rowNumber = 0;
+    ii_result->rowWidth = 0;
 }
 /* }}} */
 
@@ -1572,7 +1573,7 @@ PHP_FUNCTION(ingres_close)
 }
 /* }}} */
 
-/* {{{ proto bool ingres_query(string query [, resource link] [, array queryParams] [, array paramtypes] ) */
+/* {{{ proto mixed ingres_query(resource link, string query [, array queryParams] [, array paramtypes] ) */
 /* Send a SQL query to Ingres */
 /* This should go into the documentation */
 /* Unsupported query types:
@@ -1615,6 +1616,7 @@ PHP_FUNCTION(ingres_query)
     ii_result_entry *result_ptr = NULL;
     short int result_resource = FALSE;
     int type = 0;
+    int col = 0;
 
     ii_result_entry *result_entry;
     
@@ -1991,6 +1993,11 @@ PHP_FUNCTION(ingres_query)
     ii_result->descriptor = getDescrParm.gd_descriptor;
     ii_result->link_id = Z_LVAL_P(link);
 
+    for( col = 0; col < ii_result->fieldCount; col++)
+    {
+         ii_result->rowWidth += ii_result->descriptor[col].ds_length;
+    }  
+
 
     if ( ii_result->paramCount > 0  && ii_result->procname == NULL )
     { 
@@ -2031,7 +2038,7 @@ PHP_FUNCTION(ingres_query)
 }
 /* }}} */
 
-/* {{{ proto bool ingres_prepare(resource link, string query) */
+/* {{{ proto mixed ingres_prepare(resource link, string query) */
 /* Prepare SQL for later execution */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_prepare)
@@ -2154,7 +2161,7 @@ PHP_FUNCTION(ingres_prepare)
 }
 /* }}} */
 
-/* {{{ proto bool ingres_execute(resource result [,array params,[string paramtypes]]) 
+/* {{{ proto mixed ingres_execute(resource result [,array params,[string paramtypes]]) 
    execute a query prepared by ingres_prepare() */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_execute)
@@ -2733,7 +2740,7 @@ static char *php_ii_field_name(II_RESULT *ii_result, int index TSRMLS_DC)
 }
 /* }}} */
 
-/* {{{ proto string ingres_field_name(int index [, resource link])
+/* {{{ proto string ingres_field_name(resource result, int index)
    Return the name of a field in a query result index must be >0 and <= ingres_num_fields() */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_field_name)
@@ -2756,7 +2763,7 @@ PHP_FUNCTION(ingres_field_name)
 }
 /* }}} */
 
-/* {{{ proto string ingres_field_type(int index [, resource link])
+/* {{{ proto string ingres_field_type(resource result, int index)
    Return the type of a field in a query result index must be >0 and <= ingres_num_fields() */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_field_type)
@@ -2779,7 +2786,7 @@ PHP_FUNCTION(ingres_field_type)
 }
 /* }}} */
 
-/* {{{ proto string ingres_field_nullable(int index [, resource link])
+/* {{{ proto string ingres_field_nullable(resource result, int index)
    Return true if the field is nullable and false otherwise index must be >0 and <= ingres_num_fields() */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_field_nullable)
@@ -2802,7 +2809,7 @@ PHP_FUNCTION(ingres_field_nullable)
 }
 /* }}} */
 
-/* {{{ proto string ingres_field_length(int index [, resource link])
+/* {{{ proto string ingres_field_length(resource result, int index)
    Return the length of a field in a query result index must be >0 and <= ingres_num_fields() */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_field_length)
@@ -2825,7 +2832,7 @@ PHP_FUNCTION(ingres_field_length)
 }
 /* }}} */
 
-/* {{{ proto string ingres_field_precision(int index [, resource link])
+/* {{{ proto string ingres_field_precision(resource result, int index)
    Return the precision of a field in a query result index must be >0 and <= ingres_num_fields() */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_field_precision)
@@ -2848,7 +2855,7 @@ PHP_FUNCTION(ingres_field_precision)
 }
 /* }}} */
 
-/* {{{ proto string ingres_field_scale(int index [, resource link])
+/* {{{ proto string ingres_field_scale(resource result, int index)
    Return the scale of a field in a query result index must be >0 and <= ingres_num_fields() */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_field_scale)
@@ -3092,6 +3099,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
     char *lob_segment, *lob_ptr, *lob_data;
     II_BOOL have_lob = FALSE;
     int cell, col_no;
+    II_PTR next_cell = NULL;
 
 #if defined(IIAPI_VERSION_3)
     UTF8 *tmp_utf8_string_ptr = NULL;
@@ -3109,16 +3117,16 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 #if defined(IIAPI_VERSION_6)
     /* For the time being if some one has requested a specific row we do not check to see
        if we can satisfy that request from the buffer. For the time being we release 
-       the resultData buffer.
-       TODO : Check to see if we can satisfy the request from ii_result->resultData.
+       the metaData buffer.
+       TODO : Check to see if we can satisfy the request from ii_result->metaData.
        */
-    if (((ii_result->scrollable) && row_position != -1) &&  ii_result->resultData != NULL )
+    if (((ii_result->scrollable) && row_position != -1) &&  ii_result->metaData != NULL )
     {
         _free_resultdata(ii_result);
     }
 #endif
 
-    if ( ii_result->resultData != NULL )
+    if ( ii_result->metaData != NULL )
     {
         /* If we have pre-fetched data available */
         ii_result->rowNumber++;
@@ -3127,7 +3135,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
             /* take from the existing buffer */
             for (col_no = 0; col_no < ii_result->fieldCount; col_no++)
             {
-                php_ii_setup_return_value(INTERNAL_FUNCTION_PARAM_PASSTHRU, &ii_result->resultData[(ii_result->rowNumber * ii_result->fieldCount) + col_no], ii_result, col_no, result_type);
+                php_ii_setup_return_value(INTERNAL_FUNCTION_PARAM_PASSTHRU, &ii_result->metaData[(ii_result->rowNumber * ii_result->fieldCount) + col_no], ii_result, col_no, result_type);
             }
         }
         else
@@ -3144,13 +3152,16 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
             ii_result->getColParm.gc_stmtHandle = ii_result->stmtHandle;
             ii_result->getColParm.gc_moreSegments = 0;
             /* Allocate the memory needed to retrieve the data */
-            ii_result->resultData = (IIAPI_DATAVALUE *) emalloc (sizeof(IIAPI_DATAVALUE) * ii_result->getColParm.gc_rowCount * ii_result->getColParm.gc_columnCount);
-            ii_result->getColParm.gc_columnData = ii_result->resultData;
+            ii_result->metaData = (IIAPI_DATAVALUE *) emalloc (sizeof(IIAPI_DATAVALUE) * ii_result->getColParm.gc_rowCount * ii_result->getColParm.gc_columnCount);
+            ii_result->getColParm.gc_columnData = ii_result->metaData;
 
             /* Setup the buffer for receiving the results */
+            ii_result->dataBuffer = (II_PTR) emalloc(ii_result->rowWidth * ii_result->getColParm.gc_rowCount );
+            next_cell = ii_result->dataBuffer;
             for( cell=0; cell < ( ii_result->fieldCount * ii_result->getColParm.gc_rowCount ); cell++)
             {
-                 ii_result->resultData[cell].dv_value = (II_PTR) emalloc((ii_result->descriptor[cell % ii_result->fieldCount]).ds_length);
+                 ii_result->metaData[cell].dv_value = next_cell;
+                 next_cell += (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length;
             }  
 
             IIapi_getColumns(&ii_result->getColParm);
@@ -3181,7 +3192,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                     }
                     null_column_name = 1;
                 }
-                php_ii_setup_return_value(INTERNAL_FUNCTION_PARAM_PASSTHRU, &ii_result->resultData[(ii_result->rowNumber * ii_result->fieldCount) + col_no], ii_result, col_no, result_type);
+                php_ii_setup_return_value(INTERNAL_FUNCTION_PARAM_PASSTHRU, &ii_result->metaData[(ii_result->rowNumber * ii_result->fieldCount) + col_no], ii_result, col_no, result_type);
 
                 if ( ii_result->procname != NULL && null_column_name == 1 )
                 {
@@ -3298,13 +3309,16 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
             ii_result->getColParm.gc_stmtHandle = ii_result->stmtHandle;
             ii_result->getColParm.gc_moreSegments = 0;
             /* Allocate the memory needed to retrieve the data */
-            ii_result->resultData = (IIAPI_DATAVALUE *) emalloc (sizeof(IIAPI_DATAVALUE) * ii_result->getColParm.gc_rowCount * ii_result->getColParm.gc_columnCount);
-            ii_result->getColParm.gc_columnData = ii_result->resultData;
+            ii_result->metaData = (IIAPI_DATAVALUE *) emalloc (sizeof(IIAPI_DATAVALUE) * ii_result->getColParm.gc_rowCount * ii_result->getColParm.gc_columnCount);
+            ii_result->getColParm.gc_columnData = ii_result->metaData;
 
             /* Setup the buffer for receiving the results */
+            ii_result->dataBuffer = (II_PTR) emalloc(ii_result->rowWidth * ii_result->getColParm.gc_rowCount );
+            next_cell = ii_result->dataBuffer;
             for( cell=0; cell < ( ii_result->fieldCount * ii_result->getColParm.gc_rowCount ); cell++)
             {
-                 ii_result->resultData[cell].dv_value = (II_PTR) emalloc((ii_result->descriptor[cell % ii_result->fieldCount]).ds_length);
+                 ii_result->metaData[cell].dv_value = next_cell;
+                 next_cell += (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length;
             }  
 
             IIapi_getColumns(&ii_result->getColParm);
@@ -3335,7 +3349,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                     }
                     null_column_name = 1;
                 }
-                php_ii_setup_return_value(INTERNAL_FUNCTION_PARAM_PASSTHRU, &ii_result->resultData[(ii_result->rowNumber * ii_result->fieldCount) + col_no], ii_result, col_no, result_type);
+                php_ii_setup_return_value(INTERNAL_FUNCTION_PARAM_PASSTHRU, &ii_result->metaData[(ii_result->rowNumber * ii_result->fieldCount) + col_no], ii_result, col_no, result_type);
 
                 if ( ii_result->procname != NULL && null_column_name == 1 )
                 {
@@ -3807,7 +3821,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 }
 /* }}} */
 
-/* {{{ proto array ingres_fetch_array([int result_type [, resource link]])
+/* {{{ proto array ingres_fetch_array(resource result [, int row_position [, int row_count [,int result_type]]])
    Fetch a row of result into an array result_type can be 
    II_NUM for enumerated array, 
    II_ASSOC for associative array, or 
@@ -3836,7 +3850,7 @@ PHP_FUNCTION(ingres_fetch_array)
 }
 /* }}} */
 
-/* {{{ proto array ingres_fetch_row(resource result)
+/* {{{ proto array ingres_fetch_row(resource result [, int row_position [, int row_count]])
    Fetch a row of result into an enumerated array */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_fetch_row)
@@ -3860,7 +3874,7 @@ PHP_FUNCTION(ingres_fetch_row)
 }
 /* }}} */
 
-/* {{{ proto array ingres_fetch_object([int result_type [, resource link]])
+/* {{{ proto array ingres_fetch_object(resource result [, int row_position [, int row_count [,int result_type]]])
    Fetch a row of result into an object result_type can be II_NUM for enumerated object, II_ASSOC for associative object, or II_BOTH (default) */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_fetch_object)
@@ -4200,78 +4214,6 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode)
         default:
             break;
     }
-}
-/* }}} */
-
-/* {{{ proto long ingres_conn_errno([resource link])
-   Gets the last ingres error code generated */
-#ifdef HAVE_INGRES2
-PHP_FUNCTION(ingres2_conn_errno)
-#else
-PHP_FUNCTION(ingres_conn_errno)
-#endif
-{
-    php_ii_error(INTERNAL_FUNCTION_PARAM_PASSTHRU, 0);
-}
-/* }}} */
-
-/* {{{ proto string ingres_conn_error ([resource link])
-   Gets a meaningful error message for the last error generated  */
-#ifdef HAVE_INGRES2
-PHP_FUNCTION(ingres2_conn_error)
-#else
-PHP_FUNCTION(ingres_conn_error)
-#endif
-{
-    php_ii_error(INTERNAL_FUNCTION_PARAM_PASSTHRU, 1);
-}
-/* }}} */
-
-/* {{{ proto string ingres_conn_errsqlstate([resource link])
-   Gets the last SQLSTATE generated for an error */
-#ifdef HAVE_INGRES2
-PHP_FUNCTION(ingres2_conn_errsqlstate)
-#else
-PHP_FUNCTION(ingres_conn_errsqlstate)
-#endif
-{
-    php_ii_error(INTERNAL_FUNCTION_PARAM_PASSTHRU, 2);
-}
-/* }}} */
-
-/* {{{ proto long ingres_stmt_errno([resource link])
-   Gets the last ingres error code generated */
-#ifdef HAVE_INGRES2
-PHP_FUNCTION(ingres2_stmt_errno)
-#else
-PHP_FUNCTION(ingres_stmt_errno)
-#endif
-{
-    php_ii_error(INTERNAL_FUNCTION_PARAM_PASSTHRU, 0);
-}
-/* }}} */
-
-/* {{{ proto string ingres_stmt_error ([resource link])
-   Gets a meaningful error message for the last error generated  */
-#ifdef HAVE_INGRES2
-PHP_FUNCTION(ingres2_stmt_error)
-#else
-PHP_FUNCTION(ingres_stmt_error)
-#endif
-{
-    php_ii_error(INTERNAL_FUNCTION_PARAM_PASSTHRU, 1);
-}
-/* }}} */
-
-/* {{{ proto string ingres_stmt_errsqlstate([resource link])
-   Gets the last SQLSTATE generated for an error */
-#ifdef HAVE_INGRES2
-PHP_FUNCTION(ingres2_stmt_errsqlstate)
-#else
-PHP_FUNCTION(ingres_stmt_errsqlstate)
-#endif
-{
-    php_ii_error(INTERNAL_FUNCTION_PARAM_PASSTHRU, 2);
 }
 /* }}} */
 
@@ -5786,7 +5728,7 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
             case IIAPI_DEC_TYPE:    /* decimal (fixed point number) */
             case IIAPI_MNY_TYPE:    /* money */
                 /* convert to floating point number */
-                php_ii_convert_data ( IIAPI_FLT_TYPE, sizeof(II_FLOAT8), 53, ii_result, &ii_result->resultData[(ii_result->rowNumber * ii_result->fieldCount)], ii_result->getColParm, col_no, k TSRMLS_CC );
+                php_ii_convert_data ( IIAPI_FLT_TYPE, sizeof(II_FLOAT8), 53, ii_result, &ii_result->metaData[(ii_result->rowNumber * ii_result->fieldCount)], ii_result->getColParm, col_no, k TSRMLS_CC );
                 /* NO break */
 
             case IIAPI_FLT_TYPE:    /* floating point number */
@@ -5972,7 +5914,7 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
 #endif
                     )
                 {
-                    php_ii_convert_data ( IIAPI_VCH_TYPE, 32, 0, ii_result, &ii_result->resultData[(ii_result->rowNumber * ii_result->fieldCount)], ii_result->getColParm, k, col_no TSRMLS_CC );
+                    php_ii_convert_data ( IIAPI_VCH_TYPE, 32, 0, ii_result, &ii_result->metaData[(ii_result->rowNumber * ii_result->fieldCount)], ii_result->getColParm, k, col_no TSRMLS_CC );
                     columnData->dv_length = *((II_INT2 *) columnData->dv_value);
                     columnData->dv_value = (II_CHAR *)columnData->dv_value + 2;
                     correct_length = 1;
@@ -6017,19 +5959,19 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
 /* }}} */
 
 /* {{{ static void _free_resultdata (II_RESULT *ii_result) */
-/* Free the memory associated with ii_result->resultData */
+/* Free the memory associated with ii_result->metaData */
 static void _free_resultdata (II_RESULT *ii_result)
 {
     int cell;
-    if ( ii_result->resultData )
+    if ( ii_result->metaData )
     {
-        for( cell=0; cell < ( ii_result->fieldCount * II_BUFFER_SIZE ); cell++ )
+        if ( ii_result->dataBuffer )
         {
-            /* free up the memory assigned to hold the return data */
-            efree(ii_result->resultData[cell].dv_value);
-        }  
-        efree(ii_result->resultData);
-        ii_result->resultData = NULL;
+            efree(ii_result->dataBuffer);
+            ii_result->dataBuffer = NULL;
+        }
+        efree(ii_result->metaData);
+        ii_result->metaData = NULL;
         ii_result->rowsReturned = 0;
         ii_result->rowNumber = 0;
     }

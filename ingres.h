@@ -65,10 +65,12 @@ typedef struct _II_RESULT {
     int                 link_id;    /* the link to which this result belongs */
     II_LONG             apiLevel;   /* The API level of the DBMS server. Used to determine what the driver can/cannot do */
                                     /* See $II_SYSTEM/ingres/files/iiapi.h for the list */
-    IIAPI_DATAVALUE     *resultData; /* Buffer for IIapi_getColumn() fetches of multiple rows */
+    IIAPI_DATAVALUE     *metaData; /* Buffer for column meta data  */
+    II_PTR              *dataBuffer; /* Buffer used to hold data fetched from IIapi_getColumns() */
     int                 rowsReturned;   /* Number of rows fetched into resultData */
     int                 rowNumber;   /* Row in resultData being examined */
     IIAPI_GETCOLPARM    getColParm; /* Column data for the resultset */
+    int                 rowWidth;   /* Row width in bytes */
 } II_RESULT;
 
 /* The following was added to allow the extension to build on Windows using */
