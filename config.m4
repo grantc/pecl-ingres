@@ -26,10 +26,10 @@ if test "$PHP_INGRES" != "no" && test "$PHP_INGRES2" = "no"; then
     AC_MSG_ERROR(Cannot find iiapi.h under $II_DIR/files - is \$II_SYSTEM set?)
   fi
 
-  if test -r $II_DIR/lib/libiiapi.1.so; then
+  if test -r $II_DIR/lib/libiiapi.1.$SHLIB_SUFFIX_NAME; then
     II_LIB_DIR=$II_DIR/lib
   else
-    AC_MSG_ERROR(Cannot find libiiapi.1.so under $II_DIR/lib - is \$II_SYSTEM set?)
+    AC_MSG_ERROR(Cannot find libiiapi.1.$SHLIB_SUFFIX_NAME under $II_DIR/lib - is \$II_SYSTEM set?)
   fi
 
   PHP_ADD_LIBRARY_WITH_PATH(iiapi.1, $II_LIB_DIR, INGRES_SHARED_LIBADD)

@@ -1,4 +1,5 @@
 CVS - 2.0.2-dev
+- Enable the extension to build on Mac OS X and HP-UX
 - Reduce the number of emalloc calls in php_ii_fetch()
 - Clean up proto entries in ingres.c
 - Make ingres_conn_*() and ingres_stmt_* aliases for their ingres_err*() counterparts
