@@ -2,6 +2,8 @@
 Ingres: execute a simple select against default link - no results returned.
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--ENV--
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 

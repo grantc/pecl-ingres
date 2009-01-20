@@ -2,6 +2,8 @@
 Ingres: execute a delete using a parameter.
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--ENV--
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 require_once('connection.inc');

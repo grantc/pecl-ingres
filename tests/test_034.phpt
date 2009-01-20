@@ -2,6 +2,8 @@
 Ingres: Date century boundary.
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--ENV--
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 

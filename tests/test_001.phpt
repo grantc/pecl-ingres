@@ -2,6 +2,8 @@
 Ingres: connect to a database as current user
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--ENV--
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 
@@ -14,7 +16,7 @@ if ($conn) {
     ingres_close($conn);
 }
 else {
-    echo "Connection failed.";
+    echo "Connection failed - " . ingres_errno() . " - " . ingres_error();
 }
 
 ?>

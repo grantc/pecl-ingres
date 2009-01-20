@@ -2,6 +2,8 @@
 Ingres: execute an insert using a parameter.
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--ENV--
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 require_once('connection.inc');
@@ -10,7 +12,7 @@ $conn = ingres_connect($database,$user,$password);
 
 if ($conn) {
     echo "Connection succeeded.";
-    	$rc=ingres_query($conn, "delete from param_tests",$conn);
+    	$rc=ingres_query($conn, "delete from param_tests");
         $param = array(1,1.1,"Row 1");
 	$rc=ingres_query($conn, "insert into param_tests values (?,?,?)",$param);
 	if ($rc) {

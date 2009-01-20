@@ -2,6 +2,8 @@
 Ingres: connect to a database using a role and role password
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--ENV--
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 

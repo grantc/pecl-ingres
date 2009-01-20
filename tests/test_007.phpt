@@ -2,6 +2,8 @@
 Ingres: execute a simple select using a parameter - fetch object.
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--ENV--
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 

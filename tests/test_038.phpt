@@ -3,7 +3,7 @@ Ingres: test support for INTEGER8 values
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
 --ENV--
-II_SYSTEM=/opt/Ingres/IngresR3
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 

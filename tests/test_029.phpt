@@ -2,6 +2,8 @@
 Ingres: Adjust the date format to ISO and retrieve a date value.
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--ENV--
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 

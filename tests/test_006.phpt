@@ -2,6 +2,8 @@
 Ingres: execute a simple select against default link - fetch assoc array.
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--ENV--
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 
@@ -12,9 +14,9 @@ $conn = ingres_connect($database,$user,$password);
 if ($conn) {
     echo "Connection succeeded.";
 	$rc=ingres_query($conn, "select * from iirelation where relid='iirelation'");
-	if ($rc) {
+	if (is_resource($rc)) {
 		echo "Query succeeded.";
-		while ($row=ingres_fetch_array(INGRES_ASSOC)) {
+		while ($row=ingres_fetch_array($rc)) {
 			echo $row["relowner"];
 		}
 	} else {

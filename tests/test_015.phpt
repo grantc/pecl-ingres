@@ -2,6 +2,8 @@
 Ingres: Specifying the default structure for a newly created table.
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--ENV--
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 

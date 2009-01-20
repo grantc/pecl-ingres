@@ -2,12 +2,14 @@
 Ingres: Setting money format on connection.
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--ENV--
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 
 require_once('connection.inc');
 
-$options = array( "money_lort" => "INGRES_MONEY_LEADING" );
+$options = array( "money_lort" => INGRES_MONEY_TRAILING, "money_sign" => "¿" );
 
 $conn=ingres_connect($database,$user,$password, $options);
 
@@ -45,4 +47,4 @@ else
 ingres_close($conn);
 ?>
 --EXPECT--
-Connection succeeded.1.99€
+Connection succeeded.1.99¿

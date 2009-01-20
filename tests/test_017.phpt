@@ -2,6 +2,8 @@
 Ingres: Connecting with a dbms password.
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--ENV--
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 

@@ -2,6 +2,8 @@
 Ingres: connect to a database changing the effective user.
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--ENV--
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 

@@ -3,7 +3,7 @@ Ingres: test freeing multiple resultsets in random order
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
 --ENV--
-II_SYSTEM=/opt/Ingres/IngresR3
+II_SYSTEM=/opt/Ingres/II
 --FILE--
 <?php
 
