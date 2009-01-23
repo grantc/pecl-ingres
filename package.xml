@@ -14,27 +14,27 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grant.croker@ingres.com</email>
   <active>yes</active>
  </lead>
- <date>2008-12-20</date>
- <time>10:00:00</time>
+ <date>2009-01-23</date>
+ <time>11:00:00</time>
  <version>
-  <release>2.0.1</release>
-  <api>2.0.1</api>
+  <release>2.0.2</release>
+  <api>2.0.2</api>
  </version>
  <stability>
   <release>stable</release>
   <api>stable</api>
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
- <notes>This release fixes a number problems discovered since 2.0.0 was released. See below for the list of changes made:
- - Improved performance by batch fetching rows
- - Improved interoperability when working with older Ingres releases
- - Improved cleanup when a transaction/session is prematurely aborted
- - Replaced "long long int" with "__int64" to allow the extension to build with VC6
- - Use PZVAL_ISREF instead of pointing at (*val)->is_ref
- - Added --enable-ingres2 to generate php_ingres2.dll for Windows
- - Fixed regression with IIAPI_CP_LOGIN_LOCAL being used at the wrong API level
- - Revised PECL_INGRES_VERSION to take in to consideration --enable-ingres2
- - Fixed LOB retrieval when used with scollable cursors with Ingres 9.2.0</notes>
+ <notes>This release fixes a number problems discovered since 2.0.1 was released. See below for the list of changes made:
+    - Fix corrupt Ingres MONEY to PHP DOUBLE conversions
+    - Eliminate memory leak when ingres_free_result() is not called
+    - Fix ingres_field_name() so it returns the correct column name
+    - Fix SEGV in php_ii_convert_data() when converting DATE to STRING
+    - Enable the extension to build on Mac OS X and HP-UX
+    - Reduce the number of emalloc calls in php_ii_fetch()
+    - Clean up proto entries in ingres.c
+    - Make ingres_conn_*() and ingres_stmt_* aliases for their ingres_err*() counterparts
+ </notes>
  <contents>
   <dir name="/">
    <dir name="tests">
@@ -77,6 +77,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file baseinstalldir="ingres" name="test_035.phpt" role="test" />
     <file baseinstalldir="ingres" name="test_036.phpt" role="test" />
     <file baseinstalldir="ingres" name="test_037.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_038.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_039.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_040.phpt" role="test" />
    </dir> <!-- //tests -->
    <file baseinstalldir="ingres" name="BUILD.COM" role="src" />
    <file baseinstalldir="ingres" name="CHANGELOG" role="doc" />

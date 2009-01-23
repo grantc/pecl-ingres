@@ -1,4 +1,8 @@
 CVS - 2.0.2-dev
+- Fix corrupt Ingres MONEY to PHP DOUBLE conversions
+- Eliminate memory leak when ingres_free_result() is not called
+- Fix ingres_field_name() so it returns the correct column name
+- Fix SEGV in php_ii_convert_data() when converting DATE to STRING
 - Enable the extension to build on Mac OS X and HP-UX
 - Reduce the number of emalloc calls in php_ii_fetch()
 - Clean up proto entries in ingres.c

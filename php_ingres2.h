@@ -27,7 +27,7 @@
 #define PHP_INGRES2_H
 
 #if HAVE_INGRES2
-#define PHP_INGRES2_VERSION "2.0.2-dev"
+#define PHP_INGRES2_VERSION "2.0.2"
 #endif
 
 #endif /* PHP_INGRES2_H */

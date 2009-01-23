@@ -202,6 +202,9 @@ static int _close_statement(II_RESULT *ii_result TSRMLS_DC)
 
     if (ii_result->stmtHandle)
     {
+        /* Release any resulset data */
+        _free_resultdata (ii_result);
+
         /* see if we can close the query without cancelling it */
         /* Free query resources. */
         closeParm.cl_genParm.gp_callback = NULL;
@@ -2581,7 +2584,7 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result
     {
 
         case II_FIELD_INFO_NAME:
-            name = php_ii_field_name(ii_result, index TSRMLS_CC);
+            name = php_ii_field_name(ii_result, IIG(array_index_start) == 0 ? --index : index TSRMLS_CC);
             if (name == NULL)
             {
                 RETURN_FALSE;
@@ -2907,7 +2910,6 @@ PHP_FUNCTION(ingres_free_result)
          RETURN_FALSE;
     }
 
-    _free_resultdata(ii_result);
     php_ii_result_remove (ii_result, Z_LVAL_P(result) TSRMLS_CC);
 
     zend_list_delete(Z_LVAL_P(result));
@@ -2997,6 +2999,7 @@ static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_
 static II_LONG php_ii_convert_data ( short destType, int destSize, int precision, II_RESULT *ii_result, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC )
 {
     /* TODO: Add a mechanism for handling an IIAPI_LEVEL_1 client (or newer) talking to a level 0 client */
+
 #if defined (IIAPI_VERSION_2)
     IIAPI_FORMATPARM formatParm;
 
@@ -3022,7 +3025,7 @@ static II_LONG php_ii_convert_data ( short destType, int destSize, int precision
     formatParm.fd_dstDesc.ds_columnName = NULL;
     formatParm.fd_dstValue.dv_null = FALSE;
     formatParm.fd_dstValue.dv_length = formatParm.fd_dstDesc.ds_length;
-    formatParm.fd_dstValue.dv_value = emalloc(formatParm.fd_dstDesc.ds_length+1);
+    formatParm.fd_dstValue.dv_value = emalloc(formatParm.fd_dstDesc.ds_length);
 
     IIapi_formatData(&formatParm);
 
@@ -3030,10 +3033,14 @@ static II_LONG php_ii_convert_data ( short destType, int destSize, int precision
       return formatParm.fd_status;
     }
 
-    columnData[column].dv_length = formatParm.fd_dstValue.dv_length;
     columnData[column].dv_value = formatParm.fd_dstValue.dv_value;
-    efree(formatParm.fd_srcValue.dv_value);
-    formatParm.fd_srcValue.dv_value = NULL;
+    columnData[column].dv_length = formatParm.fd_dstValue.dv_length;
+
+    if (ii_result->metaData == NULL)
+    {
+        efree(formatParm.fd_srcValue.dv_value);
+        formatParm.fd_srcValue.dv_value = NULL;
+    }
 
 #else
     IIAPI_CONVERTPARM convertParm;
@@ -3057,7 +3064,7 @@ static II_LONG php_ii_convert_data ( short destType, int destSize, int precision
     convertParm.cv_dstDesc.ds_columnName = NULL;
     convertParm.cv_dstValue.dv_null = FALSE;
     convertParm.cv_dstValue.dv_length = convertParm.cv_dstDesc.ds_length;
-    convertParm.cv_dstValue.dv_value = emalloc(convertParm.cv_dstDesc.ds_length+1);
+    convertParm.cv_dstValue.dv_value = emalloc(convertParm.cv_dstDesc.ds_length);
 
     IIapi_convertData(&convertParm);
 
@@ -3065,10 +3072,14 @@ static II_LONG php_ii_convert_data ( short destType, int destSize, int precision
       return convertParm.cv_status;
     }
 
-    columnData[column].dv_length = convertParm.cv_dstValue.dv_length;
     columnData[column].dv_value = convertParm.cv_dstValue.dv_value;
-    efree(convertParm.cv_srcValue.dv_value);
-    convertParm.cv_srcValue.dv_value=NULL;
+    columnData[column].dv_length = convertParm.cv_dstValue.dv_length;
+
+    if (ii_result->metaData == NULL)
+    {
+        efree(convertParm.cv_srcValue.dv_value);
+        convertParm.cv_srcValue.dv_value=NULL;
+    }
 #endif
 
     return II_OK;
@@ -3099,7 +3110,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
     char *lob_segment, *lob_ptr, *lob_data;
     II_BOOL have_lob = FALSE;
     int cell, col_no;
-    II_PTR next_cell = NULL;
+    char *next_cell = NULL;
 
 #if defined(IIAPI_VERSION_3)
     UTF8 *tmp_utf8_string_ptr = NULL;
@@ -3157,7 +3168,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
             /* Setup the buffer for receiving the results */
             ii_result->dataBuffer = (II_PTR) emalloc(ii_result->rowWidth * ii_result->getColParm.gc_rowCount );
-            next_cell = ii_result->dataBuffer;
+            next_cell = (char *)ii_result->dataBuffer;
             for( cell=0; cell < ( ii_result->fieldCount * ii_result->getColParm.gc_rowCount ); cell++)
             {
                  ii_result->metaData[cell].dv_value = next_cell;
@@ -3314,7 +3325,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
             /* Setup the buffer for receiving the results */
             ii_result->dataBuffer = (II_PTR) emalloc(ii_result->rowWidth * ii_result->getColParm.gc_rowCount );
-            next_cell = ii_result->dataBuffer;
+            next_cell = (char *)ii_result->dataBuffer;
             for( cell=0; cell < ( ii_result->fieldCount * ii_result->getColParm.gc_rowCount ); cell++)
             {
                  ii_result->metaData[cell].dv_value = next_cell;
@@ -3685,6 +3696,28 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                             if (correct_length)
                             {
                                 columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value - 2;
+                                if ((ii_result->descriptor[i + k]).ds_dataType == IIAPI_DTE_TYPE
+#if defined(IIAPI_VERSION_5)
+                                    || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_ADATE_TYPE
+                                    || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TIME_TYPE
+                                    || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TMWO_TYPE
+                                    || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TMTZ_TYPE
+                                    || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TS_TYPE
+                                    || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TSWO_TYPE
+                                    || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TSTZ_TYPE
+                                    || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_INTYM_TYPE
+                                    || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_INTDS_TYPE
+#endif
+                                    )
+                                {
+                                    efree(columnData[k].dv_value);
+                                    columnData[k].dv_value = NULL;
+                                }
+                            }
+                            else if ((ii_result->descriptor[i + k]).ds_dataType == IIAPI_MNY_TYPE)
+                            {
+                                efree(columnData[k].dv_value);
+                                columnData[k].dv_value = NULL;
                             }
                         }
                         if ( ii_result->procname != NULL && null_column_name == 1 )
@@ -5728,7 +5761,7 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
             case IIAPI_DEC_TYPE:    /* decimal (fixed point number) */
             case IIAPI_MNY_TYPE:    /* money */
                 /* convert to floating point number */
-                php_ii_convert_data ( IIAPI_FLT_TYPE, sizeof(II_FLOAT8), 53, ii_result, &ii_result->metaData[(ii_result->rowNumber * ii_result->fieldCount)], ii_result->getColParm, col_no, k TSRMLS_CC );
+                php_ii_convert_data ( IIAPI_FLT_TYPE, sizeof(II_FLOAT8), 53, ii_result, &ii_result->metaData[(ii_result->rowNumber * ii_result->fieldCount)], ii_result->getColParm, k, col_no TSRMLS_CC );
                 /* NO break */
 
             case IIAPI_FLT_TYPE:    /* floating point number */
@@ -5942,7 +5975,6 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
                 {
                     add_assoc_stringl(return_value, php_ii_field_name(ii_result, col_no + IIG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
                 }
-
                 break;
 
             default:
@@ -5953,6 +5985,28 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
         if (correct_length)
         {
             columnData->dv_value = (II_CHAR *)columnData->dv_value - 2;
+            if ((ii_result->descriptor[col_no]).ds_dataType == IIAPI_DTE_TYPE
+#if defined(IIAPI_VERSION_5)
+                || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_ADATE_TYPE
+                || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TIME_TYPE
+                || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TMWO_TYPE
+                || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TMTZ_TYPE
+                || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TS_TYPE
+                || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TSWO_TYPE
+                || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TSTZ_TYPE
+                || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_INTYM_TYPE
+                || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_INTDS_TYPE
+#endif
+                )
+            {
+                efree(columnData->dv_value);
+                columnData->dv_value = NULL;
+            }
+        }
+        else if ((ii_result->descriptor[col_no]).ds_dataType == IIAPI_MNY_TYPE)
+        {
+            efree(columnData->dv_value);
+            columnData->dv_value = NULL;
         }
     }
 }
@@ -5962,7 +6016,6 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
 /* Free the memory associated with ii_result->metaData */
 static void _free_resultdata (II_RESULT *ii_result)
 {
-    int cell;
     if ( ii_result->metaData )
     {
         if ( ii_result->dataBuffer )

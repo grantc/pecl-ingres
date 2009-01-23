@@ -246,16 +246,16 @@ When prompted:
 Installing from source
 
 The latest source code can be downloaded manually from http://pecl.php.net/get/
-ingres Once you have the source archive run through the following steps to
+ingres. Once you have the source archive run through the following steps to
 build and install, note that $II_SYSTEM needs to be defined beforehand:
 
   1. Extract the archive, adapt the version number accordingly:
 
-       tar -zxvf ingres-2.0.1.tgz
+       tar -zxvf ingres-2.0.2.tgz
 
   2. Enter the newly created directory:
 
-       cd ingres-2.0.1
+       cd ingres-2.0.2
 
   3. Generate the configuration file for the extension:
 
