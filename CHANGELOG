@@ -1,4 +1,4 @@
-CVS - 2.0.2-dev
+2.0.2
 - Fix corrupt Ingres MONEY to PHP DOUBLE conversions
 - Eliminate memory leak when ingres_free_result() is not called
 - Fix ingres_field_name() so it returns the correct column name
