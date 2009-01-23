@@ -1,3 +1,6 @@
+CVS 2.1.0-dev
+- Add ingres_result_seek() to support row positioning
+
 2.0.2
 - Fix corrupt Ingres MONEY to PHP DOUBLE conversions
 - Eliminate memory leak when ingres_free_result() is not called

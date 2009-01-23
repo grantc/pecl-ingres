@@ -61,13 +61,14 @@ typedef struct _II_RESULT {
     char                *procname;
 #if defined IIAPI_VERSION_6
     int                 scrollable; /* is this a scrollable cursor */
+    int                 rowCount;    /* the value returned from ingres_num_rows() for later reuse */
 #endif
     int                 link_id;    /* the link to which this result belongs */
     II_LONG             apiLevel;   /* The API level of the DBMS server. Used to determine what the driver can/cannot do */
                                     /* See $II_SYSTEM/ingres/files/iiapi.h for the list */
     IIAPI_DATAVALUE     *metaData; /* Buffer for column meta data  */
     II_PTR              *dataBuffer; /* Buffer used to hold data fetched from IIapi_getColumns() */
-    int                 rowsReturned;   /* Number of rows fetched into resultData */
+    int                 rowsReturned;   /* Number of rows fetched into resultData by IIapi_getColumns() */
     int                 rowNumber;   /* Row in resultData being examined */
     IIAPI_GETCOLPARM    getColParm; /* Column data for the resultset */
     int                 rowWidth;   /* Row width in bytes */
@@ -188,7 +189,7 @@ static void _close_ii_plink(zend_rsrc_list_entry *link TSRMLS_DC);
 static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent);
 static char *php_ii_field_name(II_RESULT *ii_result, int index TSRMLS_DC);
 static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, long index, int info_type);
-static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int result_type, long row_position, II_INT2 row_count);
+static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int result_type);
 static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode);
 static long php_ii_paramcount(char *statement TSRMLS_DC);
 static void php_ii_gen_cursor_id(II_RESULT *ii_result TSRMLS_DC);
@@ -206,6 +207,7 @@ static int _rollback_transaction(II_LINK *ii_link  TSRMLS_DC);
 static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_DC );
 static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATAVALUE *columnData, II_RESULT *ii_result, int col_no, int result_type);
 static void _free_resultdata (II_RESULT *ii_result);
+static short int php_ii_scroll_row_count (II_RESULT *ii_result TSRMLS_DC);
 
 
 #endif  /* HAVE_II */

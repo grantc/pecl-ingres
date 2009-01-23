@@ -88,6 +88,8 @@ function_entry ingres_functions[] = {
     PHP_FALIAS(ingres2_stmt_errsqlstate,  ingres2_errsqlstate,       NULL)
     PHP_FALIAS(ingres2_conn_errsqlstate,  ingres2_errsqlstate,       NULL)
     PHP_FE(ingres2_next_error,        NULL)
+    PHP_FE(ingres2_result_seek,        NULL)
+    PHP_FALIAS(ingres2_data_seek, ingres2_result_seek, NULL)
 #else
     PHP_FE(ingres_connect,            NULL)
     PHP_FE(ingres_pconnect,            NULL)
@@ -124,6 +126,8 @@ function_entry ingres_functions[] = {
     PHP_FALIAS(ingres_stmt_errsqlstate,  ingres_errsqlstate,       NULL)
     PHP_FALIAS(ingres_conn_errsqlstate,  ingres_errsqlstate,       NULL)
     PHP_FE(ingres_next_error,        NULL)
+    PHP_FE(ingres_result_seek,        NULL)
+    PHP_FALIAS(ingres_data_seek, ingres_result_seek, NULL)
 #endif
 
     {NULL, NULL, NULL}    /* Must be the last line in ingres_functions[] */
@@ -1019,6 +1023,7 @@ static void _ii_init_result (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result,
     ii_result->errorHandle = NULL;
 #if defined(IIAPI_VERSION_6)
     ii_result->scrollable = 0;
+    ii_result->rowCount = -1;  /* A call to ingres_num_rows()/ingres_data_seek() has yet to happen */
 #endif
     ii_result->link_id = -1;
     ii_result->apiLevel = ii_link->apiLevel;
@@ -2408,10 +2413,6 @@ PHP_FUNCTION(ingres_num_rows)
     zval *result;
     II_RESULT *ii_result;
     IIAPI_GETQINFOPARM getQInfoParm;
-#if defined(IIAPI_VERSION_6)
-    IIAPI_SCROLLPARM scrollParm;
-    long row_count=0;
-#endif 
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r" , &result) == FAILURE) 
     {
@@ -2421,8 +2422,20 @@ PHP_FUNCTION(ingres_num_rows)
     ZEND_FETCH_RESOURCE(ii_result, II_RESULT *, &result, -1, "Ingres Result", le_ii_result);
 
 #if defined(IIAPI_VERSION_6)
+
+
     if (ii_result->scrollable)
     {
+        if (php_ii_scroll_row_count (ii_result TSRMLS_CC) == II_FAIL)
+        {
+            RETURN_FALSE;
+        }
+        RETURN_LONG(ii_result->rowCount);
+    }
+    else
+    {
+        /* FIXME - When a SELECT is opened using IIAPI_QT_OPEN and is not scrollable this does not work */
+        /* get number of affected rows */
         getQInfoParm.gq_genParm.gp_callback = NULL;
         getQInfoParm.gq_genParm.gp_closure = NULL;
         getQInfoParm.gq_stmtHandle = ii_result->stmtHandle;
@@ -2434,22 +2447,14 @@ PHP_FUNCTION(ingres_num_rows)
         {
             RETURN_FALSE;
         }
-
-        scrollParm.sl_genParm.gp_callback = NULL;
-        scrollParm.sl_genParm.gp_closure = NULL;
-        scrollParm.sl_stmtHandle = ii_result->stmtHandle;
-        scrollParm.sl_orientation = IIAPI_SCROLL_AFTER;
-        scrollParm.sl_offset = 0;
-
-        IIapi_scroll(&scrollParm);
-        ii_sync(&(scrollParm.sl_genParm));
-
-        if (ii_success(&(scrollParm.sl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+        if (getQInfoParm.gq_mask & IIAPI_GQ_ROW_COUNT)
         {
-            RETURN_FALSE;
+            RETURN_LONG(getQInfoParm.gq_rowCount);
+        } else {
+            RETURN_LONG(0);
         }
     }
-#endif
+#else
     /* get number of affected rows */
     getQInfoParm.gq_genParm.gp_callback = NULL;
     getQInfoParm.gq_genParm.gp_closure = NULL;
@@ -2462,53 +2467,11 @@ PHP_FUNCTION(ingres_num_rows)
     {
         RETURN_FALSE;
     }
-
-#if defined(IIAPI_VERSION_6)
-    if (ii_result->scrollable)
+    if (getQInfoParm.gq_mask & IIAPI_GQ_ROW_COUNT)
     {
-        /* return the result */
-        if ((getQInfoParm.gq_cursorType & IIAPI_CURSOR_SCROLL) && (getQInfoParm.gq_mask & IIAPI_GQ_ROW_STATUS))
-        {
-            row_count =  getQInfoParm.gq_rowPosition;
-        }
-
-        scrollParm.sl_genParm.gp_callback = NULL;
-        scrollParm.sl_genParm.gp_closure = NULL;
-        scrollParm.sl_stmtHandle = ii_result->stmtHandle;
-        scrollParm.sl_orientation = IIAPI_SCROLL_BEFORE;
-        scrollParm.sl_offset = 0;
-
-        IIapi_scroll(&scrollParm);
-        ii_sync(&(scrollParm.sl_genParm));
-
-        if (ii_success(&(scrollParm.sl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
-        {
-            RETURN_FALSE;
-        }
-
-        getQInfoParm.gq_genParm.gp_callback = NULL;
-        getQInfoParm.gq_genParm.gp_closure = NULL;
-        getQInfoParm.gq_stmtHandle = ii_result->stmtHandle;
-
-        IIapi_getQueryInfo(&getQInfoParm);
-        ii_sync(&(getQInfoParm.gq_genParm));
-
-        if (ii_success(&(getQInfoParm.gq_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
-        {
-            RETURN_FALSE;
-        }
-        RETURN_LONG(row_count);
-    }
-    else
-    {
-#endif
-        if (getQInfoParm.gq_mask & IIAPI_GQ_ROW_COUNT)
-        {
-            RETURN_LONG(getQInfoParm.gq_rowCount);
-        } else {
-            RETURN_LONG(0);
-        }
-#if defined(IIAPI_VERSION_6)
+        RETURN_LONG(getQInfoParm.gq_rowCount);
+    } else {
+        RETURN_LONG(0);
     }
 #endif
 }
@@ -2910,6 +2873,7 @@ PHP_FUNCTION(ingres_free_result)
          RETURN_FALSE;
     }
 
+    _free_resultdata(ii_result);
     php_ii_result_remove (ii_result, Z_LVAL_P(result) TSRMLS_CC);
 
     zend_list_delete(Z_LVAL_P(result));
@@ -2999,6 +2963,7 @@ static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_
 static II_LONG php_ii_convert_data ( short destType, int destSize, int precision, II_RESULT *ii_result, IIAPI_DATAVALUE *columnData, IIAPI_GETCOLPARM getColParm, int field, int column TSRMLS_DC )
 {
     /* TODO: Add a mechanism for handling an IIAPI_LEVEL_1 client (or newer) talking to a level 0 client */
+    double tmp_double;
 
 #if defined (IIAPI_VERSION_2)
     IIAPI_FORMATPARM formatParm;
@@ -3030,7 +2995,7 @@ static II_LONG php_ii_convert_data ( short destType, int destSize, int precision
     IIapi_formatData(&formatParm);
 
     if (formatParm.fd_status != IIAPI_ST_SUCCESS ) {
-      return formatParm.fd_status;
+        return formatParm.fd_status;
     }
 
     columnData[column].dv_value = formatParm.fd_dstValue.dv_value;
@@ -3078,7 +3043,7 @@ static II_LONG php_ii_convert_data ( short destType, int destSize, int precision
     if (ii_result->metaData == NULL)
     {
         efree(convertParm.cv_srcValue.dv_value);
-        convertParm.cv_srcValue.dv_value=NULL;
+        convertParm.cv_srcValue.dv_value = NULL;
     }
 #endif
 
@@ -3086,15 +3051,109 @@ static II_LONG php_ii_convert_data ( short destType, int destSize, int precision
 }
 /* }}} */
 
+/* {{{ proto bool ingres_result_seek(resource link, int position)
+   Scroll to the row number specified */
+#ifdef HAVE_INGRES2
+PHP_FUNCTION(ingres2_result_seek)
+#else
+PHP_FUNCTION(ingres_result_seek)
+#endif
+{
+#if defined(IIAPI_VERSION_6)
+    IIAPI_SCROLLPARM scrollParm;
+#endif
+    zval *result;
+    II_RESULT *ii_result;
+    int  position = -1;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"rl" , &result, &position) == FAILURE) 
+    {
+        RETURN_FALSE;
+    }
+
+    ZEND_FETCH_RESOURCE(ii_result, II_RESULT *, &result, -1, "Ingres Result", le_ii_result);
+
+#if defined(IIAPI_VERSION_6)
+
+    /* adjust position for ingres.array_index_start */
+    position = IIG(array_index_start) ? position : position++;
+
+    /* Check to see if the result is scrollable */
+    if ( ii_result->scrollable )
+    {
+        if ( ii_result->rowCount == -1)
+        {
+            if (php_ii_scroll_row_count (ii_result TSRMLS_CC) == II_FAIL)
+            {
+                RETURN_FALSE;
+            }
+        }
+        if ( position > ii_result->rowCount)
+        {
+            php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to reposition the result to position %d when there are only %d rows", position, ii_result->rowCount);
+            RETURN_FALSE;
+        }
+        if ( position > -1 ) 
+        {
+            scrollParm.sl_genParm.gp_callback = NULL;
+            scrollParm.sl_genParm.gp_closure = NULL;
+            scrollParm.sl_stmtHandle = ii_result->stmtHandle;
+            scrollParm.sl_orientation = IIAPI_SCROLL_ABSOLUTE;
+            scrollParm.sl_offset = IIG(array_index_start) ? position : position++;
+
+            IIapi_scroll(&scrollParm);
+            ii_sync(&(scrollParm.sl_genParm));
+
+            if (ii_success(&(scrollParm.sl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+            {
+                RETURN_FALSE;
+            }
+            /* For the time being if some one has requested a specific row we do not check to see
+               if we can satisfy that request from the buffer. For the time being we release 
+               the metaData buffer.
+               TODO : Check to see if we can satisfy the request from ii_result->metaData.
+               */
+            if ( ii_result->metaData != NULL )
+            {
+                _free_resultdata(ii_result);
+            }
+        }
+        else
+        {
+            php_error_docref(NULL TSRMLS_CC, E_ERROR, "Negative row positions are not allowed");
+        }
+    } 
+    else
+    {
+        /* Give a nice message if the server cannot support it or if the result set is not-scrollable */
+        if ( ii_result->apiLevel < IIAPI_LEVEL_5 )
+        {
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Row positioning is not available  with an API level of less than 5, you have level %d", ii_result->apiLevel);
+        }
+        else
+        {
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to position result on a non-scrollable resultset");
+        }
+        RETURN_FALSE;
+    }
+#else
+    if ( position > 0)
+    {
+        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Row positioning is not supported at this release level (%d), level 5 is required", ii_result->apiLevel);
+        RETURN_FALSE;
+    }
+#endif
+    RETURN_TRUE;
+
+}
+/* }}} */
+
 /* {{{ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_LINK *ii_link, int result_type) */
 /* Fetch a row of result */
-static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int result_type, long row_position, II_INT2 row_count)
+static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int result_type)
 {
     IIAPI_DATAVALUE *columnData;
     IIAPI_GETQINFOPARM getQInfoParm;
-#if defined(IIAPI_VERSION_6)
-    IIAPI_POSPARM posParm;
-#endif
 
     int i, j, k, l;
     double value_double = 0;
@@ -3124,18 +3183,6 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
     /* init first char of array used to return BIG INT values as strings */
     value_long_long_str[0] = '\0';
 
-
-#if defined(IIAPI_VERSION_6)
-    /* For the time being if some one has requested a specific row we do not check to see
-       if we can satisfy that request from the buffer. For the time being we release 
-       the metaData buffer.
-       TODO : Check to see if we can satisfy the request from ii_result->metaData.
-       */
-    if (((ii_result->scrollable) && row_position != -1) &&  ii_result->metaData != NULL )
-    {
-        _free_resultdata(ii_result);
-    }
-#endif
 
     if ( ii_result->metaData != NULL )
     {
@@ -3254,42 +3301,6 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                 }
             }
         }
-
-#if defined(IIAPI_VERSION_6)
-        if (ii_result->scrollable)
-        {
-            if (row_position > 0) 
-            {
-                /* go to the requested row */
-                posParm.po_reference = IIAPI_POS_BEGIN;
-                posParm.po_offset = row_position;
-            } 
-            else
-            {
-                /* get next row */
-                posParm.po_reference = IIAPI_POS_CURRENT;
-                posParm.po_offset = 1;
-            }
-            posParm.po_genParm.gp_callback = NULL;
-            posParm.po_genParm.gp_closure = NULL;
-            posParm.po_stmtHandle = ii_result->stmtHandle;
-            posParm.po_rowCount = 1;
-
-            IIapi_position(&posParm);
-            ii_sync(&(posParm.po_genParm));
-
-            if (ii_success(&(posParm.po_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
-            {
-                RETURN_FALSE;
-            }
-        } 
-
-#else
-        if ( row_position > 0)
-        {
-            php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Row positioning is not supported at this release level");
-        }
-#endif
 
         /* Ingres OpenAPI/GCA can fetch mulitple rows at a time if and only if:   
            - There are no LONG types in the result set                         
@@ -3696,10 +3707,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                             if (correct_length)
                             {
                                 columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value - 2;
-                                if ((ii_result->descriptor[i + k]).ds_dataType == IIAPI_DTE_TYPE
-#if defined(IIAPI_VERSION_5)
+                                if ((ii_result->descriptor[i + k]).ds_dataType == IIAPI_DTE_TYPE 
+                                    || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_MNY_TYPE 
+#if defined(IIAPI_VERSION_5) 
                                     || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_ADATE_TYPE
-                                    || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TIME_TYPE
+                                    || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TIME_TYPE 
                                     || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TMWO_TYPE
                                     || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TMTZ_TYPE
                                     || (ii_result->descriptor[i + k]).ds_dataType == IIAPI_TS_TYPE
@@ -3854,7 +3866,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 }
 /* }}} */
 
-/* {{{ proto array ingres_fetch_array(resource result [, int row_position [, int row_count [,int result_type]]])
+/* {{{ proto array ingres_fetch_array(resource result [,int result_type])
    Fetch a row of result into an array result_type can be 
    II_NUM for enumerated array, 
    II_ASSOC for associative array, or 
@@ -3866,24 +3878,22 @@ PHP_FUNCTION(ingres_fetch_array)
 #endif
 {
     long result_type=II_BOTH; 
-    long row_position = -1;
     zval *result;
     II_RESULT *ii_result;
-    II_INT2 row_count=1;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r|lll" , &result, &result_type, &row_position, &row_count) == FAILURE) 
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r|l" , &result, &result_type) == FAILURE) 
     {
         RETURN_FALSE;
     }
 
     ZEND_FETCH_RESOURCE(ii_result, II_RESULT *, &result, -1 , "Ingres Result", le_ii_result);
 
-    php_ii_fetch(INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, (ZEND_NUM_ARGS() == 1 ? II_BOTH : result_type), row_position, row_count);
+    php_ii_fetch(INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, (ZEND_NUM_ARGS() == 1 ? II_BOTH : result_type));
 
 }
 /* }}} */
 
-/* {{{ proto array ingres_fetch_row(resource result [, int row_position [, int row_count]])
+/* {{{ proto array ingres_fetch_row(resource result)
    Fetch a row of result into an enumerated array */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_fetch_row)
@@ -3893,21 +3903,19 @@ PHP_FUNCTION(ingres_fetch_row)
 {
     zval *result;
     II_RESULT *ii_result;
-    long row_position = -1;
-    II_INT2 row_count=1;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r|ll" , &result, &row_position, &row_count) == FAILURE) 
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r" , &result) == FAILURE) 
     {
         RETURN_FALSE;
     }
 
     ZEND_FETCH_RESOURCE(ii_result, II_RESULT *, &result, -1 , "Ingres Result", le_ii_result);
 
-    php_ii_fetch(INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, II_NUM, row_position, row_count);
+    php_ii_fetch(INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, II_NUM);
 }
 /* }}} */
 
-/* {{{ proto array ingres_fetch_object(resource result [, int row_position [, int row_count [,int result_type]]])
+/* {{{ proto array ingres_fetch_object(resource result [,int result_type])
    Fetch a row of result into an object result_type can be II_NUM for enumerated object, II_ASSOC for associative object, or II_BOTH (default) */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_fetch_object)
@@ -3919,17 +3927,15 @@ PHP_FUNCTION(ingres_fetch_object)
     long result_type = II_BOTH; 
     zval *result = NULL;
     II_RESULT *ii_result;
-    long row_position = -1;
-    II_INT2 row_count = 1;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r|lll" , &result, &row_position, &row_count, &result_type) == FAILURE) 
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r|l" , &result, &result_type) == FAILURE) 
     {
         RETURN_FALSE;
     }
 
     ZEND_FETCH_RESOURCE(ii_result, II_RESULT *, &result, -1 , "Ingres Result", le_ii_result);
 
-    php_ii_fetch(INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, (ZEND_NUM_ARGS() == 1 ? II_ASSOC : result_type), row_position, row_count);
+    php_ii_fetch(INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, (ZEND_NUM_ARGS() == 1 ? II_ASSOC : result_type));
 
     if (Z_TYPE_P(return_value) == IS_ARRAY)
     {
@@ -5985,10 +5991,11 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
         if (correct_length)
         {
             columnData->dv_value = (II_CHAR *)columnData->dv_value - 2;
-            if ((ii_result->descriptor[col_no]).ds_dataType == IIAPI_DTE_TYPE
-#if defined(IIAPI_VERSION_5)
+            if ((ii_result->descriptor[col_no]).ds_dataType == IIAPI_DTE_TYPE 
+                || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_MNY_TYPE 
+#if defined(IIAPI_VERSION_5) 
                 || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_ADATE_TYPE
-                || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TIME_TYPE
+                || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TIME_TYPE 
                 || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TMWO_TYPE
                 || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TMTZ_TYPE
                 || (ii_result->descriptor[col_no]).ds_dataType == IIAPI_TS_TYPE
@@ -6028,6 +6035,133 @@ static void _free_resultdata (II_RESULT *ii_result)
         ii_result->rowsReturned = 0;
         ii_result->rowNumber = 0;
     }
+}
+/* }}} */
+
+/* {{{ static short int php_ii_scroll_row_count (II_RESULT *ii_result TSRMLS_DC) */
+static short int php_ii_scroll_row_count (II_RESULT *ii_result TSRMLS_DC)
+{
+#if defined(IIAPI_VERSION_6)
+
+    IIAPI_GETQINFOPARM getQInfoParm;
+    IIAPI_SCROLLPARM scrollParm;
+    long cur_row = 0; /* Current row */
+
+    /* Clear out any prior scroll */
+    getQInfoParm.gq_genParm.gp_callback = NULL;
+    getQInfoParm.gq_genParm.gp_closure = NULL;
+    getQInfoParm.gq_stmtHandle = ii_result->stmtHandle;
+
+    IIapi_getQueryInfo(&getQInfoParm);
+    ii_sync(&(getQInfoParm.gq_genParm));
+
+    if (ii_success(&(getQInfoParm.gq_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+    {
+        return II_FAIL;
+    }
+
+    /* Find out where we are so we can come back here again */
+    scrollParm.sl_genParm.gp_callback = NULL;
+    scrollParm.sl_genParm.gp_closure = NULL;
+    scrollParm.sl_stmtHandle = ii_result->stmtHandle;
+    scrollParm.sl_orientation = IIAPI_SCROLL_CURRENT;
+    scrollParm.sl_offset = 0;
+
+    IIapi_scroll(&scrollParm);
+    ii_sync(&(scrollParm.sl_genParm));
+
+    if (ii_success(&(scrollParm.sl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+    {
+        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to determine current cursor position");
+        return II_FAIL;
+    }
+
+    getQInfoParm.gq_genParm.gp_callback = NULL;
+    getQInfoParm.gq_genParm.gp_closure = NULL;
+    getQInfoParm.gq_stmtHandle = ii_result->stmtHandle;
+
+    IIapi_getQueryInfo(&getQInfoParm);
+    ii_sync(&(getQInfoParm.gq_genParm));
+
+    if (ii_success(&(getQInfoParm.gq_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+    {
+        return II_FAIL;
+    }
+    /* I am here ... */
+    if ((getQInfoParm.gq_cursorType & IIAPI_CURSOR_SCROLL) && (getQInfoParm.gq_mask & IIAPI_GQ_ROW_COUNT))
+    {
+        cur_row =  getQInfoParm.gq_rowPosition;
+    }
+
+    /* Scroll to the end of the data set */
+    scrollParm.sl_genParm.gp_callback = NULL;
+    scrollParm.sl_genParm.gp_closure = NULL;
+    scrollParm.sl_stmtHandle = ii_result->stmtHandle;
+    scrollParm.sl_orientation = IIAPI_SCROLL_AFTER;
+    scrollParm.sl_offset = 0;
+
+    IIapi_scroll(&scrollParm);
+    ii_sync(&(scrollParm.sl_genParm));
+
+    if (ii_success(&(scrollParm.sl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+    {
+        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to scroll to the end of the result set");
+        return II_FAIL;
+    }
+
+    getQInfoParm.gq_genParm.gp_callback = NULL;
+    getQInfoParm.gq_genParm.gp_closure = NULL;
+    getQInfoParm.gq_stmtHandle = ii_result->stmtHandle;
+
+    IIapi_getQueryInfo(&getQInfoParm);
+    ii_sync(&(getQInfoParm.gq_genParm));
+
+    if (ii_success(&(getQInfoParm.gq_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+    {
+        return II_FAIL;
+    }
+
+    /* store the end row position */
+    if ((getQInfoParm.gq_cursorType & IIAPI_CURSOR_SCROLL) && (getQInfoParm.gq_mask & IIAPI_GQ_ROW_COUNT))
+    {
+        ii_result->rowCount =  getQInfoParm.gq_rowPosition;
+    }
+
+    /* Scroll back to where we were */
+    scrollParm.sl_genParm.gp_callback = NULL;
+    scrollParm.sl_genParm.gp_closure = NULL;
+    scrollParm.sl_stmtHandle = ii_result->stmtHandle;
+    scrollParm.sl_orientation = cur_row ? IIAPI_SCROLL_ABSOLUTE : IIAPI_SCROLL_BEFORE;
+    scrollParm.sl_offset = cur_row;
+
+    IIapi_scroll(&scrollParm);
+    ii_sync(&(scrollParm.sl_genParm));
+
+    if (ii_success(&(scrollParm.sl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+    {
+        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to scroll back to row %d", cur_row);
+        return II_FAIL;
+    }
+
+    getQInfoParm.gq_genParm.gp_callback = NULL;
+    getQInfoParm.gq_genParm.gp_closure = NULL;
+    getQInfoParm.gq_stmtHandle = ii_result->stmtHandle;
+
+    IIapi_getQueryInfo(&getQInfoParm);
+    ii_sync(&(getQInfoParm.gq_genParm));
+
+    if (ii_success(&(getQInfoParm.gq_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+    {
+        return II_FAIL;
+    }
+    
+    return II_OK;
+
+#else
+
+    return II_FAIL;
+
+#endif
 }
 /* }}} */
 
