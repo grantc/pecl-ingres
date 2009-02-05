@@ -90,6 +90,7 @@ function_entry ingres_functions[] = {
     PHP_FE(ingres2_next_error,        NULL)
     PHP_FE(ingres2_result_seek,        NULL)
     PHP_FALIAS(ingres2_data_seek, ingres2_result_seek, NULL)
+    PHP_FE(ingres2_escape_string,        NULL)
 #else
     PHP_FE(ingres_connect,            NULL)
     PHP_FE(ingres_pconnect,            NULL)
@@ -128,6 +129,7 @@ function_entry ingres_functions[] = {
     PHP_FE(ingres_next_error,        NULL)
     PHP_FE(ingres_result_seek,        NULL)
     PHP_FALIAS(ingres_data_seek, ingres_result_seek, NULL)
+    PHP_FE(ingres_escape_string,        NULL)
 #endif
 
     {NULL, NULL, NULL}    /* Must be the last line in ingres_functions[] */
@@ -4786,13 +4788,7 @@ static void php_ii_convert_param_markers (char *query, char *converted_query TSR
 {
     char ch, tmp_ch;
     char *p, *tmp_p;
-    long parameter_count;
     int j;
-
-
-    /* work out how many param markers there are */
-    /* used to know how much to memory to allocate */
-    parameter_count = php_ii_paramcount (query TSRMLS_CC);
 
     sprintf(converted_query,"\0");
 
@@ -4862,6 +4858,84 @@ PHP_FUNCTION(ingres_set_environment)
         php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to set environment options provided");
         RETURN_FALSE;
     }    
+}
+/* }}} */
+
+/* {{{ proto string ingres_escape_string(resource link, string string_to_escape)
+   Escape special characters for use in Ingres queries */
+#ifdef HAVE_INGRES2
+PHP_FUNCTION(ingres2_escape_string)
+#else
+PHP_FUNCTION(ingres_escape_string)
+#endif
+{
+    zval *link; 
+    II_LINK *ii_link;
+    char *str_in = NULL;
+    int str_in_len = 0;
+    char *str_out = NULL;
+    int str_out_len = 0;
+    char * str_out_ptr = NULL;
+    int pos = 0;
+
+    /* At the moment the link resource is not actually required but it may be needed in the future to */
+    /* Implement character escaping for different versions of the DBMS server */
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"rs" , &link, &str_in, &str_in_len) == FAILURE) 
+    {
+        RETURN_FALSE;
+    }
+
+    /* Allocate memory for return value */
+    /* We are allocating 9 times the space should the string be full of \0 values */
+    /* TODO - allocate double the size of str_in_len, if we run out of space double that, and so on */
+    str_out = safe_emalloc(str_in_len, 9, 1);
+
+    str_out_ptr = str_out;
+
+    for ( pos = 0; pos < str_in_len; pos++ )
+    {
+        switch (str_in[pos])
+        {
+            case '\'': /* ' becomes '' */
+                memcpy(str_out_ptr,"''",2);
+                str_out_ptr +=2;
+                break;
+            case '\0': /* \0 becomes x'00' */
+                if (str_in_len == 1) /* a single \0 */
+                {
+                    memcpy(str_out_ptr,"x'00'",5);
+                    str_out_ptr +=5;
+                }
+                else if (pos == 0) /* At the start of str_in */
+                {
+                    memcpy(str_out_ptr,"x'00'+'",7);
+                    str_out_ptr +=7;
+                }
+                else if (pos == (str_in_len - 1)) /* At the end of str_in */
+                {
+                    memcpy(str_out_ptr,"'+x'00'",7);
+                    str_out_ptr +=7;
+                }
+                else /* Some where in the middle */
+                {
+                    memcpy(str_out_ptr,"'+x'00'+'",9);
+                    str_out_ptr +=9;
+                }
+                break;
+            default: /* No "conversion", just copy and move on... */
+                *str_out_ptr = str_in[pos];
+                str_out_ptr++;
+                break;
+
+        }
+    }
+
+    *str_out_ptr = '\0'; /* terminate the new string */
+    str_out_len = str_out_ptr - str_out;
+    /* reduce the buffer down to the required size */
+    str_out = erealloc(str_out, str_out_len + 1);
+
+    RETURN_STRINGL(str_out, str_out_len, 0);
 }
 /* }}} */
 

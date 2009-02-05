@@ -1,4 +1,5 @@
 CVS 2.1.0-dev
+- Add ingres_escape_string()
 - Add ingres_result_seek() to support row positioning
 
 2.0.2
