@@ -72,6 +72,9 @@ typedef struct _II_RESULT {
     int                 rowNumber;   /* Row in resultData being examined */
     IIAPI_GETCOLPARM    getColParm; /* Column data for the resultset */
     int                 rowWidth;   /* Row width in bytes */
+    II_ULONG            queryType;  /* IIAPI_QT_{EXEC|OPEN|QUERY|PROCEDURE|...} */
+    IIAPI_DESCRIPTOR    *inputDescr;  /* Descriptors from a DESCRIBE INPUT */
+    II_INT2             inputCount;   /* number of parameters from a DESCRIBE INPUT */
 } II_RESULT;
 
 /* The following was added to allow the extension to build on Windows using */
@@ -208,6 +211,8 @@ static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_
 static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATAVALUE *columnData, II_RESULT *ii_result, int col_no, int result_type);
 static void _free_resultdata (II_RESULT *ii_result);
 static short int php_ii_scroll_row_count (II_RESULT *ii_result TSRMLS_DC);
+static short _ii_describe_input (II_RESULT *ii_result, char *query TSRMLS_DC);
+static short _ii_prepare (II_RESULT *ii_result, char *query TSRMLS_DC);
 
 
 #endif  /* HAVE_II */
