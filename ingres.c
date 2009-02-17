@@ -196,6 +196,9 @@ PHP_INI_BEGIN()
 #if defined (IIAPI_VERSION_6)
     STD_PHP_INI_BOOLEAN(INGRES_INI_SCROLL, "1", PHP_INI_ALL, OnUpdateBool, scroll, zend_ii_globals, ii_globals)
 #endif
+#if defined (IIAPI_VERSION_5)
+    STD_PHP_INI_BOOLEAN(INGRES_INI_DESCRIBE, "1", PHP_INI_ALL, OnUpdateBool, describe, zend_ii_globals, ii_globals)
+#endif
 PHP_INI_END()
 /* }}} */
 
@@ -743,6 +746,7 @@ static void php_ii_globals_init(zend_ii_globals *ii_globals)
     ii_globals->error_number = 0;
     ii_globals->reuse_connection = 1;
     ii_globals->scroll = 1;
+    ii_globals->describe = 1;
 #if defined (IIAPI_VERSION_3)
     ii_globals->utf8 = 1;
 #endif
@@ -1882,7 +1886,7 @@ PHP_FUNCTION(ingres_query)
 #if defined(IIAPI_VERSION_5)
         else
         {
-            if (ii_link->apiLevel > IIAPI_LEVEL_3)
+            if ((ii_link->apiLevel > IIAPI_LEVEL_3) && IIG(describe))
             {
                 /* We can use DESCRIBE INPUT to work out the types that Ingres is expecting */
                 if (_ii_describe_input (ii_result, query TSRMLS_CC) == II_FAIL)
@@ -2122,7 +2126,7 @@ PHP_FUNCTION(ingres_prepare)
     /* figure how many parameters are expected */
     ii_result->paramCount = php_ii_paramcount(query TSRMLS_CC);
 #if defined (IIAPI_VERSION_5)
-    if (ii_result->paramCount && (ii_result->apiLevel >  IIAPI_LEVEL_3))
+    if (ii_result->paramCount && ((ii_result->apiLevel > IIAPI_LEVEL_3) && IIG(describe)))
     {
         /* Use the result from DESCRIBE INPUT */
         if (_ii_describe_input (ii_result, query TSRMLS_CC) == II_FAIL)

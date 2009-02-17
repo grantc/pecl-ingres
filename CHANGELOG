@@ -1,4 +1,5 @@
 CVS 2.1.0-dev
+- Add ingres.describe ini setting to allow disabling of DESCRIBE INPUT if desired
 - Add support for DESCRIBE INPUT
 - Add ingres_escape_string()
 - Add ingres_result_seek() to support row positioning

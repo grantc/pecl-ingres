@@ -163,6 +163,7 @@ ZEND_BEGIN_MODULE_GLOBALS(ii)
     short reuse_connection;   /* should ingres_connect() reuse existing connections? */
     short ingres_trace; /* enable E_NOTICE tracing - not suitable for production usage */
     short scroll; /* enable/disable scrollable cursors */
+    short describe; /* enable/disable describe input support */
 
 ZEND_END_MODULE_GLOBALS(ii)
 
@@ -207,6 +208,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define INGRES_INI_REUSE_CONNECTION "ingres2.reuse_connection"
 #define INGRES_INI_TRACE "ingres2.trace"
 #define INGRES_INI_SCROLL "ingres2.scrollable"
+#define INGRES_INI_SCROLL "ingres2.describe"
 
 #else
 
@@ -227,6 +229,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define INGRES_INI_REUSE_CONNECTION "ingres.reuse_connection"
 #define INGRES_INI_TRACE "ingres.trace"
 #define INGRES_INI_SCROLL "ingres.scrollable"
+#define INGRES_INI_SCROLL "ingres.describe"
 
 #endif /* HAVE_INGRES2 */
 
