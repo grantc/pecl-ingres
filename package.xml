@@ -80,6 +80,11 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file baseinstalldir="ingres" name="test_038.phpt" role="test" />
     <file baseinstalldir="ingres" name="test_039.phpt" role="test" />
     <file baseinstalldir="ingres" name="test_040.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_041.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_042.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_043.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_044.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_045.phpt" role="test" />
    </dir> <!-- //tests -->
    <file baseinstalldir="ingres" name="BUILD.COM" role="src" />
    <file baseinstalldir="ingres" name="CHANGELOG" role="doc" />
