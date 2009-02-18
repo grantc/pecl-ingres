@@ -208,7 +208,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define INGRES_INI_REUSE_CONNECTION "ingres2.reuse_connection"
 #define INGRES_INI_TRACE "ingres2.trace"
 #define INGRES_INI_SCROLL "ingres2.scrollable"
-#define INGRES_INI_SCROLL "ingres2.describe"
+#define INGRES_INI_DESCRIBE "ingres2.describe"
 
 #else
 
@@ -229,7 +229,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define INGRES_INI_REUSE_CONNECTION "ingres.reuse_connection"
 #define INGRES_INI_TRACE "ingres.trace"
 #define INGRES_INI_SCROLL "ingres.scrollable"
-#define INGRES_INI_SCROLL "ingres.describe"
+#define INGRES_INI_DESCRIBE "ingres.describe"
 
 #endif /* HAVE_INGRES2 */
 
