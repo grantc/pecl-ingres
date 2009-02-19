@@ -46,6 +46,7 @@ typedef struct _II_LINK {
     int                 auto_multi;  /* Enable multiple cursors when autocommit is enabled */
     II_LONG             apiLevel;    /* The API level of the DBMS server. Used to determine what the driver can/cannot do */
                                      /* See $II_SYSTEM/ingres/files/iiapi.h for the list */
+    char                *charset;    /* Installation II_CHARSETxx value obtained in ingres_charset() */
 } II_LINK;
 
 typedef struct _II_RESULT {
@@ -180,6 +181,9 @@ static struct
 #  endif
 #endif
 
+/* End of String for NMgtAt */
+#define EOS '\0'
+
 
 static int ii_sync(IIAPI_GENPARM *genParm);
 static int ii_success(IIAPI_GENPARM *genParm, II_PTR *connHandle TSRMLS_DC);
@@ -214,6 +218,7 @@ static short int php_ii_scroll_row_count (II_RESULT *ii_result TSRMLS_DC);
 static short _ii_describe_input (II_RESULT *ii_result, char *query TSRMLS_DC);
 static short _ii_prepare (II_RESULT *ii_result, char *query TSRMLS_DC);
 
+void NMgtAt(char *name, char **value);
 
 #endif  /* HAVE_II */
 #endif    /* INGRES_H */

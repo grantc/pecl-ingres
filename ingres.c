@@ -91,6 +91,7 @@ function_entry ingres_functions[] = {
     PHP_FE(ingres2_result_seek,        NULL)
     PHP_FALIAS(ingres2_data_seek, ingres2_result_seek, NULL)
     PHP_FE(ingres2_escape_string,        NULL)
+    PHP_FE(ingres2_charset,        NULL)
 #else
     PHP_FE(ingres_connect,            NULL)
     PHP_FE(ingres_pconnect,            NULL)
@@ -130,6 +131,7 @@ function_entry ingres_functions[] = {
     PHP_FE(ingres_result_seek,        NULL)
     PHP_FALIAS(ingres_data_seek, ingres_result_seek, NULL)
     PHP_FE(ingres_escape_string,        NULL)
+    PHP_FE(ingres_charset,        NULL)
 #endif
 
     {NULL, NULL, NULL}    /* Must be the last line in ingres_functions[] */
@@ -506,6 +508,11 @@ static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_close_ii_link : Unable to close link");
             }
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "_close_ii_link : Unable to close statement");
+    }
+
+    if (ii_link->charset)
+    {
+        efree(ii_link->charset);
     }
 
     free(ii_link);
@@ -1016,6 +1023,7 @@ static void _ii_init_link (INTERNAL_FUNCTION_PARAMETERS,  II_LINK *ii_link )
     ii_link->result_list_ptr = NULL;
     ii_link->auto_multi = 0;
     ii_link->apiLevel = 0;
+    ii_link->charset = NULL;
 }
 /* }}} */
 
@@ -6709,6 +6717,62 @@ static short _ii_prepare (II_RESULT *ii_result, char *query TSRMLS_DC)
 }
 /* }}} */
 #endif /* IIAPI_VERSION_5 */
+
+/* {{{ proto string ingres_charset(resource link)
+   return the character set encoding of the client installation*/
+#ifdef HAVE_INGRES2
+PHP_FUNCTION(ingres2_charset)
+#else
+PHP_FUNCTION(ingres_charset)
+#endif
+{
+    zval *link;
+    II_LINK *ii_link;
+    char *ii_installation_value = NULL;
+    char ii_charset_var[13]; /* II_CHARSETxx\0 */
+    char *ii_charset_value = NULL;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r" , &link) == FAILURE) 
+    {
+        RETURN_FALSE;
+    }
+
+    ZEND_FETCH_RESOURCE2(ii_link, II_LINK *, &link, -1, "Ingres Link", le_ii_link, le_ii_plink);
+
+    if (ii_link->charset == NULL)
+    {
+        /* The variable  for II_CHARSET is dependent on the installation code II_INSTALLATION */
+        NMgtAt("II_INSTALLATION", &ii_installation_value);
+        if ((ii_installation_value != (char *)NULL) && (*ii_installation_value != EOS))
+        {
+            sprintf(ii_charset_var,"II_CHARSET%2s", ii_installation_value);
+            NMgtAt(ii_charset_var, &ii_charset_value);
+            if ((ii_charset_value == (char *)NULL) || (*ii_charset_value == EOS))
+            {
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "No value available for %s. Check your Ingres environment is setup correctly.", ii_charset_var);
+            }
+            else
+            {
+                ii_link->charset = emalloc(strlen(ii_charset_value) + 1);
+                memcpy(ii_link->charset, ii_charset_value, strlen(ii_charset_value) + 1);
+            }
+        }
+        else
+        {
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "No value available for II_INSTALLATION. Check your Ingres environment is setup correctly.");
+        }
+    }
+
+    if (ii_link->charset)
+    {
+        RETURN_STRING(ii_link->charset,1);
+    }
+    else
+    {
+        RETURN_NULL();
+    }
+}
+/* }}} */
 
 #endif /* HAVE_INGRES */
 

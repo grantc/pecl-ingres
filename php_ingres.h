@@ -83,6 +83,7 @@ PHP_FUNCTION(ingres2_autocommit_state);
 PHP_FUNCTION(ingres2_next_error);
 PHP_FUNCTION(ingres2_result_seek);
 PHP_FUNCTION(ingres2_escape_string);
+PHP_FUNCTION(ingres2_charset);
 #else
 PHP_FUNCTION(ingres_connect);
 PHP_FUNCTION(ingres_pconnect);
@@ -121,6 +122,7 @@ PHP_FUNCTION(ingres_autocommit_state);
 PHP_FUNCTION(ingres_next_error);
 PHP_FUNCTION(ingres_result_seek);
 PHP_FUNCTION(ingres_escape_string);
+PHP_FUNCTION(ingres_charset);
 #endif
 
 ZEND_BEGIN_MODULE_GLOBALS(ii)
