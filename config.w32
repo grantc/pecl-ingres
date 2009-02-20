@@ -25,10 +25,12 @@ if (PHP_INGRES != "no") {
 
         if (ii_system != "") {
             if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", extension_cflags, ii_system + "\\ingres\\files;" + PHP_INGRES) &&
+                CHECK_LIB("libingres.lib", extension_name, PHP_INGRES + "\\ingres\\lib;") && 
                 CHECK_LIB("iilibapi.lib", extension_name, ii_system + "\\ingres\\lib;" + PHP_INGRES)) {
                 // Ingres r3 
                 have_ingres_files = 1;
             } else if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", extension_cflags, ii_system + "\\ingres\\files;" + PHP_INGRES) &&
+                CHECK_LIB("ingres.lib", extension_name, PHP_INGRES + "\\ingres\\lib;") && 
                 CHECK_LIB("oiapi.lib", extension_name, ii_system + "\\ingres\\lib;" + PHP_INGRES)) {
                 // Ingres 2.0/2.5/2.6
                 have_ingres_files = 1;
@@ -39,6 +41,7 @@ if (PHP_INGRES != "no") {
         } else {
             // Check php_build dirs for headers
             if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", extension_cflags, PHP_PHP_BUILD + "\\include\\ingres") &&
+                CHECK_LIB("libingres.lib", extension_name, PHP_INGRES + "\\ingres\\lib;") && 
                 CHECK_LIB("iilibapi.lib", extension_name, PHP_PHP_BUILD + "\\lib")) {
                 have_ingres_files = 1;
             } else {                
@@ -49,9 +52,11 @@ if (PHP_INGRES != "no") {
     } else { 
         // path supplied to  --with-ingres
         if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", extension_cflags, PHP_INGRES + "\\ingres\\files;") &&
+            CHECK_LIB("libingres.lib", extension_name, PHP_INGRES + "\\ingres\\lib;") && 
             CHECK_LIB("iilibapi.lib", extension_name, PHP_INGRES + "\\ingres\\lib;"))  {
                 have_ingres_files = 1;
         } else if (CHECK_HEADER_ADD_INCLUDE("iiapi.h", extension_cflags, PHP_INGRES + "\\ingres\\files;" + PHP_INGRES) &&
+                CHECK_LIB("ingres.lib", extension_name, PHP_INGRES + "\\ingres\\lib;") && 
                 CHECK_LIB("oiapi.lib", extension_name, PHP_INGRES + "\\ingres\\lib;")) {
                 // Ingres 2.0/2.5/2.6
                 have_ingres_files = 1;
