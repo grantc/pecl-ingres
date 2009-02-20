@@ -4918,7 +4918,7 @@ static void php_ii_convert_param_markers (char *query, char *converted_query TSR
 /* }}} */
 
 /* {{{ proto string ingres_set_environment(resource link, array options)
-   Gets the last SQLSTATE generated for an error */
+   Sets various environment options for Ingres */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_set_environment)
 #else
@@ -4941,6 +4941,7 @@ PHP_FUNCTION(ingres_set_environment)
         php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to set environment options provided");
         RETURN_FALSE;
     }    
+    RETURN_TRUE;
 }
 /* }}} */
 
