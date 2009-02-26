@@ -184,10 +184,9 @@ PHP_INI_BEGIN()
     STD_PHP_INI_ENTRY(INGRES_INI_DEFAULT_USER, NULL, PHP_INI_ALL, OnUpdateString, default_user, zend_ii_globals, ii_globals)
     STD_PHP_INI_ENTRY(INGRES_INI_DEFAULT_PASSWORD, NULL, PHP_INI_ALL, OnUpdateString, default_password, zend_ii_globals, ii_globals)
     STD_PHP_INI_BOOLEAN(INGRES_INI_REPORT_DB_WARNINGS,"1", PHP_INI_ALL, OnUpdateBool, report_db_warnings, zend_ii_globals, ii_globals)
-    STD_PHP_INI_ENTRY(INGRES_INI_CURSOR_MODE, "0", PHP_INI_ALL, OnUpdateLong, cursor_mode, zend_ii_globals, ii_globals)
+    STD_PHP_INI_ENTRY(INGRES_INI_CURSOR_MODE, "1", PHP_INI_ALL, OnUpdateLong, cursor_mode, zend_ii_globals, ii_globals)
     STD_PHP_INI_ENTRY(INGRES_INI_BLOB_SEGMENT_LENGTH, "4096", PHP_INI_ALL, OnUpdateLong, blob_segment_length, zend_ii_globals, ii_globals)
     STD_PHP_INI_BOOLEAN(INGRES_INI_TRACE_CONNECT, "0", PHP_INI_ALL, OnUpdateBool, trace_connect, zend_ii_globals, ii_globals)
-    STD_PHP_INI_ENTRY(INGRES_INI_TIMEOUT, "-1", PHP_INI_ALL, OnUpdateLong, connect_timeout, zend_ii_globals, ii_globals)
     PHP_INI_ENTRY(INGRES_INI_ARRAY_INDEX_START,"1", PHP_INI_ALL, php_ii_modify_array_index_start)
     STD_PHP_INI_BOOLEAN(INGRES_INI_AUTO, "1", PHP_INI_ALL, OnUpdateBool, auto_multi, zend_ii_globals, ii_globals)
 #if defined (IIAPI_VERSION_3)
@@ -794,6 +793,7 @@ static void php_ii_globals_init(zend_ii_globals *ii_globals)
     ii_globals->utf8 = 1;
 #endif
     ii_globals->fetch_buffer_size = II_BUFFER_SIZE;
+    ii_globals->cursor_mode = II_CURSOR_READONLY;
 
 }
 /* }}} */
