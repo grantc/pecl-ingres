@@ -163,7 +163,11 @@ The following options configure the behaviour of the Ingres extension:
 |__________________________|data____________________|_______|_______|_________|
 |ingres.default_database___|Default_database_name___| _____|Yes____|Yes______|
 |ingres.default_user_______|Default_user_name_______| _____|Yes____|Yes______|
+|ingres.describe           |Enable / Disable        |On     |Yes    |Yes      |
+|__________________________|DESCRIBE_INPUT__________|_______|_______|_________|
 |ingres.default_password___|Default_password________| _____|Yes____|Yes______|
+|ingres.fetch_buffer_size  |The number of rows to   |100    |Yes    |Yes      |
+|__________________________|pre-fetch_______________|_______|_______|_________|
 |ingres.max_links          |Maximum number of links |-1     |Yes    |No       |
 |__________________________|allowed_________________|_______|_______|_________|
 |ingres.max_persistent     |Maximum number of       |-1     |Yes    |No       |
@@ -251,11 +255,11 @@ build and install, note that $II_SYSTEM needs to be defined beforehand:
 
   1. Extract the archive, adapt the version number accordingly:
 
-       tar -zxvf ingres-2.0.2.tgz
+       tar -zxvf ingres-2.1.0.tgz
 
   2. Enter the newly created directory:
 
-       cd ingres-2.0.2
+       cd ingres-2.1.0
 
   3. Generate the configuration file for the extension:
 

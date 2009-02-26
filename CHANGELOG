@@ -1,4 +1,4 @@
-CVS 2.1.0-dev
+2.1.0
 - Add ingres.fetch_buffer_size to configure to the number of rows ingres_query() will fetch.
 - Add ingres_charset() to fetch the installation II_CHARSETxx value
 - Add ingres.describe ini setting to allow disabling of DESCRIBE INPUT if desired

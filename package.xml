@@ -14,26 +14,24 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grant.croker@ingres.com</email>
   <active>yes</active>
  </lead>
- <date>2009-01-23</date>
- <time>11:00:00</time>
+ <date>2009-02-26</date>
+ <time>18:00:00</time>
  <version>
-  <release>2.0.2</release>
-  <api>2.0.2</api>
+  <release>2.1.0</release>
+  <api>2.1.0</api>
  </version>
  <stability>
   <release>stable</release>
   <api>stable</api>
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
- <notes>This release fixes a number problems discovered since 2.0.1 was released. See below for the list of changes made:
-    - Fix corrupt Ingres MONEY to PHP DOUBLE conversions
-    - Eliminate memory leak when ingres_free_result() is not called
-    - Fix ingres_field_name() so it returns the correct column name
-    - Fix SEGV in php_ii_convert_data() when converting DATE to STRING
-    - Enable the extension to build on Mac OS X and HP-UX
-    - Reduce the number of emalloc calls in php_ii_fetch()
-    - Clean up proto entries in ingres.c
-    - Make ingres_conn_*() and ingres_stmt_* aliases for their ingres_err*() counterparts
+ <notes>This is a minor release that introduces the following new functionality:
+    - Add ingres.fetch_buffer_size to configure to the number of rows ingres_query() will fetch.
+    - Add ingres_charset() to fetch the installation II_CHARSETxx value
+    - Add ingres.describe ini setting to allow disabling of DESCRIBE INPUT if desired
+    - Add support for DESCRIBE INPUT
+    - Add ingres_escape_string()
+    - Add ingres_result_seek() to support row positioning
  </notes>
  <contents>
   <dir name="/">
