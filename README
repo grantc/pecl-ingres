@@ -172,7 +172,6 @@ The following options configure the behaviour of the Ingres extension:
 |__________________________|allowed_________________|_______|_______|_________|
 |ingres.max_persistent     |Maximum number of       |-1     |Yes    |No       |
 |__________________________|persistent_links_allowed|_______|_______|_________|
-|ingres.report_db_warnings_|Suppress_DB_warnings____|On_____|Yes____|Yes______|
 |                          |When connecting with    |       |       |         |
 |                          |ingres_connect()/       |       |       |         |
 |ingres.reuse_connection   |ingres_pconnect(), use  |On     |Yes    |Yes      |
@@ -184,10 +183,6 @@ The following options configure the behaviour of the Ingres extension:
 |ingres.scrollable         |this needs to be disable|On     |Yes    |Yes      |
 |                          |for queries that fetch  |       |       |         |
 |__________________________|LOB_data________________|_______|_______|_________|
-|                          |Time in ms the OpenAPI  |       |       |         |
-|ingres.timeout            |IIapi_initialize        |-1     |Yes    |Yes      |
-|                          |function will wait      |       |       |         |
-|__________________________|before_failing__________|_______|_______|_________|
 |                          |Enable some basic query |       |       |         |
 |ingres.trace              |tracing in ingres_query |Off    |Yes    |Yes      |
 |__________________________|()______________________|_______|_______|_________|
