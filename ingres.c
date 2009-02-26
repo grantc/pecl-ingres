@@ -188,7 +188,7 @@ PHP_INI_BEGIN()
     STD_PHP_INI_ENTRY(INGRES_INI_BLOB_SEGMENT_LENGTH, "4096", PHP_INI_ALL, OnUpdateLong, blob_segment_length, zend_ii_globals, ii_globals)
     STD_PHP_INI_BOOLEAN(INGRES_INI_TRACE_CONNECT, "0", PHP_INI_ALL, OnUpdateBool, trace_connect, zend_ii_globals, ii_globals)
     STD_PHP_INI_ENTRY(INGRES_INI_TIMEOUT, "-1", PHP_INI_ALL, OnUpdateLong, connect_timeout, zend_ii_globals, ii_globals)
-    STD_PHP_INI_ENTRY(INGRES_INI_ARRAY_INDEX_START, "1", PHP_INI_ALL, OnUpdateLong, array_index_start, zend_ii_globals, ii_globals)
+    PHP_INI_ENTRY(INGRES_INI_ARRAY_INDEX_START,"1", PHP_INI_ALL, php_ii_modify_array_index_start)
     STD_PHP_INI_BOOLEAN(INGRES_INI_AUTO, "1", PHP_INI_ALL, OnUpdateBool, auto_multi, zend_ii_globals, ii_globals)
 #if defined (IIAPI_VERSION_3)
     STD_PHP_INI_BOOLEAN(INGRES_INI_UTF8, "1", PHP_INI_ALL, OnUpdateBool, utf8, zend_ii_globals, ii_globals)
@@ -201,8 +201,44 @@ PHP_INI_BEGIN()
 #if defined (IIAPI_VERSION_5)
     STD_PHP_INI_BOOLEAN(INGRES_INI_DESCRIBE, "1", PHP_INI_ALL, OnUpdateBool, describe, zend_ii_globals, ii_globals)
 #endif
+    PHP_INI_ENTRY(INGRES_INI_FETCH_BUFFER_SIZE, "100", PHP_INI_ALL, php_ii_modify_fetch_buffer_size)
 PHP_INI_END()
 /* }}} */
+
+/* PHP INI modification handlers */
+
+/* {{{ ZEND_INI_MH(php_ii_modify_array_index_start) */
+/* Make sure array_index_start can only be set to 0 or 1 */
+ZEND_INI_MH(php_ii_modify_array_index_start)
+{
+    long new_value_long = 0;
+    new_value_long = atoi(new_value);
+
+    if ((new_value_long < 0) || (new_value_long > 1))
+    {
+        return FAILURE;
+    }
+    IIG(array_index_start) = new_value_long;
+    return SUCCESS;
+}
+/* }}} */
+
+/* {{{ ZEND_INI_MH(php_ii_modify_fetch_buffer_size) */
+/* Make sure fetch_buffer_size is greater than 0 */
+ZEND_INI_MH(php_ii_modify_fetch_buffer_size)
+{
+    long new_value_long = 0;
+    new_value_long = atoi(new_value);
+
+    if (new_value_long < 1)
+    {
+        return FAILURE;
+    }
+    IIG(fetch_buffer_size) = new_value_long;
+    return SUCCESS;
+}
+/* }}} */
+
 
 /* {{{ static int _close_statement(II_LINK *ii_link TSRMLS_DC) */
 /* closes statement in given link */
@@ -757,6 +793,7 @@ static void php_ii_globals_init(zend_ii_globals *ii_globals)
 #if defined (IIAPI_VERSION_3)
     ii_globals->utf8 = 1;
 #endif
+    ii_globals->fetch_buffer_size = II_BUFFER_SIZE;
 
 }
 /* }}} */
@@ -3290,7 +3327,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
             ii_result->getColParm.gc_genParm.gp_callback = NULL;
             ii_result->getColParm.gc_genParm.gp_closure = NULL;
-            ii_result->getColParm.gc_rowCount = II_BUFFER_SIZE; /* 100 rows by default */
+            ii_result->getColParm.gc_rowCount = IIG(fetch_buffer_size); /* 100 rows by default */
             ii_result->getColParm.gc_columnCount = ii_result->fieldCount;
             ii_result->getColParm.gc_stmtHandle = ii_result->stmtHandle;
             ii_result->getColParm.gc_moreSegments = 0;
@@ -3411,7 +3448,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
         {
             ii_result->getColParm.gc_genParm.gp_callback = NULL;
             ii_result->getColParm.gc_genParm.gp_closure = NULL;
-            ii_result->getColParm.gc_rowCount = II_BUFFER_SIZE; /* 100 rows by default */
+            ii_result->getColParm.gc_rowCount = IIG(fetch_buffer_size); /* 100 rows by default */
             ii_result->getColParm.gc_columnCount = ii_result->fieldCount;
             ii_result->getColParm.gc_stmtHandle = ii_result->stmtHandle;
             ii_result->getColParm.gc_moreSegments = 0;

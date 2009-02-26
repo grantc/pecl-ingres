@@ -125,6 +125,10 @@ PHP_FUNCTION(ingres_escape_string);
 PHP_FUNCTION(ingres_charset);
 #endif
 
+/* PHP INI modification handlers */
+ZEND_INI_MH(php_ii_modify_array_index_start);
+ZEND_INI_MH(php_ii_modify_fetch_buffer_size);
+
 ZEND_BEGIN_MODULE_GLOBALS(ii)
 	long allow_persistent;
 	long max_persistent;
@@ -166,6 +170,7 @@ ZEND_BEGIN_MODULE_GLOBALS(ii)
     short ingres_trace; /* enable E_NOTICE tracing - not suitable for production usage */
     short scroll; /* enable/disable scrollable cursors */
     short describe; /* enable/disable describe input support */
+    long fetch_buffer_size; /* number of rows to attempt in a fetch */
 
 ZEND_END_MODULE_GLOBALS(ii)
 
@@ -211,6 +216,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define INGRES_INI_TRACE "ingres2.trace"
 #define INGRES_INI_SCROLL "ingres2.scrollable"
 #define INGRES_INI_DESCRIBE "ingres2.describe"
+#define INGRES_INI_FETCH_BUFFER_SIZE "ingres2.fetch_buffer_size"
 
 #else
 
@@ -232,6 +238,7 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define INGRES_INI_TRACE "ingres.trace"
 #define INGRES_INI_SCROLL "ingres.scrollable"
 #define INGRES_INI_DESCRIBE "ingres.describe"
+#define INGRES_INI_FETCH_BUFFER_SIZE "ingres.fetch_buffer_size"
 
 #endif /* HAVE_INGRES2 */
 
