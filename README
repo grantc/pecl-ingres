@@ -95,7 +95,7 @@ please log a bug via the project_home_page with the following information:
   INGRES_EXT_VERSION and INGRES_API_VERSION:
 
     <?php
-            echo INGRES_EXT_VERSION + " " + INGRES_API_VERSION;
+            echo INGRES_EXT_VERSION . " " . INGRES_API_VERSION;
     ?>
 
 
