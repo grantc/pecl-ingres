@@ -4550,17 +4550,23 @@ static char *php_ii_check_procedure(char *statement, II_LINK *ii_link TSRMLS_DC)
 static int php_ii_query_type(char *statement TSRMLS_DC)
 {
     int count = 0;
+    char *statement_ptr = NULL;
 
+    statement_ptr = statement;
+    /* Look for some white space */
+    while (isspace(*statement_ptr))
+    {
+        statement_ptr++;
+    }
     for ( count = 0; count < INGRES_NO_OF_COMMANDS; count++ )
     {
-        if (strncasecmp(SQL_COMMANDS[count].command, statement, strlen(SQL_COMMANDS[count].command)) == 0 )
+        if (strncasecmp(SQL_COMMANDS[count].command, statement_ptr, strlen(SQL_COMMANDS[count].command)) == 0 )
         {
             return SQL_COMMANDS[count].code;
         }
     }
     
     return -1;
-
 }
 /* }}} */
 

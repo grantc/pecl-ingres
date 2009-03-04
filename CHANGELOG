@@ -1,3 +1,6 @@
+CVS - 2.1.1-dev
+- Handle leading white-space characters in query detection (thanks Alex Trofast)
+
 2.1.0
 - Add ingres.fetch_buffer_size to configure to the number of rows ingres_query() will fetch.
 - Add ingres_charset() to fetch the installation II_CHARSETxx value
