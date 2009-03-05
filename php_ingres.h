@@ -84,6 +84,7 @@ PHP_FUNCTION(ingres2_next_error);
 PHP_FUNCTION(ingres2_result_seek);
 PHP_FUNCTION(ingres2_escape_string);
 PHP_FUNCTION(ingres2_charset);
+PHP_FUNCTION(ingres2_unbuffered_query)
 #else
 PHP_FUNCTION(ingres_connect);
 PHP_FUNCTION(ingres_pconnect);
@@ -123,6 +124,7 @@ PHP_FUNCTION(ingres_next_error);
 PHP_FUNCTION(ingres_result_seek);
 PHP_FUNCTION(ingres_escape_string);
 PHP_FUNCTION(ingres_charset);
+PHP_FUNCTION(ingres_unbuffered_query);
 #endif
 
 /* PHP INI modification handlers */

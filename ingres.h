@@ -76,6 +76,7 @@ typedef struct _II_RESULT {
     II_ULONG            queryType;  /* IIAPI_QT_{EXEC|OPEN|QUERY|PROCEDURE|...} */
     IIAPI_DESCRIPTOR    *inputDescr;  /* Descriptors from a DESCRIBE INPUT */
     II_INT2             inputCount;   /* number of parameters from a DESCRIBE INPUT */
+    II_BOOL             buffered;   /* Is this a buffered query or not */
 } II_RESULT;
 
 /* The following was added to allow the extension to build on Windows using */
@@ -217,6 +218,7 @@ static void _free_resultdata (II_RESULT *ii_result);
 static short int php_ii_scroll_row_count (II_RESULT *ii_result TSRMLS_DC);
 static short _ii_describe_input (II_RESULT *ii_result, char *query TSRMLS_DC);
 static short _ii_prepare (II_RESULT *ii_result, char *query TSRMLS_DC);
+static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered);
 
 void NMgtAt(char *name, char **value);
 

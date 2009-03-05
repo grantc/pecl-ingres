@@ -92,6 +92,7 @@ function_entry ingres_functions[] = {
     PHP_FALIAS(ingres2_data_seek, ingres2_result_seek, NULL)
     PHP_FE(ingres2_escape_string,        NULL)
     PHP_FE(ingres2_charset,        NULL)
+    PHP_FE(ingres2_unbuffered_query,        NULL)
 #else
     PHP_FE(ingres_connect,            NULL)
     PHP_FE(ingres_pconnect,            NULL)
@@ -132,6 +133,7 @@ function_entry ingres_functions[] = {
     PHP_FALIAS(ingres_data_seek, ingres_result_seek, NULL)
     PHP_FE(ingres_escape_string,        NULL)
     PHP_FE(ingres_charset,        NULL)
+    PHP_FE(ingres_unbuffered_query,        NULL)
 #endif
 
     {NULL, NULL, NULL}    /* Must be the last line in ingres_functions[] */
@@ -247,7 +249,7 @@ static int _close_statement(II_RESULT *ii_result TSRMLS_DC)
 
     if (ii_result->stmtHandle)
     {
-        /* Release any resulset data */
+        /* Release any resultset data */
         _free_resultdata (ii_result);
 
         /* see if we can close the query without cancelling it */
@@ -1027,6 +1029,9 @@ static int ii_success(IIAPI_GENPARM *genParm, II_PTR *errorHandle TSRMLS_DC)
                         memcpy(IIG(error_sqlstate), error_info.ge_SQLSTATE, II_SQLSTATE_LEN + 1);
 
                         break;
+                    case IIAPI_ST_INVALID_HANDLE:
+                        php_error_docref(NULL TSRMLS_CC, E_WARNING, "IIapi_getErrorInfo error, invalid error handle");
+                        break;
                     default: /* An error occured with IIapi_getErrorInfo() */
                         php_error_docref(NULL TSRMLS_CC, E_WARNING, "IIapi_getErrorInfo error, status returned was : %d", error_info.ge_status );
                         break;
@@ -1092,6 +1097,7 @@ static void _ii_init_result (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result,
     ii_result->descriptor = NULL;
     ii_result->queryType = IIAPI_QT_BASE;  /* 0 */
     ii_result->inputDescr = NULL;
+    ii_result->buffered = FALSE;
 }
 /* }}} */
 
@@ -1642,26 +1648,8 @@ PHP_FUNCTION(ingres_close)
 }
 /* }}} */
 
-/* {{{ proto mixed ingres_query(resource link, string query [, array queryParams] [, array paramtypes] ) */
-/* Send a SQL query to Ingres */
-/* This should go into the documentation */
-/* Unsupported query types:
-   - close
-   - commit
-   - connect
-   - disconnect
-   - get dbevent
-   - prepare to commit
-   - rollback
-   - savepoint
-   - set autocommit
-   - <all cursor related queries>
-   (look for dedicated functions instead) */
-#ifdef HAVE_INGRES2
-PHP_FUNCTION(ingres2_query)
-#else
-PHP_FUNCTION(ingres_query)
-#endif
+/* {{{ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered) */
+static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
 {
     zval *link = NULL;
     zval *queryParams = NULL;
@@ -1697,9 +1685,41 @@ PHP_FUNCTION(ingres_query)
     
     ZEND_FETCH_RESOURCE2(ii_link, II_LINK*, &link, -1, "Ingres Link", le_ii_link, le_ii_plink);
 
+
+    /* Ingres only allows for a single query opened with IIAPI_QT_QUERY */
+    /* Check to see any existing result-sets are unbuffered and close them */
+    if (ii_link->result_list_ptr)
+    {
+        result_ptr = (ii_result_entry *)ii_link->result_list_ptr;
+        while (result_ptr) 
+        {
+            ii_result = (II_RESULT *)zend_list_find(result_ptr->result_id, &type);
+            if ((ii_result) && (type == le_ii_result))
+            {
+                if (ii_result->buffered == FALSE)
+                {
+                    /* Close the statement */
+                    if (IIG(ingres_trace))
+                    {
+                        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Closing previous unbuffered query");
+                    }
+                    if (_close_statement(ii_result TSRMLS_CC) == II_FAIL)
+                    {
+                         php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement");
+                         RETURN_FALSE;
+                    }
+                    php_ii_result_remove (ii_result, result_ptr->result_id TSRMLS_CC);
+
+                    zend_list_delete(result_ptr->result_id);
+                }
+            }
+            /* Next */
+            result_ptr = (ii_result_entry *)result_ptr->next_result_ptr;
+        }
+    }
+
     /* If the last statement produced no rows we should call IIapi_close() else it will be lost */
     /* Row returning statements will have a result resource that references the stmtHandle. */
-
     if (ii_link->stmtHandle != NULL)
     {
         /* Is this stmtHandle associated with a result resource? */
@@ -1965,8 +1985,9 @@ PHP_FUNCTION(ingres_query)
 
     if ( ii_result->procname == NULL )
     {
-        if (query_type == INGRES_SQL_SELECT) 
+        if ((query_type == INGRES_SQL_SELECT) && (buffered)) 
         {
+            ii_result->buffered = TRUE;
             queryParm.qy_queryType  = IIAPI_QT_OPEN;
 #if defined(IIAPI_VERSION_6)
             if (IIG(scroll) && (ii_link->apiLevel >= IIAPI_LEVEL_5))
@@ -2130,6 +2151,43 @@ PHP_FUNCTION(ingres_query)
 }
 /* }}} */
 
+/* {{{ proto mixed ingres_query(resource link, string query [, array queryParams] [, array paramtypes] ) */
+/* Send a SQL query to Ingres */
+/* This should go into the documentation */
+/* Unsupported query types:
+   - close
+   - commit
+   - connect
+   - disconnect
+   - get dbevent
+   - prepare to commit
+   - rollback
+   - savepoint
+   - set autocommit
+   - <all cursor related queries>
+   (look for dedicated functions instead) */
+#ifdef HAVE_INGRES2
+PHP_FUNCTION(ingres2_query)
+#else
+PHP_FUNCTION(ingres_query)
+#endif
+{
+    php_ii_query(INTERNAL_FUNCTION_PARAM_PASSTHRU, 1);
+}
+/* }}} */
+
+
+/* {{{ proto mixed ingres_unbuffered_query(resource link, string query [, array queryParams] [, array paramtypes] ) */
+/* Send an unbuffered SQL query to Ingres */
+#ifdef HAVE_INGRES2
+PHP_FUNCTION(ingres2_unbuffered_query)
+#else
+PHP_FUNCTION(ingres_unbuffered_query)
+#endif
+{
+    php_ii_query(INTERNAL_FUNCTION_PARAM_PASSTHRU, 0);
+}
+/* }}} */
 /* {{{ proto mixed ingres_prepare(resource link, string query) */
 /* Prepare SQL for later execution */
 #ifdef HAVE_INGRES2
@@ -2996,7 +3054,6 @@ PHP_FUNCTION(ingres_free_result)
          RETURN_FALSE;
     }
 
-    _free_resultdata(ii_result);
     php_ii_result_remove (ii_result, Z_LVAL_P(result) TSRMLS_CC);
 
     zend_list_delete(Z_LVAL_P(result));
@@ -4104,6 +4161,7 @@ PHP_FUNCTION(ingres_fetch_proc_return)
     {
         RETURN_LONG(getQInfoParm.gq_procedureReturn);
     }
+    RETURN_NULL;
 }
 /* }}} */
 
