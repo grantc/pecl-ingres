@@ -4161,7 +4161,7 @@ PHP_FUNCTION(ingres_fetch_proc_return)
     {
         RETURN_LONG(getQInfoParm.gq_procedureReturn);
     }
-    RETURN_NULL;
+    RETURN_NULL();
 }
 /* }}} */
 
