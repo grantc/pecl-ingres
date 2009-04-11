@@ -77,6 +77,8 @@ typedef struct _II_RESULT {
     IIAPI_DESCRIPTOR    *inputDescr;  /* Descriptors from a DESCRIBE INPUT */
     II_INT2             inputCount;   /* number of parameters from a DESCRIBE INPUT */
     II_BOOL             buffered;   /* Is this a buffered query or not */
+    II_BOOL             prepared;   /* Is this a prepared query or not */
+    II_BOOL             executed;   /* Has this query been through ingres_execute() already? */
 } II_RESULT;
 
 /* The following was added to allow the extension to build on Windows using */
@@ -146,8 +148,13 @@ typedef struct _II_RESULT {
 #define INGRES_SQL_COPY 16
 #define INGRES_SQL_CREATE 17
 #define INGRES_SQL_ALTER 18
+#define INGRES_SQL_DROP 19
+#define INGRES_SQL_GRANT 20
+#define INGRES_SQL_REVOKE 21
+#define INGRES_SQL_MODIFY 22
+#define INGRES_SQL_SET 23
 
-#define INGRES_NO_OF_COMMANDS 18
+#define INGRES_NO_OF_COMMANDS 23
 
 static struct
 {
@@ -173,6 +180,11 @@ static struct
     { "COPY", INGRES_SQL_COPY },
     { "CREATE", INGRES_SQL_CREATE },
     { "ALTER", INGRES_SQL_ALTER },
+    { "DROP", INGRES_SQL_DROP },
+    { "GRANT", INGRES_SQL_GRANT },
+    { "REVOKE", INGRES_SQL_REVOKE },
+    { "MODIFY", INGRES_SQL_MODIFY },
+    { "SET", INGRES_SQL_SET },
 };
 
 /* II 2.6/0305 should have IIAPI_CP_LOGIN_LOCAL defined but it's not */
@@ -219,6 +231,8 @@ static short int php_ii_scroll_row_count (II_RESULT *ii_result TSRMLS_DC);
 static short _ii_describe_input (II_RESULT *ii_result, char *query TSRMLS_DC);
 static short _ii_prepare (II_RESULT *ii_result, char *query TSRMLS_DC);
 static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered);
+static short _ii_describe (II_RESULT *ii_result, char *query TSRMLS_DC);
+static short _ii_close (II_PTR *stmtHandle, II_PTR *errorHandle TSRMLS_DC);
 
 void NMgtAt(char *name, char **value);
 

@@ -239,7 +239,6 @@ ZEND_INI_MH(php_ii_modify_fetch_buffer_size)
 }
 /* }}} */
 
-
 /* {{{ static int _close_statement(II_LINK *ii_link TSRMLS_DC) */
 /* closes statement in given link */
 static int _close_statement(II_RESULT *ii_result TSRMLS_DC)
@@ -297,7 +296,6 @@ static int _close_statement(II_RESULT *ii_result TSRMLS_DC)
     {
         free(ii_result->procname);
         ii_result->procname = NULL;
-        
     }
     if ( ii_result->descriptor != NULL )
     {
@@ -579,6 +577,12 @@ static void _free_ii_link_result_list (II_LINK *ii_link TSRMLS_DC)
 
         if ( ii_result )
         {
+            /* if the result and link statement handles are the same set the latter to NULL since it will be destroyed */
+            /* _close_statement().                                                                                     */
+            if (ii_result->stmtHandle == ii_link->stmtHandle)
+            {
+                ii_link->stmtHandle = NULL;
+            }
             _close_statement (ii_result TSRMLS_CC);
         }
         zend_list_delete(ii_link->result_list_ptr->result_id);
@@ -623,16 +627,6 @@ static void _free_ii_link_result_list (II_LINK *ii_link TSRMLS_DC)
             default:
                 php_error_docref(NULL TSRMLS_CC, E_WARNING, "_free_ii_result_link_list : Unable to close statement");
         }
-                
-
-        /*
-        if (ii_success(&(closeParm.cl_genParm), &ii_link->errorHandle TSRMLS_CC) == II_FAIL)
-        {
-            php_error_docref(NULL TSRMLS_CC, E_WARNING, "_free_ii_result_link_list : Unable to close statement");
-        } else {
-            ii_link->stmtHandle = NULL;
-        }
-        */
     }
 }
 /*  }}} */
@@ -1090,6 +1084,7 @@ static void _ii_init_result (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result,
     ii_result->link_id = -1;
     ii_result->apiLevel = ii_link->apiLevel;
     ii_result->metaData = NULL;
+    ii_result->dataBuffer = NULL;
     ii_result->rowsReturned = 0;
     ii_result->rowNumber = 0;
     ii_result->rowWidth = 0;
@@ -1098,6 +1093,8 @@ static void _ii_init_result (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result,
     ii_result->queryType = IIAPI_QT_BASE;  /* 0 */
     ii_result->inputDescr = NULL;
     ii_result->buffered = FALSE;
+    ii_result->prepared = FALSE;
+    ii_result->executed = FALSE;
 }
 /* }}} */
 
@@ -1694,6 +1691,46 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     
     ZEND_FETCH_RESOURCE2(ii_link, II_LINK*, &link, -1, "Ingres Link", le_ii_link, le_ii_plink);
 
+    /* Check to see if the last ingres function generated an error */
+    /* If so close off the statement */
+    if (ii_link->stmtHandle && IIG(errorHandle))
+    {
+        /* see if we can close the query without cancelling it */
+        /* Free query resources. */
+        closeParm.cl_genParm.gp_callback = NULL;
+        closeParm.cl_genParm.gp_closure = NULL;
+        closeParm.cl_stmtHandle = ii_link->stmtHandle;
+
+        IIapi_close(&closeParm);
+        ii_sync(&(closeParm.cl_genParm));
+
+        if (ii_success(&(closeParm.cl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+        {
+            /* unable to close */
+            /* Cancel query processing. */
+            cancelParm.cn_genParm.gp_callback = NULL;
+            cancelParm.cn_genParm.gp_closure = NULL;
+            cancelParm.cn_stmtHandle = ii_result->stmtHandle;
+
+            IIapi_cancel(&cancelParm );
+            ii_sync(&(cancelParm.cn_genParm));
+
+            /* Free query resources. */
+            closeParm.cl_genParm.gp_callback = NULL;
+            closeParm.cl_genParm.gp_closure = NULL;
+            closeParm.cl_stmtHandle = ii_result->stmtHandle;
+
+            IIapi_close( &closeParm );
+            ii_sync(&(closeParm.cl_genParm));
+
+            if (ii_success(&(closeParm.cl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+            {
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close a previously executed query");
+                RETURN_FALSE;
+            }
+        }
+        ii_link->stmtHandle = NULL;
+    }
 
     /* Ingres only allows for a single query opened with IIAPI_QT_QUERY */
     /* Check to see any existing result-sets are unbuffered and close them */
@@ -1789,17 +1826,31 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
         }
     }
 
+    /* Allocate and initialize the memory for the new result resource */
+    ii_result = (II_RESULT *) malloc(sizeof(II_RESULT));
+    _ii_init_result(INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, ii_link);
+
     /* determine what sort of query is being executed */
     query_type = php_ii_query_type(query TSRMLS_CC);
 
     switch (query_type)
     {
         case INGRES_SQL_SELECT:
+            if (buffered)
+            {
+                ii_result->buffered = TRUE;
+                ii_result->queryType = IIAPI_QT_OPEN;
+            }
+            else
+            {
+                ii_result->queryType = IIAPI_QT_QUERY;
+            }
         case INGRES_SQL_INSERT:
         case INGRES_SQL_UPDATE:
         case INGRES_SQL_DELETE:
         case INGRES_SQL_CREATE:
         case INGRES_SQL_ALTER:
+            ii_result->queryType = IIAPI_QT_QUERY;
             break;
         case INGRES_SQL_COMMIT:
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Use ingres_commit() to commit a transaction");
@@ -1811,6 +1862,8 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
             break;
         case INGRES_SQL_OPEN:
         case INGRES_SQL_CLOSE:
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Use ingres_prepare() and ingres_execute() for cursor operations");
+            RETURN_FALSE;
             break;
         case INGRES_SQL_CONNECT:
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Use ingres_connect() to connect to a database");
@@ -1834,12 +1887,14 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
             break;
         case INGRES_SQL_EXECUTE_PROCEDURE:
         case INGRES_SQL_CALL:
+            ii_result->queryType = IIAPI_QT_EXEC_PROCEDURE;
             break;
         case INGRES_SQL_COPY:
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Ingres 'COPY TABLE() INTO/FROM' is not supported at the current time");
             RETURN_FALSE;
             break;
         default:
+            ii_result->queryType = IIAPI_QT_QUERY;
             break;
     }
 
@@ -1921,10 +1976,6 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
         php_error_docref(NULL TSRMLS_CC, E_NOTICE, "%s:%d, ac-state:%d, ac-emulation:%d",INGRES_INI_AUTO, IIG(auto_multi), ii_link->autocommit, ii_link->auto_multi);
     }
 
-    /* Allocate and initialize the memory for the new result resource */
-    ii_result = (II_RESULT *) malloc(sizeof(II_RESULT));
-    _ii_init_result(INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, ii_link);
-
     /* check to see if there are any parameters to the query */
     ii_result->paramCount = php_ii_paramcount(query TSRMLS_CC);
 
@@ -1962,6 +2013,11 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
             if ((ii_link->apiLevel > IIAPI_LEVEL_3) && IIG(describe))
             {
                 /* We can use DESCRIBE INPUT to work out the types that Ingres is expecting */
+                if (_ii_prepare(ii_result, query TSRMLS_CC) == II_FAIL)
+                {
+                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occurred when preparing a query for DESCRIBE INPUT");
+                    RETURN_FALSE;
+                }
                 if (_ii_describe_input (ii_result, query TSRMLS_CC) == II_FAIL)
                 {
                     php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occurred whilst trying to describe the query");
@@ -1991,13 +2047,19 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
 #if defined(IIAPI_VERSION_6)
     queryParm.qy_flags  = 0;
 #endif
-
-    if ( ii_result->procname == NULL )
+    queryParm.qy_queryType  = ii_result->queryType;
+    if ( ii_result->paramCount  || ii_result->queryType == IIAPI_QT_EXEC_PROCEDURE)
     {
-        if ((query_type == INGRES_SQL_SELECT) && (buffered)) 
-        {
-            ii_result->buffered = TRUE;
-            queryParm.qy_queryType  = IIAPI_QT_OPEN;
+        queryParm.qy_parameters = TRUE;
+    }
+    else
+    {
+        queryParm.qy_parameters = FALSE;
+    }
+
+    switch(ii_result->queryType)
+    {
+        case IIAPI_QT_OPEN:
 #if defined(IIAPI_VERSION_6)
             if (IIG(scroll) && (ii_link->apiLevel >= IIAPI_LEVEL_5))
             {
@@ -2020,20 +2082,9 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
             }
             sprintf (query_ptr," for readonly");
             ii_result->cursor_mode = II_CURSOR_READONLY;
-        }
-        else
-        {
-            queryParm.qy_queryType  = IIAPI_QT_QUERY;
-        } /* query_type == INGRES_SQL_SELECT */
-
-        if ( ii_result->paramCount > 0 )
-        {
-            queryParm.qy_parameters = TRUE;
-            queryParm.qy_queryText = converted_query;
-        }
-        else
-        {
-            queryParm.qy_parameters = FALSE;
+            /* fall through */
+        case IIAPI_QT_QUERY:
+            /* query has params or is a read-only cursor or both */
             if ( converted_query != NULL )
             {
                 queryParm.qy_queryText = converted_query;
@@ -2042,13 +2093,14 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
             {
                 queryParm.qy_queryText = query;
             }
-        } /* ii_result->paramCount > 0 */
-    }
-    else
-    {
-        queryParm.qy_queryType  = IIAPI_QT_EXEC_PROCEDURE;
-        queryParm.qy_parameters = TRUE;
-        queryParm.qy_queryText  = NULL;
+            break;
+        case IIAPI_QT_EXEC_PROCEDURE:
+            queryParm.qy_parameters = TRUE;
+            queryParm.qy_queryText  = NULL;
+        default:
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to execute OpenAPI query type, %d", ii_result->queryType);
+            RETURN_FALSE;
+            break;
     }
 
     IIapi_query(&queryParm);
@@ -2065,7 +2117,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     ii_link->tranHandle = queryParm.qy_tranHandle;
     ii_link->stmtHandle = queryParm.qy_stmtHandle;
 
-    if ( ii_result->paramCount > 0  ||  ii_result->procname != NULL )
+    if ( ii_result->paramCount > 0  ||  ii_result->queryType == IIAPI_QT_EXEC_PROCEDURE )
     {
         if (php_ii_bind_params (INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, queryParams, paramtypes) == II_FAIL)
         {
@@ -2119,7 +2171,6 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     {
          ii_result->rowWidth += ii_result->descriptor[col].ds_length;
     }  
-
 
     if ( ii_result->paramCount > 0  && ii_result->procname == NULL )
     { 
@@ -2185,7 +2236,6 @@ PHP_FUNCTION(ingres_query)
 }
 /* }}} */
 
-
 /* {{{ proto mixed ingres_unbuffered_query(resource link, string query [, array queryParams] [, array paramtypes] ) */
 /* Send an unbuffered SQL query to Ingres */
 #ifdef HAVE_INGRES2
@@ -2197,6 +2247,7 @@ PHP_FUNCTION(ingres_unbuffered_query)
     php_ii_query(INTERNAL_FUNCTION_PARAM_PASSTHRU, 0);
 }
 /* }}} */
+
 /* {{{ proto mixed ingres_prepare(resource link, string query) */
 /* Prepare SQL for later execution */
 #ifdef HAVE_INGRES2
@@ -2211,6 +2262,8 @@ PHP_FUNCTION(ingres_prepare)
     II_RESULT *ii_result;
 
     IIAPI_QUERYPARM     queryParm;
+    IIAPI_GETQINFOPARM  getQInfoParm;
+    IIAPI_CANCELPARM    cancelParm;
     IIAPI_CLOSEPARM     closeParm;
 
     int query_len=0;
@@ -2220,6 +2273,7 @@ PHP_FUNCTION(ingres_prepare)
     int cursor_id_len;
 
     ii_result_entry *result_entry;
+    int query_type;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"rs" , &link, &query, &query_len) == FAILURE) 
     {
@@ -2228,26 +2282,88 @@ PHP_FUNCTION(ingres_prepare)
 
     ZEND_FETCH_RESOURCE2(ii_link, II_LINK *, &link, -1, "Ingres Link", le_ii_link, le_ii_plink);
 
+    /* Check to see if the last ingres function generated an error */
+    /* If so close off the statement */
+    if (ii_link->stmtHandle && IIG(errorHandle))
+    {
+        /* see if we can close the query without cancelling it */
+        /* Free query resources. */
+        closeParm.cl_genParm.gp_callback = NULL;
+        closeParm.cl_genParm.gp_closure = NULL;
+        closeParm.cl_stmtHandle = ii_link->stmtHandle;
+
+        IIapi_close(&closeParm);
+        ii_sync(&(closeParm.cl_genParm));
+
+        if (ii_success(&(closeParm.cl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+        {
+            /* unable to close */
+            /* Cancel query processing. */
+            cancelParm.cn_genParm.gp_callback = NULL;
+            cancelParm.cn_genParm.gp_closure = NULL;
+            cancelParm.cn_stmtHandle = ii_result->stmtHandle;
+
+            IIapi_cancel(&cancelParm );
+            ii_sync(&(cancelParm.cn_genParm));
+
+            /* Free query resources. */
+            closeParm.cl_genParm.gp_callback = NULL;
+            closeParm.cl_genParm.gp_closure = NULL;
+            closeParm.cl_stmtHandle = ii_result->stmtHandle;
+
+            IIapi_close( &closeParm );
+            ii_sync(&(closeParm.cl_genParm));
+
+            if (ii_success(&(closeParm.cl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+            {
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close a previously executed query");
+                RETURN_FALSE;
+            }
+        }
+        ii_link->stmtHandle = NULL;
+    }
+
     /* Allocate and initialize the memory for the new result resource */
     ii_result = (II_RESULT *) malloc(sizeof(II_RESULT));
     _ii_init_result(INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, ii_link);
 
+    /* determine what sort of query is being executed */
+    query_type = php_ii_query_type(query TSRMLS_CC);
+
+    switch (query_type)
+    {
+        case INGRES_SQL_SELECT:
+            ii_result->queryType = IIAPI_QT_OPEN;
+            break;
+        case INGRES_SQL_INSERT:
+        case INGRES_SQL_UPDATE:
+        case INGRES_SQL_DELETE:
+            ii_result->queryType = IIAPI_QT_EXEC;
+            break;
+        case INGRES_SQL_CREATE:
+        case INGRES_SQL_ALTER:
+        case INGRES_SQL_COMMIT:
+        case INGRES_SQL_ROLLBACK:
+        case INGRES_SQL_OPEN:
+        case INGRES_SQL_CLOSE:
+        case INGRES_SQL_CONNECT:
+        case INGRES_SQL_DISCONNECT:
+        case INGRES_SQL_GETDBEVENT:
+        case INGRES_SQL_SAVEPOINT:
+        case INGRES_SQL_AUTOCOMMIT:
+        case INGRES_SQL_EXECUTE_PROCEDURE:
+        case INGRES_SQL_CALL:
+        default:
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to execute a %s statement using ingres_prepare() use ingres_query() instead", SQL_COMMANDS[query_type].command );
+            RETURN_FALSE;
+            break;
+    }
     statement = query;
 
     /* figure how many parameters are expected */
     ii_result->paramCount = php_ii_paramcount(query TSRMLS_CC);
-#if defined (IIAPI_VERSION_5)
-    if (ii_result->paramCount && ((ii_result->apiLevel > IIAPI_LEVEL_3) && IIG(describe)))
-    {
-        /* Use the result from DESCRIBE INPUT */
-        if (_ii_describe_input (ii_result, query TSRMLS_CC) == II_FAIL)
-        {
-            php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occurred whilst trying to describe the query");
-            RETURN_FALSE;
-        }
-    }
-#endif
     ii_result->procname = NULL;
+    ii_result->prepared = TRUE;
 
     /* check to see if this is a procedure or not
        load the procedure name into ii_link->procname.
@@ -2255,81 +2371,114 @@ PHP_FUNCTION(ingres_prepare)
 
     ii_result->procname = php_ii_check_procedure(query, ii_link TSRMLS_CC);
 
-    if ( ii_result->procname == NULL )
-    {
-        /* Adapt the query into a prepared statement */
-        php_ii_gen_cursor_id(ii_result TSRMLS_CC);
-        cursor_id_len = strlen(ii_result->cursor_id);
-        preparedStatement=ecalloc(query_len + 15 + cursor_id_len, 1);
-        sprintf (preparedStatement,"prepare %s from %s", ii_result->cursor_id, statement);
-        statement = preparedStatement;
+    /* Adapt the query into a prepared statement */
+    php_ii_gen_cursor_id(ii_result TSRMLS_CC);
+    cursor_id_len = strlen(ii_result->cursor_id);
+    preparedStatement=ecalloc(query_len + 15 + cursor_id_len, 1);
+    sprintf (preparedStatement,"prepare %s from %s", ii_result->cursor_id, statement);
+    statement = preparedStatement;
 
-        queryParm.qy_genParm.gp_callback = NULL;
-        queryParm.qy_genParm.gp_closure = NULL;
-        queryParm.qy_connHandle = ii_result->connHandle;
-        queryParm.qy_tranHandle = ii_result->tranHandle;
-        queryParm.qy_stmtHandle = NULL;
-        queryParm.qy_queryType  = IIAPI_QT_QUERY; 
-        queryParm.qy_parameters = FALSE;
-        queryParm.qy_queryText  = statement;
+    queryParm.qy_genParm.gp_callback = NULL;
+    queryParm.qy_genParm.gp_closure = NULL;
+    queryParm.qy_connHandle = ii_result->connHandle;
+    queryParm.qy_tranHandle = ii_result->tranHandle;
+    queryParm.qy_stmtHandle = NULL;
+    queryParm.qy_queryType  = IIAPI_QT_QUERY; 
+    queryParm.qy_parameters = FALSE;
+    queryParm.qy_queryText  = statement;
 #if defined (IIAPI_VERSION_6)
-        queryParm.qy_flags = 0;
+    queryParm.qy_flags = 0;
 #endif
 
-        IIapi_query(&queryParm);
-        ii_sync(&(queryParm.qy_genParm));
+    IIapi_query(&queryParm);
+    ii_sync(&(queryParm.qy_genParm));
 
-        if (ii_success(&(queryParm.qy_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL) 
-        {
-            efree(preparedStatement);
-            RETURN_FALSE;
-        }
-
-        ii_result->tranHandle = queryParm.qy_tranHandle;
-        ii_result->stmtHandle = queryParm.qy_stmtHandle;
-
-        /*
-        * Call IIapi_close() to release resources.
-        */
-        closeParm.cl_genParm.gp_callback = NULL;
-        closeParm.cl_genParm.gp_closure = NULL;
-        closeParm.cl_stmtHandle = queryParm.qy_stmtHandle;
-
-        IIapi_close( &closeParm );
-        ii_sync(&(closeParm.cl_genParm));
-        if (ii_success(&(closeParm.cl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL) 
-        {
-            efree(preparedStatement);
-            RETURN_FALSE;
-        }
-
-        ZEND_REGISTER_RESOURCE(return_value, ii_result, le_ii_result)
-
-        /* Add details of the II_RESULT resource to the II_LINK resource for later clean up */
-
-        result_entry = (ii_result_entry *)malloc(sizeof(ii_result_entry));
-        if (result_entry == NULL )
-        {
-            php_error_docref(NULL TSRMLS_CC, E_ERROR, "Unable to create memory for result_entry");
-            RETURN_FALSE;
-        }
-
-        if (ii_link->result_list_ptr == NULL)
-        {
-            ii_link->result_list_ptr = result_entry;
-            result_entry->next_result_ptr = NULL;
-            result_entry->result_id = Z_LVAL_P(return_value); /* resource id */
-        }
-        else
-        {   
-            /* insert the new result_entry to the head of the result_list */
-            result_entry->next_result_ptr = (char *)ii_link->result_list_ptr;
-            ii_link->result_list_ptr = result_entry;
-            result_entry->result_id = Z_LVAL_P(return_value); /* resource id */
-        }
-
+    if (ii_success(&(queryParm.qy_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL) 
+    {
         efree(preparedStatement);
+        RETURN_FALSE;
     }
+
+    ii_result->tranHandle = queryParm.qy_tranHandle;
+    ii_result->stmtHandle = queryParm.qy_stmtHandle;
+
+    /* Update ii_link so we can commit later */
+    ii_link->tranHandle = ii_result->tranHandle;
+    ii_link->stmtHandle = ii_result->stmtHandle;
+
+    getQInfoParm.gq_genParm.gp_callback = NULL;
+    getQInfoParm.gq_genParm.gp_closure = NULL;
+    getQInfoParm.gq_stmtHandle = ii_result->stmtHandle;
+
+    IIapi_getQueryInfo(&getQInfoParm);
+    ii_sync(&(getQInfoParm.gq_genParm));
+
+    if (ii_success(&(getQInfoParm.gq_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+    {
+        efree(preparedStatement);
+        RETURN_FALSE;
+    }
+
+    if  (_ii_close( &ii_result->stmtHandle, &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+    {
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close a prepared statement - %s", statement);
+        RETURN_FALSE;
+    }
+    ii_link->stmtHandle = NULL;
+
+#if defined (IIAPI_VERSION_5)
+    if (ii_result->paramCount && ((ii_result->apiLevel > IIAPI_LEVEL_3) && IIG(describe)))
+    {
+        /* Use the result from DESCRIBE INPUT */
+        if (_ii_describe_input (ii_result, query TSRMLS_CC) == II_FAIL)
+        {
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occurred whilst trying to fetch a description of the input parameters");
+            RETURN_FALSE;
+        }
+    }
+    else
+    {
+        /* DESCRIBE the prepared query */
+        if (_ii_describe (ii_result, query TSRMLS_CC) == II_FAIL)
+        {
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occurred whilst trying to describe the query");
+            RETURN_FALSE;
+        }
+    }
+#else
+    /* DESCRIBE the prepared query */
+    if (_ii_describe (ii_result, query TSRMLS_CC) == II_FAIL)
+    {
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occurred whilst trying to describe the query");
+        RETURN_FALSE;
+    }
+#endif
+
+    ZEND_REGISTER_RESOURCE(return_value, ii_result, le_ii_result)
+
+    /* Add details of the II_RESULT resource to the II_LINK resource for later clean up */
+
+    result_entry = (ii_result_entry *)malloc(sizeof(ii_result_entry));
+    if (result_entry == NULL )
+    {
+        php_error_docref(NULL TSRMLS_CC, E_ERROR, "Unable to create memory for result_entry");
+        RETURN_FALSE;
+    }
+
+    if (ii_link->result_list_ptr == NULL)
+    {
+        ii_link->result_list_ptr = result_entry;
+        result_entry->next_result_ptr = NULL;
+        result_entry->result_id = Z_LVAL_P(return_value); /* resource id */
+    }
+    else
+    {   
+        /* insert the new result_entry to the head of the result_list */
+        result_entry->next_result_ptr = (char *)ii_link->result_list_ptr;
+        ii_link->result_list_ptr = result_entry;
+        result_entry->result_id = Z_LVAL_P(return_value); /* resource id */
+    }
+    efree(preparedStatement);
 }
 /* }}} */
 
@@ -2342,15 +2491,18 @@ PHP_FUNCTION(ingres_execute)
 #endif
 {
     zval *result, *queryParams;
-    char *paramtypes;
+    char *paramtypes = NULL;
     int paramtypes_len;
     II_RESULT *ii_result;
     IIAPI_QUERYPARM     queryParm;
     IIAPI_GETDESCRPARM  getDescrParm;
-    II_INT2                columnType;
+    IIAPI_CANCELPARM    cancelParm;
+    IIAPI_CLOSEPARM     closeParm;
+
+    int                 col;
 
     int elementCount;
-    char *statement;
+    char *statement = NULL;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r|as" , &result, &queryParams, &paramtypes, &paramtypes_len) == FAILURE) 
     {
@@ -2358,6 +2510,60 @@ PHP_FUNCTION(ingres_execute)
     }
         
     ZEND_FETCH_RESOURCE(ii_result, II_RESULT *, &result, -1, "Ingres Result", le_ii_result);
+
+    /* Bail if passed a non-prepared query */
+    if (ii_result->prepared == FALSE)
+    {
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, "Cannot execute a non-prepared query" );
+        RETURN_FALSE;
+    }
+
+    /* Check if we have already executed a query against this prepared statement */
+    if (ii_result->executed)
+    {
+        if (ii_result->stmtHandle)
+        {
+            /* Release any resultset data */
+            _free_resultdata (ii_result);
+
+            /* see if we can close the query without cancelling it */
+            /* Free query resources. */
+            closeParm.cl_genParm.gp_callback = NULL;
+            closeParm.cl_genParm.gp_closure = NULL;
+            closeParm.cl_stmtHandle = ii_result->stmtHandle;
+
+            IIapi_close(&closeParm);
+            ii_sync(&(closeParm.cl_genParm));
+
+            if (ii_success(&(closeParm.cl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+            {
+                /* unable to close */
+                /* Cancel query processing. */
+                cancelParm.cn_genParm.gp_callback = NULL;
+                cancelParm.cn_genParm.gp_closure = NULL;
+                cancelParm.cn_stmtHandle = ii_result->stmtHandle;
+
+                IIapi_cancel(&cancelParm );
+
+                ii_sync(&(cancelParm.cn_genParm));
+
+                /* Free query resources. */
+                closeParm.cl_genParm.gp_callback = NULL;
+                closeParm.cl_genParm.gp_closure = NULL;
+                closeParm.cl_stmtHandle = ii_result->stmtHandle;
+
+                IIapi_close( &closeParm );
+
+                ii_sync(&(closeParm.cl_genParm));
+
+                if (ii_success(&(closeParm.cl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+                {
+                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close a previously executed query");
+                    RETURN_FALSE;
+                }
+            }
+        }
+    }
 
     if ( ii_result->paramCount > 0 )
     {
@@ -2375,66 +2581,48 @@ PHP_FUNCTION(ingres_execute)
         zend_hash_internal_pointer_reset(Z_ARRVAL_P(queryParams));
     }
 
-    if ( ii_result->procname == NULL )
+    statement = ecalloc(strlen(ii_result->cursor_id) + 25, 1);
+    if (ii_result->queryType == IIAPI_QT_OPEN)
     {
-        statement = ecalloc(strlen(ii_result->cursor_id) + 25, 1);
-
-        /* Set the cursor mode according to ii_link->cursor_mode */
-        /*
-        switch (IIG(cursor_mode))
+        if (ii_result->cursor_mode == II_CURSOR_READONLY)
         {
-            case II_CURSOR_UPDATE:
-                sprintf (statement,"execute %s", ii_result->cursor_id );
-                break;
-            case II_CURSOR_READONLY:
-                sprintf (statement,"%s for readonly", ii_result->cursor_id );
-                break;
-            default:
-                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown cursor mode requested, %d", IIG(cursor_mode));
-                efree(statement);
-                statement = NULL;
-                RETURN_FALSE;
-        } */
-        sprintf (statement,"execute %s", ii_result->cursor_id );
-
-        queryParm.qy_genParm.gp_callback = NULL;
-        queryParm.qy_genParm.gp_closure = NULL;
-        queryParm.qy_connHandle = ii_result->connHandle;
-        queryParm.qy_tranHandle = ii_result->tranHandle;
-        queryParm.qy_stmtHandle = NULL;
-        queryParm.qy_queryType  = IIAPI_QT_EXEC; 
-
-        if (ii_result->paramCount) 
-        {
-            queryParm.qy_parameters = TRUE;
-        } 
-        else 
-        {
-            queryParm.qy_parameters = FALSE;
+            sprintf (statement,"%s for readonly", ii_result->cursor_id );
         }
-
-        queryParm.qy_queryText = statement;
-
-        columnType = IIAPI_COL_QPARM;
-
+        else
+        {
+            sprintf (statement,"%s", ii_result->cursor_id );
+        }
     }
     else
     {
-        queryParm.qy_genParm.gp_callback = NULL;
-        queryParm.qy_genParm.gp_closure = NULL;
-        queryParm.qy_connHandle = ii_result->connHandle;
-        queryParm.qy_tranHandle = ii_result->tranHandle;
-        queryParm.qy_stmtHandle = NULL;
-        queryParm.qy_queryType  = IIAPI_QT_EXEC_PROCEDURE; 
-        queryParm.qy_parameters = TRUE;
-        queryParm.qy_queryText  = NULL;
-
-        columnType = IIAPI_COL_PROCPARM;
-
-        /* allow for the procedure name as a param */
-        ii_result->paramCount++;
-
+        sprintf (statement,"execute %s", ii_result->cursor_id );
     }
+
+    queryParm.qy_genParm.gp_callback = NULL;
+    queryParm.qy_genParm.gp_closure = NULL;
+    queryParm.qy_connHandle = ii_result->connHandle;
+    queryParm.qy_tranHandle = ii_result->tranHandle;
+    queryParm.qy_stmtHandle = NULL;
+    queryParm.qy_queryType  = ii_result->queryType; 
+    queryParm.qy_queryText  = statement; 
+    if ((ii_result->paramCount) || (ii_result->queryType == IIAPI_QT_OPEN))
+    {
+        queryParm.qy_parameters = TRUE;
+    }
+    else
+    {
+        queryParm.qy_parameters = FALSE;
+    }
+#if defined (IIAPI_VERSION_6)
+    queryParm.qy_flags = 0;
+    if (IIG(scroll) && (ii_result->apiLevel >= IIAPI_LEVEL_5))
+    {
+        /* Enable scrolling cursor support */
+        queryParm.qy_flags  = IIAPI_QF_SCROLL;
+        ii_result->scrollable = 1;
+    }
+        queryParm.qy_flags = 0;
+#endif
 
     IIapi_query(&queryParm);
     ii_sync(&(queryParm.qy_genParm));
@@ -2450,64 +2638,31 @@ PHP_FUNCTION(ingres_execute)
 
     ii_result->tranHandle = queryParm.qy_tranHandle;
     ii_result->stmtHandle = queryParm.qy_stmtHandle;
+    ii_result->executed = TRUE;
 
-    if ( ii_result->paramCount > 0 )
+    if ((ii_result->paramCount) || (ii_result->queryType == IIAPI_QT_OPEN))
     {
-        if ((queryParams != NULL) || (ii_result->inputCount))
+        if (php_ii_bind_params (INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, queryParams, paramtypes) == II_FAIL)
         {
-            if ( php_ii_bind_params (INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, queryParams, paramtypes) == II_FAIL)
+            if (ii_result->inputCount)
             {
-                if (ii_result->inputCount)
-                {
-                    php_error_docref(NULL TSRMLS_CC, E_WARNING,"Error occurred whilst binding pre-described parameters");
-                }
-                else
-                {
-                    php_error_docref(NULL TSRMLS_CC, E_WARNING,"Error binding parameters using user supplied parameter types");
-                }
-                RETURN_FALSE;
+                php_error_docref(NULL TSRMLS_CC, E_WARNING,"Error occurred whilst binding pre-described parameters");
             }
-        }
-        else
-        {
-            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to bind parameters for query execution as none were provided");
-            RETURN_FALSE;
-        }
-    } 
-    else
-    {
-        /* not handling parameters */
-
-        queryParm.qy_genParm.gp_callback = NULL;
-        queryParm.qy_genParm.gp_closure = NULL;
-        queryParm.qy_connHandle = ii_result->connHandle;
-        queryParm.qy_tranHandle = ii_result->tranHandle;
-        queryParm.qy_stmtHandle = NULL;
-        queryParm.qy_queryType  = IIAPI_QT_QUERY;
-        queryParm.qy_parameters = FALSE;
-        queryParm.qy_queryText  = statement;
-#if defined (IIAPI_VERSION_6)
-        queryParm.qy_flags = 0;
-#endif
-
-        IIapi_query(&queryParm);
-        ii_sync(&(queryParm.qy_genParm));
-
-        if (ii_success(&(queryParm.qy_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
-        {
-            if ( ii_result->procname == NULL )
+            else
+            {
+                php_error_docref(NULL TSRMLS_CC, E_WARNING,"Error binding parameters using user supplied parameter types");
+            }
+            if (statement)
             {
                 efree (statement);
             }
             RETURN_FALSE;
         }
-
-    } /* if ii_link->paramCount > 0 */
+    } 
 
     /* store transaction and statement handles */
     ii_result->tranHandle = queryParm.qy_tranHandle;
     ii_result->stmtHandle = queryParm.qy_stmtHandle;
-
     
     /* get description of results */
     getDescrParm.gd_genParm.gp_callback = NULL;
@@ -2529,6 +2684,12 @@ PHP_FUNCTION(ingres_execute)
     /* store the results */
     ii_result->fieldCount = getDescrParm.gd_descriptorCount;
     ii_result->descriptor = getDescrParm.gd_descriptor;
+
+    for( col = 0; col < ii_result->fieldCount; col++)
+    {
+         ii_result->rowWidth += ii_result->descriptor[col].ds_length;
+    }  
+
     if ( ii_result->procname == NULL )
     {
         efree (statement);
@@ -3341,6 +3502,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 {
     IIAPI_DATAVALUE *columnData;
     IIAPI_GETQINFOPARM getQInfoParm;
+    IIAPI_GETDESCRPARM getDescrParm;
 
     int i, j, k, l;
     double value_double = 0;
@@ -3369,6 +3531,39 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
     array_init(return_value);
     /* init first char of array used to return BIG INT values as strings */
     value_long_long_str[0] = '\0';
+
+    if (ii_result->descriptor == NULL)
+    {
+        /* get description of results */
+        getDescrParm.gd_genParm.gp_callback = NULL;
+        getDescrParm.gd_genParm.gp_closure  = NULL;
+        getDescrParm.gd_stmtHandle = ii_result->stmtHandle;
+
+        IIapi_getDescriptor(&getDescrParm);
+        ii_sync(&(getDescrParm.gd_genParm));
+
+        if (ii_success(&(getDescrParm.gd_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+        {
+            if (ii_result->cursor_id)
+            {
+                efree(ii_result->cursor_id);
+                ii_result->cursor_id = NULL;
+            }
+            if (ii_result->inputDescr)
+            {
+                efree(ii_result->inputDescr);
+                ii_result->inputDescr = NULL;
+            }
+            if (ii_result)
+            {
+                free(ii_result);
+                ii_result = NULL;
+            }
+            RETURN_FALSE;
+        }
+        ii_result->fieldCount = getDescrParm.gd_descriptorCount;
+        ii_result->descriptor = getDescrParm.gd_descriptor;
+    }
 
 
     if ( ii_result->metaData != NULL )
@@ -3405,8 +3600,8 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
             next_cell = (char *)ii_result->dataBuffer;
             for( cell=0; cell < ( ii_result->fieldCount * ii_result->getColParm.gc_rowCount ); cell++)
             {
-                 ii_result->metaData[cell].dv_value = next_cell;
-                 next_cell += (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length;
+                ii_result->metaData[cell].dv_value = next_cell;
+                next_cell += (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length;
             }  
 
             IIapi_getColumns(&ii_result->getColParm);
@@ -4210,6 +4405,8 @@ PHP_FUNCTION(ingres_commit)
 {
     zval *link;
     II_LINK *ii_link;
+    IIAPI_CANCELPARM   cancelParm;
+    IIAPI_CLOSEPARM    closeParm;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r" , &link) == FAILURE) 
     {
@@ -5156,7 +5353,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
     unsigned long index;
     long lob_len;
     long segment_length;
-    short with_procedure = 0;
+    short param_offset = 0;
     char *types;
     short unicode_lob = 0;
 
@@ -5182,11 +5379,14 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
     setDescrParm.sd_genParm.gp_closure = NULL;
     setDescrParm.sd_stmtHandle = ii_result->stmtHandle;
 
-    if ( ii_result->procname != NULL )
+    /* If we are executing a procedure or a cursor that has been prepared then we need to bind an additional */
+    /* parameter */
+    if ((ii_result->queryType == IIAPI_QT_EXEC_PROCEDURE) || 
+        ((ii_result->queryType == IIAPI_QT_OPEN)  && (ii_result->prepared)))
     {
         /* bump descriptorCount to allow for procedure name */
         setDescrParm.sd_descriptorCount = ii_result->paramCount + 1;
-        with_procedure = 1;
+        param_offset = 1;
     }
     else
     {
@@ -5196,7 +5396,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
     descriptorInfo = (IIAPI_DESCRIPTOR *) safe_emalloc(sizeof(IIAPI_DESCRIPTOR),setDescrParm.sd_descriptorCount, 0);
     setDescrParm.sd_descriptor = descriptorInfo;
 
-    if ( ii_result->procname == NULL )
+    if (ii_result->queryType != IIAPI_QT_EXEC_PROCEDURE)
     {
         columnType = IIAPI_COL_QPARM;
     }
@@ -5216,17 +5416,31 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
     for ( param = 0 ; param < setDescrParm.sd_descriptorCount ; param++)
     {
 
-        if (( ii_result->procname != NULL)  && (param == 0) ) 
+        if (((ii_result->queryType == IIAPI_QT_EXEC_PROCEDURE) || 
+            ((ii_result->queryType == IIAPI_QT_OPEN) && (ii_result->prepared))) && (param == 0)) 
         { 
-            /* setup the first parameter as the procedure name */
-            setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
-            setDescrParm.sd_descriptor[param].ds_length = strlen(ii_result->procname);
-            setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
-            setDescrParm.sd_descriptor[param].ds_precision = 0;
-            setDescrParm.sd_descriptor[param].ds_scale = 0;
-            setDescrParm.sd_descriptor[param].ds_columnType = IIAPI_COL_SVCPARM;
-            setDescrParm.sd_descriptor[param].ds_columnName = NULL;
-
+            if (ii_result->queryType == IIAPI_QT_EXEC_PROCEDURE)
+            {
+                /* setup the first parameter as the procedure name */
+                setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
+                setDescrParm.sd_descriptor[param].ds_length = strlen(ii_result->procname);
+                setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+                setDescrParm.sd_descriptor[param].ds_precision = 0;
+                setDescrParm.sd_descriptor[param].ds_scale = 0;
+                setDescrParm.sd_descriptor[param].ds_columnType = IIAPI_COL_SVCPARM;
+                setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+            }
+            else /* ii_result->queryType == IIAPI_QT_OPEN */
+            {
+                setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
+                setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+                //setDescrParm.sd_descriptor[param].ds_length = 2;
+                setDescrParm.sd_descriptor[param].ds_length = strlen(ii_result->cursor_id);
+                setDescrParm.sd_descriptor[param].ds_precision = 0;
+                setDescrParm.sd_descriptor[param].ds_scale = 0;
+                setDescrParm.sd_descriptor[param].ds_columnType = IIAPI_COL_SVCPARM;
+                setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+            }
         } 
         else 
         {
@@ -5263,7 +5477,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                 {
                     setDescrParm.sd_descriptor[param].ds_columnName = key;
                 }
-                switch (types[param - with_procedure])
+                switch (types[param - param_offset])
                 {
                     case 'B': /* long byte */
                         convert_to_string_ex(val);
@@ -5504,7 +5718,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                 /* Check to see if we have descriptors from DESCRIBE INPUT */
                 if (ii_result->inputCount > 0)
                 {
-                    switch ((ii_result->inputDescr[param]).ds_dataType)
+                    switch ((ii_result->inputDescr[param - param_offset]).ds_dataType)
                     {
                         case IIAPI_LBYTE_TYPE: /* long byte */
                         case IIAPI_BYTE_TYPE: /* byte */
@@ -5526,48 +5740,49 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                         case IIAPI_TXT_TYPE: /* text */
                         case IIAPI_DEC_TYPE: /* decimal - we need an exact value for decimal storage */
                             convert_to_string_ex(val);
-                            if ((ii_result->inputDescr[param]).ds_dataType != IIAPI_LBYTE_TYPE) 
+                            if ((ii_result->inputDescr[param - param_offset]).ds_dataType != IIAPI_LBYTE_TYPE) 
                             {
                                 setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
                             }
                             else
                             {
-                                setDescrParm.sd_descriptor[param].ds_dataType = (ii_result->inputDescr[param]).ds_dataType;
+                                setDescrParm.sd_descriptor[param].ds_dataType = (ii_result->inputDescr[param - param_offset]).ds_dataType;
                             }
-                            setDescrParm.sd_descriptor[param].ds_nullable = (ii_result->inputDescr[param]).ds_nullable;
                             setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
-                            setDescrParm.sd_descriptor[param].ds_precision = (ii_result->inputDescr[param]).ds_precision;
-                            setDescrParm.sd_descriptor[param].ds_scale = (ii_result->inputDescr[param]).ds_scale;
+                            setDescrParm.sd_descriptor[param].ds_precision = (ii_result->inputDescr[param - param_offset]).ds_precision;
+                            setDescrParm.sd_descriptor[param].ds_scale = (ii_result->inputDescr[param - param_offset]).ds_scale;
                             setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+                            setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
                             break;
                         case IIAPI_MNY_TYPE: /* money */
                         case IIAPI_FLT_TYPE: /* float */
                             convert_to_double_ex(val);
                             setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_FLT_TYPE;
-                            setDescrParm.sd_descriptor[param].ds_dataType = (ii_result->inputDescr[param]).ds_dataType;
                             setDescrParm.sd_descriptor[param].ds_length = sizeof(Z_DVAL_PP(val));
                             setDescrParm.sd_descriptor[param].ds_precision = 31;
                             setDescrParm.sd_descriptor[param].ds_scale = 15;
                             setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+                            setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
                             break;
                         case IIAPI_LTXT_TYPE: /* long text */
                         case IIAPI_LVCH_TYPE: /* long varchar */
                             convert_to_string_ex(val);
                             setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_LVCH_TYPE;
-                            setDescrParm.sd_descriptor[param].ds_dataType = (ii_result->inputDescr[param]).ds_dataType;
                             setDescrParm.sd_descriptor[param].ds_length =  Z_STRLEN_PP(val);
                             setDescrParm.sd_descriptor[param].ds_precision = 0;
                             setDescrParm.sd_descriptor[param].ds_scale = 0;
                             setDescrParm.sd_descriptor[param].ds_columnType = columnType;
                             setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+                            setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
                             break;
                         case IIAPI_INT_TYPE: /* INTEGER */
                             setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_INT_TYPE;
                             setDescrParm.sd_descriptor[param].ds_precision = 0;
                             setDescrParm.sd_descriptor[param].ds_scale = 0;
                             setDescrParm.sd_descriptor[param].ds_columnType = columnType;
-                            setDescrParm.sd_descriptor[param].ds_dataType = (ii_result->inputDescr[param]).ds_dataType;
+                            setDescrParm.sd_descriptor[param].ds_dataType = (ii_result->inputDescr[param - param_offset]).ds_dataType;
                             setDescrParm.sd_descriptor[param].ds_length = sizeof(Z_LVAL_PP(val));
+                            setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
                             break;
 #if defined (IIAPI_VERSION_3)
                         case IIAPI_NCHA_TYPE: /* NCHAR */
@@ -5601,10 +5816,10 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                     }
                                     setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
                                 }
-                                setDescrParm.sd_descriptor[param].ds_dataType = (ii_result->inputDescr[param]).ds_dataType;
-                                setDescrParm.sd_descriptor[param].ds_nullable = (ii_result->inputDescr[param]).ds_nullable;
-                                setDescrParm.sd_descriptor[param].ds_precision = (ii_result->inputDescr[param]).ds_precision;
-                                setDescrParm.sd_descriptor[param].ds_scale = (ii_result->inputDescr[param]).ds_scale;
+                                setDescrParm.sd_descriptor[param].ds_dataType = (ii_result->inputDescr[param - param_offset]).ds_dataType;
+                                setDescrParm.sd_descriptor[param].ds_nullable = (ii_result->inputDescr[param - param_offset]).ds_nullable;
+                                setDescrParm.sd_descriptor[param].ds_precision = (ii_result->inputDescr[param - param_offset]).ds_precision;
+                                setDescrParm.sd_descriptor[param].ds_scale = (ii_result->inputDescr[param - param_offset]).ds_scale;
                                 setDescrParm.sd_descriptor[param].ds_columnType = columnType;
                             }
                             else
@@ -5623,7 +5838,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             setDescrParm.sd_descriptor[param].ds_columnType = columnType;
                             break;
                         default:
-                            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unsupported type, %d", (ii_result->inputDescr[param]).ds_dataType);
+                            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unsupported type, %d", (ii_result->inputDescr[param - param_offset]).ds_dataType);
                             break;
                     }
                     if ( ii_result->procname == NULL )
@@ -5718,7 +5933,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                     }
                 }
 
-            if (((ii_result->procname != NULL) && (param > 0)) || (ii_result->procname == NULL))
+            if (((param_offset) && (param > 0)) || (!param_offset))
             {
                 zend_hash_move_forward_ex(arr_hash, &pointer);
             }
@@ -5727,7 +5942,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
 
     } /* param=0; param < setDescrParm.sd_descriptorCount; param++ */
 
-    if (((ii_result->procname == NULL) && (ii_result->paramCount > 0)) || ((ii_result->procname != NULL) && (setDescrParm.sd_descriptorCount > 1)))
+    if (((param_offset) && (setDescrParm.sd_descriptorCount > 1)) || ((!param_offset) && (ii_result->paramCount > 0)))
     {
         zend_hash_internal_pointer_reset_ex(arr_hash, &pointer);
     }
@@ -5753,12 +5968,13 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
     {
         putParmParm.pp_parmCount=1; /* New parameter */
         
-        if ((ii_result->procname != NULL) && (param == 0))
+        if (((ii_result->queryType == IIAPI_QT_EXEC_PROCEDURE) || 
+            ((ii_result->queryType == IIAPI_QT_OPEN) && (ii_result->stmtHandle))) && (param == 0)) 
         {
-            /* place the procedure name as the first parameter */
+            /* place the procedure name / cursor_id as the first parameter */
             putParmParm.pp_parmData[0].dv_null = FALSE;
-            putParmParm.pp_parmData[0].dv_length = strlen(ii_result->procname);
-            putParmParm.pp_parmData[0].dv_value = ii_result->procname;
+            putParmParm.pp_parmData[0].dv_length = ii_result->queryType == IIAPI_QT_EXEC_PROCEDURE ? strlen(ii_result->procname) :  strlen(ii_result->cursor_id);
+            putParmParm.pp_parmData[0].dv_value = ii_result->queryType == IIAPI_QT_EXEC_PROCEDURE ? ii_result->procname : ii_result->cursor_id;
         }
         else
         {
@@ -5791,7 +6007,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                     convert_to_string_ex(val);
                     if ( paramtypes != NULL ) 
                     {
-                        switch (types[param - with_procedure])
+                        switch (types[param - param_offset])
                         {
 #if defined (IIAPI_VERSION_3)
                             case 'N': /* NVARCHAR */
@@ -5948,7 +6164,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                     else if (ii_result->inputCount > 0)
                     {
                         /* Use the descriptor information to convert the data */
-                        switch ((ii_result->inputDescr[param - with_procedure]).ds_dataType)
+                        switch ((ii_result->inputDescr[param - param_offset]).ds_dataType)
                         {
 #if defined (IIAPI_VERSION_3)
                             case IIAPI_NVCH_TYPE: /* NVARCHAR */
@@ -6114,14 +6330,26 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                     putParmParm.pp_parmData[0].dv_length = 0; 
                     putParmParm.pp_parmData[0].dv_value = NULL;
                     break;
+                case IS_ARRAY:
+                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to use an array as a parameter to a query");
+                    return II_FAIL;
+                    break;
+                case IS_OBJECT:
+                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to use an object as a parameter to a query");
+                    return II_FAIL;
+                    break;
+                case IS_RESOURCE:
+                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to use a PHP resource as a parameter to a query");
+                    return II_FAIL;
+                    break;
                 default:
-                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Error putting a parameter of unknown type" );
+                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Error putting a parameter of unknown type");
                     return II_FAIL;
                     break;
             }
         }
 
-        if (((ii_result->procname != NULL) && (param > 0)) || (ii_result->procname == NULL))
+        if (((param_offset) && (param > 0)) || (!param_offset))
         {
             zend_hash_move_forward_ex(arr_hash, &pointer);
         }
@@ -6673,12 +6901,6 @@ static short _ii_describe_input (II_RESULT *ii_result, char *query TSRMLS_DC)
 
     char *queryText = NULL;
 
-    if (_ii_prepare(ii_result, query TSRMLS_CC) == II_FAIL)
-    {
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occurred when preparing a query for DESCRIBE INPUT");
-        return II_FAIL;
-    }
-    
     queryText = emalloc(strlen(ii_result->cursor_id) + 17);
     sprintf(queryText, "DESCRIBE INPUT %s", ii_result->cursor_id);
 
@@ -6687,7 +6909,7 @@ static short _ii_describe_input (II_RESULT *ii_result, char *query TSRMLS_DC)
     queryParm.qy_connHandle = ii_result->connHandle;
     queryParm.qy_tranHandle = ii_result->tranHandle;
     queryParm.qy_stmtHandle = NULL;
-    queryParm.qy_queryType  = ii_result->queryType; 
+    queryParm.qy_queryType  = IIAPI_QT_QUERY; 
     queryParm.qy_parameters = FALSE;
     queryParm.qy_queryText  = queryText;
 #if defined (IIAPI_VERSION_6)
@@ -6721,7 +6943,6 @@ static short _ii_describe_input (II_RESULT *ii_result, char *query TSRMLS_DC)
         return II_FAIL;
     }
 
-
     /* Store the descriptors retrieved for later use */
     if (getDescrParm.gd_descriptorCount)
     {
@@ -6731,7 +6952,7 @@ static short _ii_describe_input (II_RESULT *ii_result, char *query TSRMLS_DC)
     }
 
     /*
-    ** Call IIapi_close( ) to release resources.
+    ** Call IIapi_close() to release resources.
     */
     closeParm.cl_genParm.gp_callback = NULL;
     closeParm.cl_genParm.gp_closure = NULL;
@@ -6828,6 +7049,64 @@ static short _ii_prepare (II_RESULT *ii_result, char *query TSRMLS_DC)
 /* }}} */
 #endif /* IIAPI_VERSION_5 */
 
+/* {{{ static short _ii_describe (II_RESULT *ii_result TSRMLS_DC) */
+/* Describe a prepared query*/
+static short _ii_describe (II_RESULT *ii_result, char *query TSRMLS_DC)
+{
+    IIAPI_QUERYPARM    queryParm;
+    IIAPI_CANCELPARM   cancelParm;
+    IIAPI_CLOSEPARM    closeParm;
+
+    char *queryText = NULL;
+
+    queryText = emalloc(strlen(ii_result->cursor_id) + 10);
+    sprintf(queryText, "DESCRIBE %s", ii_result->cursor_id);
+
+    queryParm.qy_genParm.gp_callback = NULL;
+    queryParm.qy_genParm.gp_closure = NULL;
+    queryParm.qy_connHandle = ii_result->connHandle;
+    queryParm.qy_tranHandle = ii_result->tranHandle;
+    queryParm.qy_stmtHandle = NULL;
+    queryParm.qy_queryType  = IIAPI_QT_QUERY; 
+    queryParm.qy_parameters = FALSE;
+    queryParm.qy_queryText  = queryText;
+#if defined (IIAPI_VERSION_6)
+    queryParm.qy_flags = 0;
+#endif
+
+    IIapi_query(&queryParm);
+    ii_sync(&(queryParm.qy_genParm));
+
+    if (ii_success(&(queryParm.qy_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL) 
+    {
+        php_error_docref(NULL TSRMLS_CC, E_ERROR, "An error occurred when issuing a DESCRIBE of a prepared query");
+        efree(queryText);
+        return II_FAIL;
+    }
+
+    ii_result->tranHandle = queryParm.qy_tranHandle;
+    ii_result->stmtHandle = queryParm.qy_stmtHandle;
+
+    /*
+    ** Call IIapi_close( ) to release resources.
+    */
+    closeParm.cl_genParm.gp_callback = NULL;
+    closeParm.cl_genParm.gp_closure = NULL;
+    closeParm.cl_stmtHandle = queryParm.qy_stmtHandle;
+
+    IIapi_close( &closeParm );
+    ii_sync(&(closeParm.cl_genParm));
+
+    if (ii_success(&(closeParm.cl_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL) 
+    {
+        efree(queryText);
+        return II_FAIL;
+    }
+    efree(queryText);
+    return II_OK;
+}
+/* }}} */
+
 /* {{{ proto string ingres_charset(resource link)
    return the character set encoding of the client installation*/
 #ifdef HAVE_INGRES2
@@ -6884,6 +7163,57 @@ PHP_FUNCTION(ingres_charset)
 }
 /* }}} */
 
+
+/* {{{ static short _ii_close (II_PTR *stmtHandle, II_PTR *errorHandle) */
+/* Close / Cancel / close a query*/
+static short _ii_close (II_PTR *stmtHandle, II_PTR *errorHandle TSRMLS_DC)
+{
+    IIAPI_CANCELPARM   cancelParm;
+    IIAPI_CLOSEPARM    closeParm;
+
+    if (stmtHandle)
+    {
+        /* see if we can close the query without cancelling it */
+        /* Free query resources. */
+        closeParm.cl_genParm.gp_callback = NULL;
+        closeParm.cl_genParm.gp_closure = NULL;
+        closeParm.cl_stmtHandle = *stmtHandle;
+
+        IIapi_close(&closeParm);
+        ii_sync(&(closeParm.cl_genParm));
+
+        if (ii_success(&(closeParm.cl_genParm), errorHandle TSRMLS_CC) == II_FAIL)
+        {
+            /* unable to close */
+            /* Cancel query processing. */
+            cancelParm.cn_genParm.gp_callback = NULL;
+            cancelParm.cn_genParm.gp_closure = NULL;
+            cancelParm.cn_stmtHandle = *stmtHandle;
+
+            IIapi_cancel(&cancelParm );
+
+            ii_sync(&(cancelParm.cn_genParm));
+
+            /* Free query resources. */
+            closeParm.cl_genParm.gp_callback = NULL;
+            closeParm.cl_genParm.gp_closure = NULL;
+            closeParm.cl_stmtHandle = *stmtHandle;
+
+            IIapi_close( &closeParm );
+
+            ii_sync(&(closeParm.cl_genParm));
+
+            if (ii_success(&(closeParm.cl_genParm), errorHandle TSRMLS_CC) == II_FAIL)
+            {
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close a previously executed query");
+                return II_FAIL;
+            }
+        }
+        *stmtHandle = NULL;
+    }
+    return II_OK;
+}
+/* }}} */
 #endif /* HAVE_INGRES */
 
 /*

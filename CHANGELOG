@@ -1,4 +1,5 @@
 CVS - 2.1.1-dev
+- Fix ingres_prepare() and ingres_execute() so they actually work
 - Make sql_safe_mode use ingres.default_database
 - ingres_fetch_proc_return should return NULL if no value is available
 - Add ingres_unbuffered_query()
