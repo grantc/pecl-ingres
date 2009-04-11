@@ -216,6 +216,8 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define INGRES_INI_DESCRIBE "ingres2.describe"
 #define INGRES_INI_FETCH_BUFFER_SIZE "ingres2.fetch_buffer_size"
 
+#define INGRES_EXT_NAME "ingres2"
+
 #else
 
 #define INGRES_INI_ALLOW_PERSISTENT "ingres.allow_persistent"
@@ -237,6 +239,8 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define INGRES_INI_SCROLL "ingres.scrollable"
 #define INGRES_INI_DESCRIBE "ingres.describe"
 #define INGRES_INI_FETCH_BUFFER_SIZE "ingres.fetch_buffer_size"
+
+#define INGRES_EXT_NAME "ingres"
 
 #endif /* HAVE_INGRES2 */
 

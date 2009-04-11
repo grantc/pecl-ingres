@@ -1113,7 +1113,9 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
     int username_len = 0;
     int password_len = 0;
     zval *options = NULL;
-    char *db, *user, *pass;
+    char *db = NULL;
+    char *user = NULL;
+    char *pass = NULL;
     char *hashed_details;
     int hashed_details_length;
     IIAPI_CONNPARM connParm;
@@ -1126,7 +1128,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
     if ( getenv("II_SYSTEM") == NULL )
     {
         php_error_docref(NULL TSRMLS_CC, E_ERROR, "II_SYSTEM is not defined - unable to connect" );
-      RETURN_FALSE;
+        RETURN_FALSE;
     }
 
     if (IIG(trace_connect)) {
@@ -1146,9 +1148,16 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
             php_error_docref(NULL TSRMLS_CC, E_NOTICE, "SQL safe mode in effect - ignoring host/user/password/option information");
         }
 
-        db = NULL;
-        pass = NULL;
-        user = php_get_current_user();
+        db = IIG(default_database);
+        user = IIG(default_user);
+        pass = IIG(default_password);
+
+        if (!strlen(db))
+        {
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "SQL safe mode in effect - %s.default_database is not set, unable to continue", INGRES_EXT_NAME);
+            RETURN_FALSE;
+        }
+
         hashed_details_length = strlen(user) + sizeof("ingres___") - 1;
         hashed_details = (char *) emalloc(hashed_details_length + 1);
         sprintf(hashed_details, "Ingres__%s_", user);
