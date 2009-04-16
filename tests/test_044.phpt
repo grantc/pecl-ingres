@@ -11,6 +11,7 @@ require_once('connection.inc');
 
 ini_set("ingres.scrollable", FALSE);
 ini_set("ingres.utf8", TRUE);
+ini_set("ingres.array_index_start",0);
 
 $link = ingres_connect("demodb");
 
@@ -130,7 +131,7 @@ a15 - 231 - IIAPI_FLT_TYPE - 231 Passed
 a16 - 12-12-2006 - IIAPI_DTE_TYPE - 12-dec-2006 Passed
 a17 - 12:12:12 - IIAPI_TMWO_TYPE - 12:12:12 Passed
 a18 - 2006-12-12 12:12:12 - IIAPI_TSWO_TYPE - 2006-12-12 12:12:12.000000 Passed
-a19 - 123 - IIAPI_MNY_TYPE - 1.23 Passed
+a19 - 123 - IIAPI_MNY_TYPE - 123 Passed
 a20 - v - IIAPI_TXT_TYPE - v Passed
 a21 - c - IIAPI_TXT_TYPE - c Passed
 a22 - 154 - IIAPI_BYTE_TYPE - 154 Passed
@@ -152,7 +153,7 @@ a15nn - 987 - IIAPI_FLT_TYPE - 987 Passed
 a16nn - 12-12-2006 - IIAPI_DTE_TYPE - 12-dec-2006 Passed
 a17nn - 12:12:12 - IIAPI_TMWO_TYPE - 12:12:12 Passed
 a18nn - 2007-01-01 12:12:12 - IIAPI_TSWO_TYPE - 2007-01-01 12:12:12.000000 Passed
-a19nn - 456 - IIAPI_MNY_TYPE - 4.56 Passed
+a19nn - 456 - IIAPI_MNY_TYPE - 456 Passed
 a20nn - v - IIAPI_TXT_TYPE - v Passed
 a21nn - v - IIAPI_TXT_TYPE - v Passed
 a22nn - 567 - IIAPI_BYTE_TYPE - 567 Passed
