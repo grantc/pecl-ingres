@@ -1,4 +1,5 @@
 CVS - 2.1.1-dev
+- Fix GPF on Windows with sql.safe_mode and undefined ingres.default_database
 - Fix ingres_prepare() and ingres_execute() so they actually work
 - Make sql_safe_mode use ingres.default_database
 - ingres_fetch_proc_return should return NULL if no value is available

@@ -789,6 +789,9 @@ static void php_ii_globals_init(zend_ii_globals *ii_globals)
 #endif
     ii_globals->fetch_buffer_size = II_BUFFER_SIZE;
     ii_globals->cursor_mode = II_CURSOR_READONLY;
+    ii_globals->default_database = NULL;
+    ii_globals->default_user = NULL;
+    ii_globals->default_password = NULL;
 
 }
 /* }}} */
@@ -1145,19 +1148,40 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
             php_error_docref(NULL TSRMLS_CC, E_NOTICE, "SQL safe mode in effect - ignoring host/user/password/option information");
         }
 
-        db = IIG(default_database);
-        user = IIG(default_user);
-        pass = IIG(default_password);
-
-        if (!strlen(db))
+        if (IIG(default_database))
+        {
+            db = IIG(default_database);
+        }
+        else
         {
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "SQL safe mode in effect - %s.default_database is not set, unable to continue", INGRES_EXT_NAME);
             RETURN_FALSE;
         }
+        if (IIG(default_user))
+        {
+            username = IIG(default_user);
+            user = username;
 
-        hashed_details_length = strlen(user) + sizeof("ingres___") - 1;
+            /* Require a password if a username is defined in php.ini */
+            if (IIG(default_password))
+            {
+                pass = IIG(default_password);
+            }
+            else
+            {
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "SQL safe mode in effect - %s.default_password is not set, unable to authenticate as %s", INGRES_EXT_NAME, user);
+                RETURN_FALSE;
+            }
+        }
+        else
+        {
+            /* if no username is supplied we need supply one for the hash */
+            username = php_get_current_user();
+        }
+        
+        hashed_details_length = strlen(username) + sizeof("ingres___") - 1;
         hashed_details = (char *) emalloc(hashed_details_length + 1);
-        sprintf(hashed_details, "Ingres__%s_", user);
+        sprintf(hashed_details, "Ingres__%s_", username);
 
     } 
     else 
