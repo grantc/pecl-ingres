@@ -5685,7 +5685,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                     /* Convert the UTF-8 data we have to UTF-16 so Ingres will store it */
                                     tmp_utf16_string = emalloc((Z_STRLEN_PP(val) * 4) + 2);
                                     string_start = (UTF8 *)Z_STRVAL_PP(val);
-                                    tmp_utf16_string_ptr = tmp_utf16_string + 2;
+                                    tmp_utf16_string_ptr = tmp_utf16_string + 1;
                                     result = ConvertUTF8toUTF16((const UTF8 **) &string_start,  string_start + Z_STRLEN_PP(val) + 1, &tmp_utf16_string_ptr, tmp_utf16_string_ptr + (Z_STRLEN_PP(val) * 4) , strictConversion);
                                     utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string)) * 2;
                                     *((II_INT2*)(tmp_utf16_string)) = utf16_string_len/2;
@@ -5826,7 +5826,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                         /* Convert the UTF-8 data we have to UTF-16 so Ingres will store it */
                                         tmp_utf16_string = emalloc((Z_STRLEN_PP(val) * 4) + 2);
                                         string_start = (UTF8 *)Z_STRVAL_PP(val);
-                                        tmp_utf16_string_ptr = tmp_utf16_string + 2;
+                                        tmp_utf16_string_ptr = tmp_utf16_string + 1;
                                         result = ConvertUTF8toUTF16((const UTF8 **) &string_start,  string_start + Z_STRLEN_PP(val) + 1, &tmp_utf16_string_ptr, tmp_utf16_string_ptr + (Z_STRLEN_PP(val) * 4) , strictConversion);
                                         utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string)) * 2;
                                         efree(tmp_utf16_string);
@@ -6041,7 +6041,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                     string_start = (UTF8 *)Z_STRVAL_PP(val);
                                     tmp_utf16_string_ptr = tmp_utf16_string + 1;
                                     result = ConvertUTF8toUTF16((const UTF8 **) &string_start,  string_start + Z_STRLEN_PP(val) + 1, &tmp_utf16_string_ptr, tmp_utf16_string_ptr + (Z_STRLEN_PP(val) * 4) , strictConversion);
-                                    utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string)) * 2;
+                                    utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string + 1)) * 2;
                                     *((II_INT2*)(tmp_utf16_string)) = utf16_string_len/2;
                                     putParmParm.pp_parmData[0].dv_value = tmp_utf16_string;
                                     putParmParm.pp_parmData[0].dv_length = utf16_string_len + 2; 
@@ -6198,7 +6198,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                     string_start = (UTF8 *)Z_STRVAL_PP(val);
                                     tmp_utf16_string_ptr = tmp_utf16_string + 1;
                                     result = ConvertUTF8toUTF16((const UTF8 **) &string_start,  string_start + Z_STRLEN_PP(val) + 1, &tmp_utf16_string_ptr, tmp_utf16_string_ptr + (Z_STRLEN_PP(val) * 4) , strictConversion);
-                                    utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string)) * 2;
+                                    utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string + 1)) * 2;
                                     *((II_INT2*)(tmp_utf16_string)) = utf16_string_len/2;
                                     putParmParm.pp_parmData[0].dv_value = tmp_utf16_string;
                                     putParmParm.pp_parmData[0].dv_length = utf16_string_len + 2; 
