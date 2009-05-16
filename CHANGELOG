@@ -1,4 +1,5 @@
 CVS - 2.1.1-dev
+- Fix bug 16539 - Stale connections fail to be disconnected using IIapi_disconnect()
 - Fix bug 16539 - Binding UTF-8 data causes an additional NULL to be sent to the server
 - Fix GPF on Windows with sql.safe_mode and undefined ingres.default_database
 - Fix ingres_prepare() and ingres_execute() so they actually work

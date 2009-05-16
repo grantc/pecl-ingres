@@ -484,6 +484,7 @@ static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
 {
     IIAPI_DISCONNPARM disconnParm;
     IIAPI_GETEINFOPARM error_info;
+    IIAPI_ABORTPARM abortParm;
 
     if (IIG(ingres_trace))
     {
@@ -541,7 +542,30 @@ static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
             {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_close_ii_link : Unable to close link");
             }
-            php_error_docref(NULL TSRMLS_CC, E_WARNING, "_close_ii_link : Unable to close statement");
+            abortParm.ab_genParm.gp_callback = NULL;
+            abortParm.ab_genParm.gp_closure = NULL;
+            abortParm.ab_connHandle = ii_link->connHandle;
+            IIapi_abort(&abortParm);
+
+            ii_sync(&(abortParm.ab_genParm));
+            switch((abortParm.ab_genParm).gp_status)
+            {
+                case IIAPI_ST_SUCCESS:
+                case IIAPI_ST_NO_DATA:
+                    ii_link->stmtHandle = NULL;
+                    break;
+                default:
+                    error_info.ge_errorHandle = (abortParm.ab_genParm).gp_errorHandle;
+                    IIapi_getErrorInfo(&error_info);
+                    if (error_info.ge_status == IIAPI_ST_SUCCESS)
+                    {
+                        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_close_ii_link : %d - %s", error_info.ge_errorCode, error_info.ge_message);
+                    }
+                    else
+                    {
+                        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_close_ii_link : Unable to close link");
+                    }
+            }
     }
 
     if (ii_link->charset)
