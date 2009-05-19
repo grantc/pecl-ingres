@@ -1151,7 +1151,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 #endif
     if ( getenv("II_SYSTEM") == NULL )
     {
-        php_error_docref(NULL TSRMLS_CC, E_ERROR, "II_SYSTEM is not defined - unable to connect" );
+        php_error_docref(NULL TSRMLS_CC, E_ERROR, "Unable to connect - II_SYSTEM is not defined, refer to http://php.net/manual/en/ingres.installation.php for information about setting up your environment." );
         RETURN_FALSE;
     }
 
