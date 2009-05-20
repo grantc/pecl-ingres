@@ -34,9 +34,9 @@ extern zend_module_entry ingres_module_entry;
 #define PHP_INGRES_VERSION "2.1.1-dev"
 
 #ifdef PHP_WIN32
-#define PHP_II_API __declspec(dllexport)
+#define PHP_INGRES_API __declspec(dllexport)
 #else
-#define PHP_II_API
+#define PHP_INGRES_API
 #endif
 
 PHP_MINIT_FUNCTION(ingres);
@@ -131,7 +131,7 @@ PHP_FUNCTION(ingres_unbuffered_query);
 ZEND_INI_MH(php_ii_modify_array_index_start);
 ZEND_INI_MH(php_ii_modify_fetch_buffer_size);
 
-ZEND_BEGIN_MODULE_GLOBALS(ii)
+ZEND_BEGIN_MODULE_GLOBALS(ingres)
 	long allow_persistent;
 	long max_persistent;
 	long max_links;
@@ -170,7 +170,7 @@ ZEND_BEGIN_MODULE_GLOBALS(ii)
     short describe; /* enable/disable describe input support */
     long fetch_buffer_size; /* number of rows to attempt in a fetch */
 
-ZEND_END_MODULE_GLOBALS(ii)
+ZEND_END_MODULE_GLOBALS(ingres)
 
 #define II_ASSOC (1<<0)
 #define II_NUM   (1<<1)
@@ -180,10 +180,10 @@ ZEND_END_MODULE_GLOBALS(ii)
 #define II_CURSOR_READONLY 1 /* default */
 
 #ifdef ZTS
-#define IIG(v) TSRMG(ii_globals_id, zend_ii_globals *, v)
+#define INGRESG(v) TSRMG(ingres_globals_id, zend_ingres_globals *, v)
 #define II_THREAD_ID (unsigned long)tsrm_thread_id()
 #else
-#define IIG(v) (ii_globals.v)
+#define INGRESG(v) (ingres_globals.v)
 #define II_THREAD_ID 0
 #endif
 

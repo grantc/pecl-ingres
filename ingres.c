@@ -40,7 +40,8 @@
 
 #if HAVE_INGRES
 
-ZEND_DECLARE_MODULE_GLOBALS(ii)
+ZEND_DECLARE_MODULE_GLOBALS(ingres)
+static PHP_GINIT_FUNCTION(ingres);
 
 /* True globals, no need for thread safety */
 static int le_ii_result;
@@ -48,92 +49,218 @@ static int le_ii_link, le_ii_plink;
 
 #define SAFE_STRING(s) ((s)?(s):"")
 
+/* {{{ arginfo */
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_connect, 0, 0, 1)
+   ZEND_ARG_INFO(0, database)
+   ZEND_ARG_INFO(0, username)
+   ZEND_ARG_INFO(0, password)
+   ZEND_ARG_ARRAY_INFO(0, options, 0)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_pconnect, 0, 0, 1)
+   ZEND_ARG_INFO(0, database)
+   ZEND_ARG_INFO(0, username)
+   ZEND_ARG_INFO(0, password)
+   ZEND_ARG_ARRAY_INFO(0, options, 0)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_close, 0, 0, 1)
+   ZEND_ARG_INFO(0, link)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_query, 0, 0, 2)
+   ZEND_ARG_INFO(0, link)
+   ZEND_ARG_INFO(0, query)
+   ZEND_ARG_ARRAY_INFO(0, params, 0)
+   ZEND_ARG_INFO(0, types)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_unbuffered_query, 0, 0, 2)
+   ZEND_ARG_INFO(0, link)
+   ZEND_ARG_INFO(0, query)
+   ZEND_ARG_ARRAY_INFO(0, params, 0)
+   ZEND_ARG_INFO(0, types)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_prepare, 0, 0, 2)
+   ZEND_ARG_INFO(0, link)
+   ZEND_ARG_INFO(0, query)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_execute, 0, 0, 1)
+   ZEND_ARG_INFO(0, result)
+   ZEND_ARG_INFO(0, params)
+   ZEND_ARG_INFO(0, types)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_cursor, 0, 0, 1)
+   ZEND_ARG_INFO(0, result)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_num_rows, 0, 0, 1)
+   ZEND_ARG_INFO(0, result)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_num_fields, 0, 0, 1)
+   ZEND_ARG_INFO(0, result)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_field_name, 0, 0, 2)
+   ZEND_ARG_INFO(0, result)
+   ZEND_ARG_INFO(0, index)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_field_type, 0, 0, 2)
+   ZEND_ARG_INFO(0, result)
+   ZEND_ARG_INFO(0, index)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_field_nullable, 0, 0, 2)
+   ZEND_ARG_INFO(0, result)
+   ZEND_ARG_INFO(0, index)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_field_length, 0, 0, 2)
+   ZEND_ARG_INFO(0, result)
+   ZEND_ARG_INFO(0, index)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_field_precision, 0, 0, 2)
+   ZEND_ARG_INFO(0, result)
+   ZEND_ARG_INFO(0, index)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_field_scale, 0, 0, 2)
+   ZEND_ARG_INFO(0, result)
+   ZEND_ARG_INFO(0, index)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_free_result, 0, 0, 1)
+   ZEND_ARG_INFO(0, result)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_result_seek, 0, 0, 2)
+   ZEND_ARG_INFO(0, link)
+   ZEND_ARG_INFO(0, position)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_fetch_array, 0, 0, 2)
+   ZEND_ARG_INFO(0, result)
+   ZEND_ARG_INFO(0, result_type)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_fetch_row, 0, 0, 1)
+   ZEND_ARG_INFO(0, result)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_fetch_object, 0, 0, 2)
+   ZEND_ARG_INFO(0, result)
+   ZEND_ARG_INFO(0, result_type)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_fetch_proc_return, 0, 0, 1)
+   ZEND_ARG_INFO(0, result)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_rollback, 0, 0, 1)
+   ZEND_ARG_INFO(0, link)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_commit, 0, 0, 1)
+   ZEND_ARG_INFO(0, link)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_autocommit, 0, 0, 1)
+   ZEND_ARG_INFO(0, link)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_autocommit_state, 0, 0, 1)
+   ZEND_ARG_INFO(0, link)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_next_error, 0, 0, 0)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_errno, 0, 0, 0)
+   ZEND_ARG_INFO(0, link)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_error, 0, 0, 0)
+   ZEND_ARG_INFO(0, link)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_errsqlstate, 0, 0, 0)
+   ZEND_ARG_INFO(0, link)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_set_environment, 0, 0, 2)
+   ZEND_ARG_INFO(0, link)
+   ZEND_ARG_ARRAY_INFO(0, options, 0)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_escape_string, 0, 0, 2)
+   ZEND_ARG_INFO(0, link)
+   ZEND_ARG_INFO(0, source_string)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_charset, 0, 0, 1)
+   ZEND_ARG_INFO(0, link)
+ZEND_END_ARG_INFO()
+/* }}} */
+
 /* {{{ Ingres module function list
  * Every user visible function must have an entry in ingres_functions[].
 */
 function_entry ingres_functions[] = {
 #if defined(HAVE_INGRES2)
-    PHP_FE(ingres2_connect,            NULL)
-    PHP_FE(ingres2_pconnect,            NULL)
-    PHP_FE(ingres2_close,            NULL)
-    PHP_FE(ingres2_query,            NULL)
-    PHP_FE(ingres2_num_rows,            NULL)
-    PHP_FE(ingres2_num_fields,        NULL)
-    PHP_FE(ingres2_field_name,        NULL)
-    PHP_FE(ingres2_field_type,        NULL)
-    PHP_FE(ingres2_field_nullable,    NULL)
-    PHP_FE(ingres2_field_length,        NULL)
-    PHP_FE(ingres2_field_precision,    NULL)
-    PHP_FE(ingres2_field_scale,        NULL)
-    PHP_FE(ingres2_fetch_array,        NULL)
-    PHP_FE(ingres2_fetch_row,        NULL)
-    PHP_FE(ingres2_fetch_object,        NULL)
-    PHP_FE(ingres2_rollback,            NULL)
-    PHP_FE(ingres2_commit,            NULL)
-    PHP_FE(ingres2_autocommit,        NULL)
-    PHP_FE(ingres2_prepare,            NULL)
-    PHP_FE(ingres2_execute,            NULL)
-    PHP_FE(ingres2_cursor,            NULL)
-    PHP_FE(ingres2_set_environment,    NULL)
-    PHP_FE(ingres2_fetch_proc_return,  NULL)
-    PHP_FE(ingres2_free_result,        NULL)
-    PHP_FE(ingres2_autocommit_state,   NULL)
-    PHP_FE(ingres2_errno,            NULL)
-    PHP_FE(ingres2_error,            NULL)
-    PHP_FE(ingres2_errsqlstate,        NULL)
-    PHP_FALIAS(ingres2_conn_errno, ingres2_errno,            NULL)
-    PHP_FALIAS(ingres2_stmt_errno, ingres2_errno,          NULL)
-    PHP_FALIAS(ingres2_conn_error, ingres2_error,        NULL)
-    PHP_FALIAS(ingres2_stmt_error, ingres2_error,         NULL)
-    PHP_FALIAS(ingres2_stmt_errsqlstate,  ingres2_errsqlstate,       NULL)
-    PHP_FALIAS(ingres2_conn_errsqlstate,  ingres2_errsqlstate,       NULL)
-    PHP_FE(ingres2_next_error,        NULL)
-    PHP_FE(ingres2_result_seek,        NULL)
-    PHP_FALIAS(ingres2_data_seek, ingres2_result_seek, NULL)
-    PHP_FE(ingres2_escape_string,        NULL)
-    PHP_FE(ingres2_charset,        NULL)
-    PHP_FE(ingres2_unbuffered_query,        NULL)
+    PHP_FE(ingres2_connect,		        arginfo_ingres_connect)
+    PHP_FE(ingres2_pconnect,		    arginfo_ingres_pconnect)
+    PHP_FE(ingres2_close,		        arginfo_ingres_close)
+    PHP_FE(ingres2_query,		        arginfo_ingres_query)
+    PHP_FE(ingres2_num_rows,		    arginfo_ingres_num_rows)
+    PHP_FE(ingres2_num_fields,		    arginfo_ingres_num_fields)
+    PHP_FE(ingres2_field_name,		    arginfo_ingres_field_name)
+    PHP_FE(ingres2_field_type,		    arginfo_ingres_field_type)
+    PHP_FE(ingres2_field_nullable,		arginfo_ingres_field_nullable)
+    PHP_FE(ingres2_field_length,		arginfo_ingres_field_length)
+    PHP_FE(ingres2_field_precision,		arginfo_ingres_field_precision)
+    PHP_FE(ingres2_field_scale,		    arginfo_ingres_field_scale)
+    PHP_FE(ingres2_fetch_array,		    arginfo_ingres_fetch_array)
+    PHP_FE(ingres2_fetch_row,		    arginfo_ingres_fetch_row)
+    PHP_FE(ingres2_fetch_object,		arginfo_ingres_fetch_object)
+    PHP_FE(ingres2_rollback,		    arginfo_ingres_rollback)
+    PHP_FE(ingres2_commit,		        arginfo_ingres_commit)
+    PHP_FE(ingres2_autocommit,		    arginfo_ingres_autocommit)
+    PHP_FE(ingres2_prepare,		        arginfo_ingres_prepare)
+    PHP_FE(ingres2_execute,		        arginfo_ingres_execute)
+    PHP_FE(ingres2_cursor,		        arginfo_ingres_cursor)
+    PHP_FE(ingres2_set_environment,		arginfo_ingres_set_environment)
+    PHP_FE(ingres2_fetch_proc_return,	arginfo_ingres_fetch_proc_return)
+    PHP_FE(ingres2_free_result,		    arginfo_ingres_free_result)
+    PHP_FE(ingres2_autocommit_state,	arginfo_ingres_autocommit_state)
+    PHP_FE(ingres2_errno,		        arginfo_ingres_errno)
+    PHP_FE(ingres2_error,		        arginfo_ingres_error)
+    PHP_FE(ingres2_errsqlstate,		    arginfo_ingres_errsqlstate)
+    PHP_FE(ingres2_next_error,		    arginfo_ingres_next_error)
+    PHP_FE(ingres2_result_seek,		    arginfo_ingres_result_seek)
+    PHP_FE(ingres2_escape_string,		arginfo_ingres_escape_string)
+    PHP_FE(ingres2_charset,		        arginfo_ingres_charset)
+    PHP_FE(ingres2_unbuffered_query,	arginfo_ingres_unbuffered_query)
+    PHP_FALIAS(ingres2_conn_errno,       ingres2_errno, arginfo_ingres_errno)
+    PHP_FALIAS(ingres2_stmt_errno,       ingres2_errno, arginfo_ingres_errno)
+    PHP_FALIAS(ingres2_conn_error,       ingres2_error, arginfo_ingres_error)
+    PHP_FALIAS(ingres2_stmt_error,       ingres2_error, arginfo_ingres_error)
+    PHP_FALIAS(ingres2_stmt_errsqlstate,  ingres2_errsqlstate, arginfo_ingres_errsqlstate)
+    PHP_FALIAS(ingres2_conn_errsqlstate,  ingres2_errsqlstate, arginfo_ingres_errsqlstate)
 #else
-    PHP_FE(ingres_connect,            NULL)
-    PHP_FE(ingres_pconnect,            NULL)
-    PHP_FE(ingres_close,            NULL)
-    PHP_FE(ingres_query,            NULL)
-    PHP_FE(ingres_num_rows,            NULL)
-    PHP_FE(ingres_num_fields,        NULL)
-    PHP_FE(ingres_field_name,        NULL)
-    PHP_FE(ingres_field_type,        NULL)
-    PHP_FE(ingres_field_nullable,    NULL)
-    PHP_FE(ingres_field_length,        NULL)
-    PHP_FE(ingres_field_precision,    NULL)
-    PHP_FE(ingres_field_scale,        NULL)
-    PHP_FE(ingres_fetch_array,        NULL)
-    PHP_FE(ingres_fetch_row,        NULL)
-    PHP_FE(ingres_fetch_object,        NULL)
-    PHP_FE(ingres_rollback,            NULL)
-    PHP_FE(ingres_commit,            NULL)
-    PHP_FE(ingres_autocommit,        NULL)
-    PHP_FE(ingres_prepare,            NULL)
-    PHP_FE(ingres_execute,            NULL)
-    PHP_FE(ingres_cursor,            NULL)
-    PHP_FE(ingres_set_environment,    NULL)
-    PHP_FE(ingres_fetch_proc_return,  NULL)
-    PHP_FE(ingres_free_result,        NULL)
-    PHP_FE(ingres_autocommit_state,   NULL)
-    PHP_FE(ingres_errno,            NULL)
-    PHP_FE(ingres_error,            NULL)
-    PHP_FE(ingres_errsqlstate,        NULL)
-    PHP_FALIAS(ingres_conn_errno, ingres_errno,           NULL)
-    PHP_FALIAS(ingres_stmt_errno, ingres_errno,          NULL)
-    PHP_FALIAS(ingres_conn_error, ingres_error,         NULL)
-    PHP_FALIAS(ingres_stmt_error, ingres_error,          NULL)
-    PHP_FALIAS(ingres_stmt_errsqlstate,  ingres_errsqlstate,       NULL)
-    PHP_FALIAS(ingres_conn_errsqlstate,  ingres_errsqlstate,       NULL)
-    PHP_FE(ingres_next_error,        NULL)
-    PHP_FE(ingres_result_seek,        NULL)
-    PHP_FALIAS(ingres_data_seek, ingres_result_seek, NULL)
-    PHP_FE(ingres_escape_string,        NULL)
-    PHP_FE(ingres_charset,        NULL)
-    PHP_FE(ingres_unbuffered_query,        NULL)
+    PHP_FE(ingres_connect,		        arginfo_ingres_connect)
+    PHP_FE(ingres_pconnect,		        arginfo_ingres_pconnect)
+    PHP_FE(ingres_close,		        arginfo_ingres_close)
+    PHP_FE(ingres_query,		        arginfo_ingres_query)
+    PHP_FE(ingres_num_rows,		        arginfo_ingres_num_rows)
+    PHP_FE(ingres_num_fields,		    arginfo_ingres_num_fields)
+    PHP_FE(ingres_field_name,		    arginfo_ingres_field_name)
+    PHP_FE(ingres_field_type,		    arginfo_ingres_field_type)
+    PHP_FE(ingres_field_nullable,		arginfo_ingres_field_nullable)
+    PHP_FE(ingres_field_length,		    arginfo_ingres_field_length)
+    PHP_FE(ingres_field_precision,		arginfo_ingres_field_precision)
+    PHP_FE(ingres_field_scale,		    arginfo_ingres_field_scale)
+    PHP_FE(ingres_fetch_array,		    arginfo_ingres_fetch_array)
+    PHP_FE(ingres_fetch_row,		    arginfo_ingres_fetch_row)
+    PHP_FE(ingres_fetch_object,		    arginfo_ingres_fetch_object)
+    PHP_FE(ingres_rollback,		        arginfo_ingres_rollback)
+    PHP_FE(ingres_commit,		        arginfo_ingres_commit)
+    PHP_FE(ingres_autocommit,		    arginfo_ingres_autocommit)
+    PHP_FE(ingres_prepare,		        arginfo_ingres_prepare)
+    PHP_FE(ingres_execute,		        arginfo_ingres_execute)
+    PHP_FE(ingres_cursor,		        arginfo_ingres_cursor)
+    PHP_FE(ingres_set_environment,		arginfo_ingres_set_environment)
+    PHP_FE(ingres_fetch_proc_return,	arginfo_ingres_fetch_proc_return)
+    PHP_FE(ingres_free_result,		    arginfo_ingres_free_result)
+    PHP_FE(ingres_autocommit_state,		arginfo_ingres_autocommit_state)
+    PHP_FE(ingres_errno,		        arginfo_ingres_errno)
+    PHP_FE(ingres_error,		        arginfo_ingres_error)
+    PHP_FE(ingres_errsqlstate,		    arginfo_ingres_errsqlstate)
+    PHP_FE(ingres_next_error,		    arginfo_ingres_next_error)
+    PHP_FE(ingres_result_seek,		    arginfo_ingres_result_seek)
+    PHP_FE(ingres_escape_string,		arginfo_ingres_escape_string)
+    PHP_FE(ingres_charset,		        arginfo_ingres_charset)
+    PHP_FE(ingres_unbuffered_query,		arginfo_ingres_unbuffered_query)
+    PHP_FALIAS(ingres_conn_errno,       ingres_errno, arginfo_ingres_errno)
+    PHP_FALIAS(ingres_stmt_errno,       ingres_errno, arginfo_ingres_errno)
+    PHP_FALIAS(ingres_conn_error,       ingres_error, arginfo_ingres_error)
+    PHP_FALIAS(ingres_stmt_error,       ingres_error, arginfo_ingres_error)
+    PHP_FALIAS(ingres_stmt_errsqlstate,  ingres_errsqlstate, arginfo_ingres_errsqlstate)
+    PHP_FALIAS(ingres_conn_errsqlstate,  ingres_errsqlstate, arginfo_ingres_errsqlstate)
+
 #endif
 
     {NULL, NULL, NULL}    /* Must be the last line in ingres_functions[] */
@@ -154,7 +281,8 @@ zend_module_entry ingres_module_entry = {
     PHP_RSHUTDOWN(ingres),
     PHP_MINFO(ingres),
     PHP_INGRES_VERSION,
-    STANDARD_MODULE_PROPERTIES
+    PHP_MODULE_GLOBALS(ingres),
+    PHP_GINIT(ingres)
 };
 
 #ifdef HAVE_INGRES2
@@ -179,27 +307,27 @@ ZEND_GET_MODULE(ingres)
 
 /* {{{ php.ini entries */
 PHP_INI_BEGIN()
-    STD_PHP_INI_BOOLEAN(INGRES_INI_ALLOW_PERSISTENT, "1", PHP_INI_SYSTEM,    OnUpdateLong, allow_persistent, zend_ii_globals, ii_globals)
-    STD_PHP_INI_ENTRY_EX(INGRES_INI_MAX_PERSISTENT, "-1", PHP_INI_SYSTEM, OnUpdateLong, max_persistent, zend_ii_globals, ii_globals, display_link_numbers)
-    STD_PHP_INI_ENTRY_EX(INGRES_INI_MAX_LINKS, "-1", PHP_INI_SYSTEM, OnUpdateLong, max_links, zend_ii_globals, ii_globals, display_link_numbers)
-    STD_PHP_INI_ENTRY(INGRES_INI_DEFAULT_DATABASE, NULL, PHP_INI_ALL, OnUpdateString, default_database, zend_ii_globals, ii_globals)
-    STD_PHP_INI_ENTRY(INGRES_INI_DEFAULT_USER, NULL, PHP_INI_ALL, OnUpdateString, default_user, zend_ii_globals, ii_globals)
-    STD_PHP_INI_ENTRY(INGRES_INI_DEFAULT_PASSWORD, NULL, PHP_INI_ALL, OnUpdateString, default_password, zend_ii_globals, ii_globals)
-    STD_PHP_INI_ENTRY(INGRES_INI_CURSOR_MODE, "1", PHP_INI_ALL, OnUpdateLong, cursor_mode, zend_ii_globals, ii_globals)
-    STD_PHP_INI_ENTRY(INGRES_INI_BLOB_SEGMENT_LENGTH, "4096", PHP_INI_ALL, OnUpdateLong, blob_segment_length, zend_ii_globals, ii_globals)
-    STD_PHP_INI_BOOLEAN(INGRES_INI_TRACE_CONNECT, "0", PHP_INI_ALL, OnUpdateBool, trace_connect, zend_ii_globals, ii_globals)
+    STD_PHP_INI_BOOLEAN(INGRES_INI_ALLOW_PERSISTENT, "1", PHP_INI_SYSTEM,    OnUpdateLong, allow_persistent, zend_ingres_globals, ingres_globals)
+    STD_PHP_INI_ENTRY_EX(INGRES_INI_MAX_PERSISTENT, "-1", PHP_INI_SYSTEM, OnUpdateLong, max_persistent, zend_ingres_globals, ingres_globals, display_link_numbers)
+    STD_PHP_INI_ENTRY_EX(INGRES_INI_MAX_LINKS, "-1", PHP_INI_SYSTEM, OnUpdateLong, max_links, zend_ingres_globals, ingres_globals, display_link_numbers)
+    STD_PHP_INI_ENTRY(INGRES_INI_DEFAULT_DATABASE, NULL, PHP_INI_ALL, OnUpdateString, default_database, zend_ingres_globals, ingres_globals)
+    STD_PHP_INI_ENTRY(INGRES_INI_DEFAULT_USER, NULL, PHP_INI_ALL, OnUpdateString, default_user, zend_ingres_globals, ingres_globals)
+    STD_PHP_INI_ENTRY(INGRES_INI_DEFAULT_PASSWORD, NULL, PHP_INI_ALL, OnUpdateString, default_password, zend_ingres_globals, ingres_globals)
+    STD_PHP_INI_ENTRY(INGRES_INI_CURSOR_MODE, "1", PHP_INI_ALL, OnUpdateLong, cursor_mode, zend_ingres_globals, ingres_globals)
+    STD_PHP_INI_ENTRY(INGRES_INI_BLOB_SEGMENT_LENGTH, "4096", PHP_INI_ALL, OnUpdateLong, blob_segment_length, zend_ingres_globals, ingres_globals)
+    STD_PHP_INI_BOOLEAN(INGRES_INI_TRACE_CONNECT, "0", PHP_INI_ALL, OnUpdateBool, trace_connect, zend_ingres_globals, ingres_globals)
     PHP_INI_ENTRY(INGRES_INI_ARRAY_INDEX_START,"1", PHP_INI_ALL, php_ii_modify_array_index_start)
-    STD_PHP_INI_BOOLEAN(INGRES_INI_AUTO, "1", PHP_INI_ALL, OnUpdateBool, auto_multi, zend_ii_globals, ii_globals)
+    STD_PHP_INI_BOOLEAN(INGRES_INI_AUTO, "1", PHP_INI_ALL, OnUpdateBool, auto_multi, zend_ingres_globals, ingres_globals)
 #if defined (IIAPI_VERSION_3)
-    STD_PHP_INI_BOOLEAN(INGRES_INI_UTF8, "1", PHP_INI_ALL, OnUpdateBool, utf8, zend_ii_globals, ii_globals)
+    STD_PHP_INI_BOOLEAN(INGRES_INI_UTF8, "1", PHP_INI_ALL, OnUpdateBool, utf8, zend_ingres_globals, ingres_globals)
 #endif
-    STD_PHP_INI_BOOLEAN(INGRES_INI_REUSE_CONNECTION, "1", PHP_INI_ALL, OnUpdateBool, reuse_connection, zend_ii_globals, ii_globals)
-    STD_PHP_INI_BOOLEAN(INGRES_INI_TRACE, "0", PHP_INI_ALL, OnUpdateBool, ingres_trace, zend_ii_globals, ii_globals)
+    STD_PHP_INI_BOOLEAN(INGRES_INI_REUSE_CONNECTION, "1", PHP_INI_ALL, OnUpdateBool, reuse_connection, zend_ingres_globals, ingres_globals)
+    STD_PHP_INI_BOOLEAN(INGRES_INI_TRACE, "0", PHP_INI_ALL, OnUpdateBool, ingres_trace, zend_ingres_globals, ingres_globals)
 #if defined (IIAPI_VERSION_6)
-    STD_PHP_INI_BOOLEAN(INGRES_INI_SCROLL, "1", PHP_INI_ALL, OnUpdateBool, scroll, zend_ii_globals, ii_globals)
+    STD_PHP_INI_BOOLEAN(INGRES_INI_SCROLL, "1", PHP_INI_ALL, OnUpdateBool, scroll, zend_ingres_globals, ingres_globals)
 #endif
 #if defined (IIAPI_VERSION_5)
-    STD_PHP_INI_BOOLEAN(INGRES_INI_DESCRIBE, "1", PHP_INI_ALL, OnUpdateBool, describe, zend_ii_globals, ii_globals)
+    STD_PHP_INI_BOOLEAN(INGRES_INI_DESCRIBE, "1", PHP_INI_ALL, OnUpdateBool, describe, zend_ingres_globals, ingres_globals)
 #endif
     PHP_INI_ENTRY(INGRES_INI_FETCH_BUFFER_SIZE, "100", PHP_INI_ALL, php_ii_modify_fetch_buffer_size)
 PHP_INI_END()
@@ -218,7 +346,7 @@ ZEND_INI_MH(php_ii_modify_array_index_start)
     {
         return FAILURE;
     }
-    IIG(array_index_start) = new_value_long;
+    INGRESG(array_index_start) = new_value_long;
     return SUCCESS;
 }
 /* }}} */
@@ -234,7 +362,7 @@ ZEND_INI_MH(php_ii_modify_fetch_buffer_size)
     {
         return FAILURE;
     }
-    IIG(fetch_buffer_size) = new_value_long;
+    INGRESG(fetch_buffer_size) = new_value_long;
     return SUCCESS;
 }
 /* }}} */
@@ -340,31 +468,31 @@ static int _rollback_transaction(II_LINK *ii_link  TSRMLS_DC)
     switch((rollbackParm.rb_genParm).gp_status)
     {
         case IIAPI_ST_SUCCESS:
-            if (IIG(ingres_trace))
+            if (INGRESG(ingres_trace))
             {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_rollback_transaction: IIAPI_ST_SUCCESS");
             }
             break;
         case IIAPI_ST_MESSAGE:
-            if (IIG(ingres_trace))
+            if (INGRESG(ingres_trace))
             {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_rollback_transaction: IIAPI_ST_MESSAGE");
             }
             break;
         case IIAPI_ST_WARNING:
-            if (IIG(ingres_trace))
+            if (INGRESG(ingres_trace))
             {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_rollback_transaction: IIAPI_ST_WARNING");
             }
             break;
         case IIAPI_ST_NO_DATA:
-            if (IIG(ingres_trace))
+            if (INGRESG(ingres_trace))
             {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_rollback_transaction: IIAPI_ST_NO_DATA");
             }
             break;
         case IIAPI_ST_FAILURE:
-            if (IIG(ingres_trace))
+            if (INGRESG(ingres_trace))
             {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_rollback_transaction: IIAPI_ST_FAILURE");
             }
@@ -398,7 +526,7 @@ static int _rollback_transaction(II_LINK *ii_link  TSRMLS_DC)
 static int _commit_transaction(II_LINK *ii_link  TSRMLS_DC)
 {
     IIAPI_COMMITPARM commitParm;
-    if (IIG(ingres_trace))
+    if (INGRESG(ingres_trace))
     {
         php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_commit_transaction: started");
     }
@@ -414,7 +542,7 @@ static int _commit_transaction(II_LINK *ii_link  TSRMLS_DC)
 
         if (ii_success(&(commitParm.cm_genParm), &ii_link->errorHandle TSRMLS_CC) == II_FAIL)
         {
-        if (IIG(ingres_trace))
+        if (INGRESG(ingres_trace))
             {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_commit_transaction: no success");
             }
@@ -486,7 +614,7 @@ static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
     IIAPI_GETEINFOPARM error_info;
     IIAPI_ABORTPARM abortParm;
 
-    if (IIG(ingres_trace))
+    if (INGRESG(ingres_trace))
     {
         php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_close_ii_link: started");
     }
@@ -575,8 +703,8 @@ static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
 
     free(ii_link);
 
-    IIG(num_links)--;
-    if (IIG(ingres_trace))
+    INGRESG(num_links)--;
+    if (INGRESG(ingres_trace))
     {
         php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_close_ii_link: done");
     }
@@ -685,7 +813,7 @@ static void _close_ii_plink(zend_rsrc_list_entry *rsrc TSRMLS_DC)
     II_LINK *ii_link = (II_LINK *) rsrc->ptr;
 
     _close_ii_link(ii_link TSRMLS_CC);
-    IIG(num_persistent)--;
+    INGRESG(num_persistent)--;
 }
 /*  }}} */
 
@@ -744,10 +872,10 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
         ii_link->connHandle = NULL;
     }
 
-    if (IIG(error_text) != NULL )
+    if (INGRESG(error_text) != NULL )
     {
-        efree(IIG(error_text));
-        IIG(error_text) = NULL;
+        efree(INGRESG(error_text));
+        INGRESG(error_text) = NULL;
     }
 
 }
@@ -762,8 +890,8 @@ static void _clean_ii_plink(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 }
 /* }}} */
 
-/* {{{ static void php_ii_globals_init(zend_ii_globals *ii_globals) */
-static void php_ii_globals_init(zend_ii_globals *ii_globals)
+/* {{{ PHP_GINIT_FUNCTION */
+static PHP_GINIT_FUNCTION(ingres)
 {
     IIAPI_INITPARM initParm;
 
@@ -790,39 +918,33 @@ static void php_ii_globals_init(zend_ii_globals *ii_globals)
 #if defined(IIAPI_VERSION_2)
     if ( initParm.in_envHandle != NULL )
     {    
-        ii_globals->envHandle = initParm.in_envHandle; 
+        ingres_globals->envHandle = initParm.in_envHandle; 
     }
 #else
-    ii_globals->envHandle = NULL;
+    ingres_globals->envHandle = NULL;
 #endif
 
     /* Defaults for the ingres.xxxxxx ini settings */
 
-    ii_globals->num_persistent = 0;
-    ii_globals->auto_multi = 1;
-    ii_globals->trace_connect = 0;
-    ii_globals->ingres_trace = 0;
-    ii_globals->array_index_start = 1;
-    ii_globals->error_text = NULL;
-    ii_globals->error_number = 0;
-    ii_globals->reuse_connection = 1;
-    ii_globals->scroll = 1;
-    ii_globals->describe = 1;
+    ingres_globals->num_persistent = 0;
+    ingres_globals->auto_multi = 1;
+    ingres_globals->trace_connect = 0;
+    ingres_globals->ingres_trace = 0;
+    ingres_globals->array_index_start = 1;
+    ingres_globals->error_text = NULL;
+    ingres_globals->error_number = 0;
+    ingres_globals->reuse_connection = 1;
+    ingres_globals->scroll = 1;
+    ingres_globals->describe = 1;
 #if defined (IIAPI_VERSION_3)
-    ii_globals->utf8 = 1;
+    ingres_globals->utf8 = 1;
 #endif
-    ii_globals->fetch_buffer_size = II_BUFFER_SIZE;
-    ii_globals->cursor_mode = II_CURSOR_READONLY;
-    ii_globals->default_database = NULL;
-    ii_globals->default_user = NULL;
-    ii_globals->default_password = NULL;
+    ingres_globals->fetch_buffer_size = II_BUFFER_SIZE;
+    ingres_globals->cursor_mode = II_CURSOR_READONLY;
+    ingres_globals->default_database = NULL;
+    ingres_globals->default_user = NULL;
+    ingres_globals->default_password = NULL;
 
-}
-/* }}} */
-
-/* {{{ static void php_ii_globals_shutdown(zend_ii_globals *ii_globals) */
-static void php_ii_globals_shutdown(zend_ii_globals *ii_globals)
-{
 }
 /* }}} */
 
@@ -831,7 +953,6 @@ static void php_ii_globals_shutdown(zend_ii_globals *ii_globals)
 PHP_MINIT_FUNCTION(ingres)
 {
 
-    ZEND_INIT_MODULE_GLOBALS(ii, php_ii_globals_init, php_ii_globals_shutdown);
     REGISTER_INI_ENTRIES();
 
     le_ii_result = zend_register_list_destructors_ex(php_close_ii_result,     NULL, "ingres result", module_number);
@@ -914,14 +1035,14 @@ PHP_MSHUTDOWN_FUNCTION(ingres)
 #if defined(IIAPI_VERSION_2)
     IIAPI_RELENVPARM   relEnvParm;
 
-    relEnvParm.re_envHandle = IIG(envHandle);
+    relEnvParm.re_envHandle = INGRESG(envHandle);
     IIapi_releaseEnv(&relEnvParm);
 #endif
     /* Ingres api termination */
     IIapi_terminate(&termParm);
 
 #ifdef ZTS
-    ts_free_id(ii_globals_id);    
+    ts_free_id(ingres_globals_id);    
 #endif
 
     UNREGISTER_INI_ENTRIES();
@@ -939,8 +1060,8 @@ PHP_MSHUTDOWN_FUNCTION(ingres)
 /* {{{ New request initialization */
 PHP_RINIT_FUNCTION(ingres)
 {
-    IIG(num_links) = IIG(num_persistent);
-    IIG(cursor_no) = 0;
+    INGRESG(num_links) = INGRESG(num_persistent);
+    INGRESG(cursor_no) = 0;
 
     return SUCCESS;
 }
@@ -949,10 +1070,10 @@ PHP_RINIT_FUNCTION(ingres)
 /* {{{ End of request */
 PHP_RSHUTDOWN_FUNCTION(ingres)
 {
-    if (IIG(error_text) != NULL)
+    if (INGRESG(error_text) != NULL)
     {
-        efree(IIG(error_text));
-        IIG(error_text) = NULL;
+        efree(INGRESG(error_text));
+        INGRESG(error_text) = NULL;
     }
     return SUCCESS;
 }
@@ -971,9 +1092,9 @@ PHP_MINFO_FUNCTION(ingres)
     php_info_print_table_row(2, "Revision", "$Revision$");
     sprintf(buf, "%d", IIAPI_VERSION );
     php_info_print_table_row(2, "Ingres OpenAPI Version", buf);
-    sprintf(buf, "%ld", IIG(num_persistent));
+    sprintf(buf, "%ld", INGRESG(num_persistent));
     php_info_print_table_row(2, "Active Persistent Links", buf);
-    sprintf(buf, "%ld", IIG(num_links));
+    sprintf(buf, "%ld", INGRESG(num_links));
     php_info_print_table_row(2, "Active Links", buf);
     php_info_print_table_end();
 
@@ -1014,12 +1135,12 @@ static int ii_success(IIAPI_GENPARM *genParm, II_PTR *errorHandle TSRMLS_DC)
     IIAPI_GETEINFOPARM error_info;
 
     /* Initialise global variables */
-    IIG(errorHandle) = NULL;
-    IIG(error_number) = 0;
-    if (IIG(error_text) != NULL)
+    INGRESG(errorHandle) = NULL;
+    INGRESG(error_number) = 0;
+    if (INGRESG(error_text) != NULL)
     {
-        efree(IIG(error_text));
-        IIG(error_text) = NULL;
+        efree(INGRESG(error_text));
+        INGRESG(error_text) = NULL;
     }
 
     switch (genParm->gp_status)
@@ -1045,9 +1166,9 @@ static int ii_success(IIAPI_GENPARM *genParm, II_PTR *errorHandle TSRMLS_DC)
                 {
                     case IIAPI_ST_SUCCESS:
                     case IIAPI_ST_NO_DATA:
-                        IIG(error_number) = error_info.ge_errorCode;
-                        IIG(error_text) = estrdup(error_info.ge_message);
-                        memcpy(IIG(error_sqlstate), error_info.ge_SQLSTATE, II_SQLSTATE_LEN + 1);
+                        INGRESG(error_number) = error_info.ge_errorCode;
+                        INGRESG(error_text) = estrdup(error_info.ge_message);
+                        memcpy(INGRESG(error_sqlstate), error_info.ge_SQLSTATE, II_SQLSTATE_LEN + 1);
 
                         break;
                     case IIAPI_ST_INVALID_HANDLE:
@@ -1057,7 +1178,7 @@ static int ii_success(IIAPI_GENPARM *genParm, II_PTR *errorHandle TSRMLS_DC)
                         php_error_docref(NULL TSRMLS_CC, E_WARNING, "IIapi_getErrorInfo error, status returned was : %d", error_info.ge_status );
                         break;
                 }
-                IIG(errorHandle) = genParm->gp_errorHandle;
+                INGRESG(errorHandle) = genParm->gp_errorHandle;
             }
             return II_FAIL;
     }
@@ -1069,7 +1190,7 @@ static int ii_success(IIAPI_GENPARM *genParm, II_PTR *errorHandle TSRMLS_DC)
  */
 static void _ii_init_link (INTERNAL_FUNCTION_PARAMETERS,  II_LINK *ii_link )
 {
-    ii_link->envHandle = IIG(envHandle);
+    ii_link->envHandle = INGRESG(envHandle);
     if ( ii_link->envHandle != NULL )
     {
         ii_link->connHandle = ii_link->envHandle;
@@ -1155,7 +1276,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
         RETURN_FALSE;
     }
 
-    if (IIG(trace_connect)) {
+    if (INGRESG(trace_connect)) {
         php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Enter php_ii_do_connect");
     }
 
@@ -1163,7 +1284,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
     if (PG(sql_safe_mode))
     {    /* sql_safe_mode */
 
-        if (IIG(trace_connect)) {
+        if (INGRESG(trace_connect)) {
             php_error_docref(NULL TSRMLS_CC, E_NOTICE, "SQL safe mode in effect");
         }
 
@@ -1172,24 +1293,24 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
             php_error_docref(NULL TSRMLS_CC, E_NOTICE, "SQL safe mode in effect - ignoring host/user/password/option information");
         }
 
-        if (IIG(default_database))
+        if (INGRESG(default_database))
         {
-            db = IIG(default_database);
+            db = INGRESG(default_database);
         }
         else
         {
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "SQL safe mode in effect - %s.default_database is not set, unable to continue", INGRES_EXT_NAME);
             RETURN_FALSE;
         }
-        if (IIG(default_user))
+        if (INGRESG(default_user))
         {
-            username = IIG(default_user);
+            username = INGRESG(default_user);
             user = username;
 
             /* Require a password if a username is defined in php.ini */
-            if (IIG(default_password))
+            if (INGRESG(default_password))
             {
-                pass = IIG(default_password);
+                pass = INGRESG(default_password);
             }
             else
             {
@@ -1210,12 +1331,12 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
     } 
     else 
     {                    /* non-sql_safe_mode */
-        if (IIG(trace_connect)) {
+        if (INGRESG(trace_connect)) {
             php_error_docref(NULL TSRMLS_CC, E_NOTICE, "SQL safe mode not in effect");
         }
-        db = IIG(default_database);
-        user = IIG(default_user);
-        pass = IIG(default_password);
+        db = INGRESG(default_database);
+        user = INGRESG(default_user);
+        pass = INGRESG(default_password);
 
         if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"s|ssa", &database, &database_len, &username, &username_len, &password, &password_len, &options) == FAILURE) 
         {
@@ -1242,7 +1363,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
         }
         
         /* Perform Sanity Check. If no database has been set then we have a problem */
-        if (IIG(trace_connect)) {
+        if (INGRESG(trace_connect)) {
             php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Connecting to %s as %s", db, user);
         }
 
@@ -1259,7 +1380,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
     }
 
     /* if asked for an unauthorized persistent connection, issue a warning and go for a non-persistent link */
-    if (persistent && !IIG(allow_persistent))
+    if (persistent && !INGRESG(allow_persistent))
     {
         php_error_docref(NULL TSRMLS_CC, E_WARNING, "Persistent links disabled !");
         persistent = 0;
@@ -1269,7 +1390,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
     {
         list_entry *le;
 
-        if (IIG(trace_connect)) {
+        if (INGRESG(trace_connect)) {
             php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Enter persistent connection");
         }
 
@@ -1279,19 +1400,19 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
             list_entry new_le;
 
-            if (IIG(trace_connect)) {
+            if (INGRESG(trace_connect)) {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "creating new persistent connection");
             }
 
-            if (IIG(max_links) != -1 && IIG(num_links) >= IIG(max_links))
+            if (INGRESG(max_links) != -1 && INGRESG(num_links) >= INGRESG(max_links))
             {
-                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Too many open links (%ld)", IIG(num_links));
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Too many open links (%ld)", INGRESG(num_links));
                 efree(hashed_details);
                 RETURN_FALSE;
             }
-            if (IIG(max_persistent) != -1 && IIG(num_persistent) >= IIG(max_persistent))
+            if (INGRESG(max_persistent) != -1 && INGRESG(num_persistent) >= INGRESG(max_persistent))
             {
-                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Too many open persistent links (%ld)", IIG(num_persistent));
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Too many open persistent links (%ld)", INGRESG(num_persistent));
                 efree(hashed_details);
                 RETURN_FALSE;
             }
@@ -1330,7 +1451,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
             
             connParm.co_tranHandle = NULL;
 
-            if (IIG(trace_connect)) {
+            if (INGRESG(trace_connect)) {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Start IIapi_connect()");
             }
 
@@ -1343,7 +1464,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
                 php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to connect to database (%s)", db);
                 RETURN_FALSE;
             }
-            if (IIG(trace_connect)) {
+            if (INGRESG(trace_connect)) {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "End IIapi_connect()");
             }
 
@@ -1357,7 +1478,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
             {
                 /* first set the blob_segment_length according to the default */
                 setEnvPrmParm.se_envHandle = ii_link->envHandle;
-                temp_long = IIG(blob_segment_length);
+                temp_long = INGRESG(blob_segment_length);
                 setEnvPrmParm.se_paramValue = (II_PTR)&temp_long;
                 setEnvPrmParm.se_paramID = IIAPI_EP_MAX_SEGMENT_LEN;
                 IIapi_setEnvParam( &setEnvPrmParm );
@@ -1391,12 +1512,12 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
                 efree(hashed_details);
                 RETURN_FALSE;
             }
-            IIG(num_persistent)++;
-            IIG(num_links)++;
+            INGRESG(num_persistent)++;
+            INGRESG(num_links)++;
 
         } else { /* already open persistent connection */
 
-            if (IIG(trace_connect)) {
+            if (INGRESG(trace_connect)) {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "using existing persistent connection");
             }
 
@@ -1443,7 +1564,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
                 connParm.co_type = IIAPI_CT_SQL;
 #endif
 
-                if (IIG(trace_connect)) {
+                if (INGRESG(trace_connect)) {
                     php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Start IIapi_connect()");
                 }
 
@@ -1456,7 +1577,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
                     RETURN_FALSE;
                 }
 
-                if (IIG(trace_connect)) {
+                if (INGRESG(trace_connect)) {
                     php_error_docref(NULL TSRMLS_CC, E_NOTICE, "End IIapi_connect()");
                 }
 
@@ -1479,7 +1600,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
         
         ZEND_REGISTER_RESOURCE(return_value, ii_link, le_ii_plink);
 
-        if (IIG(trace_connect)) {
+        if (INGRESG(trace_connect)) {
             php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Exit persistent connection");
         }
 
@@ -1487,7 +1608,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
         list_entry *index_ptr, new_index_ptr;
 
-        if (IIG(trace_connect)) {
+        if (INGRESG(trace_connect)) {
             php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Enter non-persistent connection");
         }
 
@@ -1497,7 +1618,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
          * and add a pointer to it with hashed_details as the key.
          */
 
-        if ((IIG(reuse_connection)) && (zend_hash_find(&EG(regular_list), hashed_details, hashed_details_length + 1, (void *) &index_ptr) == SUCCESS))
+        if ((INGRESG(reuse_connection)) && (zend_hash_find(&EG(regular_list), hashed_details, hashed_details_length + 1, (void *) &index_ptr) == SUCCESS))
         {
             int type;
             void *ptr;
@@ -1522,9 +1643,9 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
                 zend_hash_del(&EG(regular_list), hashed_details, hashed_details_length + 1);
             }
         }
-        if (IIG(max_links) != -1 && IIG(num_links) >= IIG(max_links))
+        if (INGRESG(max_links) != -1 && INGRESG(num_links) >= INGRESG(max_links))
         {
-            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Too many open links (%ld)", IIG(num_links));
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Too many open links (%ld)", INGRESG(num_links));
             efree(hashed_details);
             RETURN_FALSE;
         }
@@ -1564,7 +1685,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
         connParm.co_tranHandle = NULL;
 
-        if (IIG(trace_connect)) {
+        if (INGRESG(trace_connect)) {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Start IIapi_connect()");
         }
 
@@ -1577,7 +1698,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
             RETURN_FALSE;
         }
 
-        if (IIG(trace_connect)) {
+        if (INGRESG(trace_connect)) {
             php_error_docref(NULL TSRMLS_CC, E_NOTICE, "End IIapi_connect()");
         }
 
@@ -1591,7 +1712,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
             {
                 /* first set the blob_segment_length according to the default */
                 setEnvPrmParm.se_envHandle = ii_link->envHandle;
-                temp_long = IIG(blob_segment_length);
+                temp_long = INGRESG(blob_segment_length);
                 setEnvPrmParm.se_paramValue = (II_PTR)&temp_long;
                 setEnvPrmParm.se_paramID = IIAPI_EP_MAX_SEGMENT_LEN;
                 IIapi_setEnvParam( &setEnvPrmParm );
@@ -1628,9 +1749,9 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
             efree(hashed_details);
             RETURN_FALSE;
         }
-        IIG(num_links)++;
+        INGRESG(num_links)++;
 
-        if (IIG(trace_connect)) {
+        if (INGRESG(trace_connect)) {
             php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Exit non-persistent connection");
         }
     }
@@ -1641,7 +1762,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
         hashed_details = NULL;
     }
 
-    if (IIG(trace_connect)) {
+    if (INGRESG(trace_connect)) {
         php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Exit php_ii_do_connect");
     }
 } 
@@ -1741,7 +1862,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
 
     /* Check to see if the last ingres function generated an error */
     /* If so close off the statement */
-    if (ii_link->stmtHandle && IIG(errorHandle))
+    if (ii_link->stmtHandle && INGRESG(errorHandle))
     {
         /* see if we can close the query without cancelling it */
         /* Free query resources. */
@@ -1793,7 +1914,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
                 if (ii_result->buffered == FALSE)
                 {
                     /* Close the statement */
-                    if (IIG(ingres_trace))
+                    if (INGRESG(ingres_trace))
                     {
                         php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Closing previous unbuffered query");
                     }
@@ -1839,7 +1960,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
         if (result_resource == FALSE)
         {
             /* Close the statement since it is not associated with any current resource */
-            if (IIG(ingres_trace))
+            if (INGRESG(ingres_trace))
             {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Closing a non-result resource statHandle");
             }
@@ -1946,10 +2067,10 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
             break;
     }
 
-    if (IIG(ingres_trace))
+    if (INGRESG(ingres_trace))
     {
         php_error_docref(NULL TSRMLS_CC, E_NOTICE, "%s", query);
-        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "%s:%d, ac-state:%d, ac-emulation:%d",INGRES_INI_AUTO, IIG(auto_multi), ii_link->autocommit, ii_link->auto_multi);
+        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "%s:%d, ac-state:%d, ac-emulation:%d",INGRES_INI_AUTO, INGRESG(auto_multi), ii_link->autocommit, ii_link->auto_multi);
     }
 
     /* Ingres only allows for a single cursor to be open when auto-commit is enabled */
@@ -1958,7 +2079,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     /* invokes a commit before auto-commit is re-enabled */
 
     /* If we are to simulate auto-commit */ 
-    if ((IIG(auto_multi)) && ((ii_link->autocommit) || (ii_link->auto_multi)))
+    if ((INGRESG(auto_multi)) && ((ii_link->autocommit) || (ii_link->auto_multi)))
     {
         if (ii_link->auto_multi) /* We are in emulation mode */
         {
@@ -1970,7 +2091,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
                     /* clean up any un-freed statements/results */
                     _free_ii_link_result_list(ii_link TSRMLS_CC);
                 }
-                if (IIG(ingres_trace))
+                if (INGRESG(ingres_trace))
                 {
                     php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Issuing commit whilst in auto-commit emulation mode");
                 }
@@ -1979,7 +2100,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
                 {
                     php_error_docref(NULL TSRMLS_CC, E_ERROR, "An error occur when issuing an internal commit");
                 }
-                if (IIG(ingres_trace))
+                if (INGRESG(ingres_trace))
                 {
                     php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Re-activating auto-commit");
                 }
@@ -2004,7 +2125,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
                         /* clean up any un-freed statements/results */
                         _free_ii_link_result_list(ii_link TSRMLS_CC);
                     }
-                    if (IIG(ingres_trace))
+                    if (INGRESG(ingres_trace))
                     {
                         php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Disabling auto-commit");
                     }
@@ -2019,9 +2140,9 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
             }
         }
     }
-    if (IIG(ingres_trace))
+    if (INGRESG(ingres_trace))
     {
-        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "%s:%d, ac-state:%d, ac-emulation:%d",INGRES_INI_AUTO, IIG(auto_multi), ii_link->autocommit, ii_link->auto_multi);
+        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "%s:%d, ac-state:%d, ac-emulation:%d",INGRES_INI_AUTO, INGRESG(auto_multi), ii_link->autocommit, ii_link->auto_multi);
     }
 
     /* check to see if there are any parameters to the query */
@@ -2058,7 +2179,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
 #if defined(IIAPI_VERSION_5)
         else
         {
-            if ((ii_link->apiLevel > IIAPI_LEVEL_3) && IIG(describe))
+            if ((ii_link->apiLevel > IIAPI_LEVEL_3) && INGRESG(describe))
             {
                 /* We can use DESCRIBE INPUT to work out the types that Ingres is expecting */
                 if (_ii_prepare(ii_result, query TSRMLS_CC) == II_FAIL)
@@ -2109,7 +2230,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     {
         case IIAPI_QT_OPEN:
 #if defined(IIAPI_VERSION_6)
-            if (IIG(scroll) && (ii_link->apiLevel >= IIAPI_LEVEL_5))
+            if (INGRESG(scroll) && (ii_link->apiLevel >= IIAPI_LEVEL_5))
             {
                 /* Enable scrolling cursor support */
                 queryParm.qy_flags  = IIAPI_QF_SCROLL;
@@ -2332,7 +2453,7 @@ PHP_FUNCTION(ingres_prepare)
 
     /* Check to see if the last ingres function generated an error */
     /* If so close off the statement */
-    if (ii_link->stmtHandle && IIG(errorHandle))
+    if (ii_link->stmtHandle && INGRESG(errorHandle))
     {
         /* see if we can close the query without cancelling it */
         /* Free query resources. */
@@ -2475,7 +2596,7 @@ PHP_FUNCTION(ingres_prepare)
     ii_link->stmtHandle = NULL;
 
 #if defined (IIAPI_VERSION_5)
-    if (ii_result->paramCount && ((ii_result->apiLevel > IIAPI_LEVEL_3) && IIG(describe)))
+    if (ii_result->paramCount && ((ii_result->apiLevel > IIAPI_LEVEL_3) && INGRESG(describe)))
     {
         /* Use the result from DESCRIBE INPUT */
         if (_ii_describe_input (ii_result, query TSRMLS_CC) == II_FAIL)
@@ -2663,7 +2784,7 @@ PHP_FUNCTION(ingres_execute)
     }
 #if defined (IIAPI_VERSION_6)
     queryParm.qy_flags = 0;
-    if (IIG(scroll) && (ii_result->apiLevel >= IIAPI_LEVEL_5))
+    if (INGRESG(scroll) && (ii_result->apiLevel >= IIAPI_LEVEL_5))
     {
         /* Enable scrolling cursor support */
         queryParm.qy_flags  = IIAPI_QF_SCROLL;
@@ -2764,8 +2885,8 @@ static void  php_ii_gen_cursor_id(II_RESULT *ii_result TSRMLS_DC)
     thread_id = II_THREAD_ID;
 
     tmp_id = ecalloc (33,1);
-    IIG(cursor_no)++;
-    sprintf (tmp_id,"php_%lu_%ld", II_THREAD_ID, IIG(cursor_no));
+    INGRESG(cursor_no)++;
+    sprintf (tmp_id,"php_%lu_%ld", II_THREAD_ID, INGRESG(cursor_no));
     ii_result->cursor_id = emalloc(strlen(tmp_id) + 1);
     strcpy(ii_result->cursor_id,tmp_id);
     efree(tmp_id);
@@ -2902,7 +3023,7 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result
 {
     char *name, *fun_name;
 
-    if (index < IIG(array_index_start) || index > ii_result->fieldCount)
+    if (index < INGRESG(array_index_start) || index > ii_result->fieldCount)
     {
         switch (info_type)
         {
@@ -2943,7 +3064,7 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result
     {
 
         case II_FIELD_INFO_NAME:
-            name = php_ii_field_name(ii_result, IIG(array_index_start) == 0 ? --index : index TSRMLS_CC);
+            name = php_ii_field_name(ii_result, INGRESG(array_index_start) == 0 ? --index : index TSRMLS_CC);
             if (name == NULL)
             {
                 RETURN_FALSE;
@@ -3081,27 +3202,27 @@ static char *php_ii_field_name(II_RESULT *ii_result, int index TSRMLS_DC)
     
     space = ' ';
 
-    if ((index < IIG(array_index_start)) || index > ii_result->fieldCount)
+    if ((index < INGRESG(array_index_start)) || index > ii_result->fieldCount)
     {
         php_error_docref(NULL TSRMLS_CC, E_WARNING, "php_ii_field_name() called with wrong index (%d)", index);
         return NULL;
     }
 
-    if ( (ii_result->descriptor[index - IIG(array_index_start)]).ds_columnName != NULL )
+    if ( (ii_result->descriptor[index - INGRESG(array_index_start)]).ds_columnName != NULL )
     {
         /* if the column name has a space */
-        if ( strchr((ii_result->descriptor[index - IIG(array_index_start)]).ds_columnName, space ) != NULL ) 
+        if ( strchr((ii_result->descriptor[index - INGRESG(array_index_start)]).ds_columnName, space ) != NULL ) 
         {
-            sprintf(ii_result->descriptor[index - IIG(array_index_start)].ds_columnName,"col%d",index); 
+            sprintf(ii_result->descriptor[index - INGRESG(array_index_start)].ds_columnName,"col%d",index); 
         }
         /* If we have created the memory ourselves */
-        if ( (ii_result->descriptor[index - IIG(array_index_start)]).ds_columnName[0]  == '\0' ) 
+        if ( (ii_result->descriptor[index - INGRESG(array_index_start)]).ds_columnName[0]  == '\0' ) 
         {
-            sprintf(ii_result->descriptor[index - IIG(array_index_start)].ds_columnName,"col%d",index); 
+            sprintf(ii_result->descriptor[index - INGRESG(array_index_start)].ds_columnName,"col%d",index); 
         }
     }
 
-    return (ii_result->descriptor[index - IIG(array_index_start)]).ds_columnName;
+    return (ii_result->descriptor[index - INGRESG(array_index_start)]).ds_columnName;
 }
 /* }}} */
 
@@ -3115,7 +3236,7 @@ PHP_FUNCTION(ingres_field_name)
 {
     zval *result = NULL;
     II_RESULT *ii_result;
-    long index=IIG(array_index_start);
+    long index=INGRESG(array_index_start);
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"rl" , &result, &index) == FAILURE) 
     {
@@ -3138,7 +3259,7 @@ PHP_FUNCTION(ingres_field_type)
 {
     zval *result = NULL;
     II_RESULT *ii_result;
-    long index=IIG(array_index_start);
+    long index=INGRESG(array_index_start);
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"rl" , &result, &index) == FAILURE) 
     {
@@ -3161,7 +3282,7 @@ PHP_FUNCTION(ingres_field_nullable)
 {
     zval *result = NULL;
     II_RESULT *ii_result;
-    long index=IIG(array_index_start);
+    long index=INGRESG(array_index_start);
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"rl" , &result, &index) == FAILURE) 
     {
@@ -3184,7 +3305,7 @@ PHP_FUNCTION(ingres_field_length)
 {
     zval *result = NULL;
     II_RESULT *ii_result;
-    long index=IIG(array_index_start);
+    long index=INGRESG(array_index_start);
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"rl" , &result, &index) == FAILURE) 
     {
@@ -3207,7 +3328,7 @@ PHP_FUNCTION(ingres_field_precision)
 {
     zval *result = NULL;
     II_RESULT *ii_result;
-    long index=IIG(array_index_start);
+    long index=INGRESG(array_index_start);
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"rl" , &result, &index) == FAILURE) 
     {
@@ -3230,7 +3351,7 @@ PHP_FUNCTION(ingres_field_scale)
 {
     zval *result = NULL;
     II_RESULT *ii_result;
-    long index=IIG(array_index_start);
+    long index=INGRESG(array_index_start);
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"rl" , &result, &index) == FAILURE) 
     {
@@ -3364,7 +3485,7 @@ static II_LONG php_ii_convert_data ( short destType, int destSize, int precision
 #if defined (IIAPI_VERSION_2)
     IIAPI_FORMATPARM formatParm;
 
-    formatParm.fd_envHandle = IIG(envHandle);
+    formatParm.fd_envHandle = INGRESG(envHandle);
 
     formatParm.fd_srcDesc.ds_dataType = (ii_result->descriptor[field+column]).ds_dataType;
     formatParm.fd_srcDesc.ds_nullable = (ii_result->descriptor[field+column]).ds_nullable;
@@ -3472,7 +3593,7 @@ PHP_FUNCTION(ingres_result_seek)
 #if defined(IIAPI_VERSION_6)
 
     /* adjust position for ingres.array_index_start */
-    position = IIG(array_index_start) ? position : position++;
+    position = INGRESG(array_index_start) ? position : position++;
 
     /* Check to see if the result is scrollable */
     if ( ii_result->scrollable )
@@ -3495,7 +3616,7 @@ PHP_FUNCTION(ingres_result_seek)
             scrollParm.sl_genParm.gp_closure = NULL;
             scrollParm.sl_stmtHandle = ii_result->stmtHandle;
             scrollParm.sl_orientation = IIAPI_SCROLL_ABSOLUTE;
-            scrollParm.sl_offset = IIG(array_index_start) ? position : position++;
+            scrollParm.sl_offset = INGRESG(array_index_start) ? position : position++;
 
             IIapi_scroll(&scrollParm);
             ii_sync(&(scrollParm.sl_genParm));
@@ -3635,7 +3756,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
             ii_result->getColParm.gc_genParm.gp_callback = NULL;
             ii_result->getColParm.gc_genParm.gp_closure = NULL;
-            ii_result->getColParm.gc_rowCount = IIG(fetch_buffer_size); /* 100 rows by default */
+            ii_result->getColParm.gc_rowCount = INGRESG(fetch_buffer_size); /* 100 rows by default */
             ii_result->getColParm.gc_columnCount = ii_result->fieldCount;
             ii_result->getColParm.gc_stmtHandle = ii_result->stmtHandle;
             ii_result->getColParm.gc_moreSegments = 0;
@@ -3756,7 +3877,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
         {
             ii_result->getColParm.gc_genParm.gp_callback = NULL;
             ii_result->getColParm.gc_genParm.gp_closure = NULL;
-            ii_result->getColParm.gc_rowCount = IIG(fetch_buffer_size); /* 100 rows by default */
+            ii_result->getColParm.gc_rowCount = INGRESG(fetch_buffer_size); /* 100 rows by default */
             ii_result->getColParm.gc_columnCount = ii_result->fieldCount;
             ii_result->getColParm.gc_stmtHandle = ii_result->stmtHandle;
             ii_result->getColParm.gc_moreSegments = 0;
@@ -3897,11 +4018,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
                             if (result_type & II_NUM)
                             {
-                                add_index_null(return_value, i + k + IIG(array_index_start));
+                                add_index_null(return_value, i + k + INGRESG(array_index_start));
                             }
                             if (result_type & II_ASSOC)
                             {
-                                add_assoc_null(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC));
+                                add_assoc_null(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC));
                             }
 
                         } else {    /* non NULL value */
@@ -3935,12 +4056,12 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
                                     if (result_type & II_NUM)
                                     {
-                                        add_index_double(return_value, i + k + IIG(array_index_start), value_double);
+                                        add_index_double(return_value, i + k + INGRESG(array_index_start), value_double);
                                     }
 
                                     if (result_type & II_ASSOC)
                                     {
-                                        add_assoc_double(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_double);
+                                        add_assoc_double(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC), value_double);
 
                                     }
                                     break;
@@ -3988,11 +4109,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                         should_copy = 1;
                                         if (result_type & II_NUM)
                                         {
-                                            add_index_stringl(return_value, i + k + IIG(array_index_start), value_long_long_str, value_long_long_str_len, should_copy);
+                                            add_index_stringl(return_value, i + k + INGRESG(array_index_start), value_long_long_str, value_long_long_str_len, should_copy);
                                         }
                                         if (result_type & II_ASSOC)
                                         {
-                                            add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_long_long_str, value_long_long_str_len, should_copy);
+                                            add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC), value_long_long_str, value_long_long_str_len, should_copy);
                                         }
                                         /* Init the first char to '\0' for later reuse */
                                         value_long_long_str[0] = '\0';
@@ -4001,11 +4122,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                     {
                                         if (result_type & II_NUM)
                                         {
-                                            add_index_long(return_value, i + k + IIG(array_index_start), value_long);
+                                            add_index_long(return_value, i + k + INGRESG(array_index_start), value_long);
                                         }
                                         if (result_type & II_ASSOC)
                                         {
-                                            add_assoc_long(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_long);
+                                            add_assoc_long(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC), value_long);
                                         }
                                     }
                                     break;
@@ -4027,7 +4148,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                         should_copy = 1;
                                     }
 
-                                    if (IIG(utf8)) {
+                                    if (INGRESG(utf8)) {
                                         /* User has requested the output in UTF-8 */
                                         /* create a big enough buffer - each code point in UTF-16 can be upto 4 bytes in UTF-8 */
                                         tmp_utf8_string = emalloc((len * 4) + 1);
@@ -4044,11 +4165,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
                                     if (result_type & II_NUM)
                                     {
-                                        add_index_stringl(return_value, i + k + IIG(array_index_start), value_char_p, len, should_copy);
+                                        add_index_stringl(return_value, i + k + INGRESG(array_index_start), value_char_p, len, should_copy);
                                     }
                                     if (result_type & II_ASSOC)
                                     {
-                                        add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
+                                        add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
                                     }
                                     if (tmp_utf8_string) {
                                         efree(tmp_utf8_string);
@@ -4119,12 +4240,12 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
                                     if (result_type & II_NUM)
                                     {
-                                        add_index_stringl(return_value, i + k + IIG(array_index_start), value_char_p, len, should_copy);
+                                        add_index_stringl(return_value, i + k + INGRESG(array_index_start), value_char_p, len, should_copy);
                                     }
 
                                     if (result_type & II_ASSOC)
                                     {
-                                        add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
+                                        add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
                                     }
 
                                     break;
@@ -4186,7 +4307,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                     /* alloc memory for the size of the segment we need */
 
                     columnData = (IIAPI_DATAVALUE *) safe_emalloc(sizeof(IIAPI_DATAVALUE), 1, 0);
-                    lob_segment = (char *) emalloc (IIG(blob_segment_length));
+                    lob_segment = (char *) emalloc (INGRESG(blob_segment_length));
                     lob_len = 0;
                     do
                     {
@@ -4257,23 +4378,23 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
                         if (result_type & II_NUM)
                         {
-                            add_index_null(return_value, i + k + IIG(array_index_start));
+                            add_index_null(return_value, i + k + INGRESG(array_index_start));
                         }
                         if (result_type & II_ASSOC)
                         {
-                            add_assoc_null(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC));
+                            add_assoc_null(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC));
                         }
                     }
                     else
                     {
                         if (result_type & II_NUM)
                         {
-                            add_index_stringl(return_value, i + k + IIG(array_index_start), lob_data, lob_len, 1);
+                            add_index_stringl(return_value, i + k + INGRESG(array_index_start), lob_data, lob_len, 1);
                         }
 
                         if (result_type & II_ASSOC)
                         {
-                            add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + IIG(array_index_start) TSRMLS_CC), lob_data, lob_len, 1);
+                            add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC), lob_data, lob_len, 1);
                         }
                     }
 
@@ -4580,27 +4701,27 @@ PHP_FUNCTION(ingres_next_error)
     IIAPI_GETEINFOPARM error_info;
 
 
-    if (IIG(errorHandle) != NULL)
+    if (INGRESG(errorHandle) != NULL)
     {
-        IIG(error_number) = 0;
-        if (IIG(error_text) != NULL )
+        INGRESG(error_number) = 0;
+        if (INGRESG(error_text) != NULL )
         {
-            efree(IIG(error_text));
-            IIG(error_text) = NULL;
+            efree(INGRESG(error_text));
+            INGRESG(error_text) = NULL;
         }
         for ( i = 0; i < (II_SQLSTATE_LEN + 1); i++ ) 
         {
-            IIG(error_sqlstate)[i] = '\0';
+            INGRESG(error_sqlstate)[i] = '\0';
         }
-        error_info.ge_errorHandle = IIG(errorHandle);
+        error_info.ge_errorHandle = INGRESG(errorHandle);
         IIapi_getErrorInfo(&error_info);
 
         switch (error_info.ge_status)
         {
             case IIAPI_ST_SUCCESS:
-                IIG(error_number) = error_info.ge_errorCode;
-                IIG(error_text) = estrdup(error_info.ge_message);
-                memcpy(IIG(error_sqlstate),error_info.ge_SQLSTATE, II_SQLSTATE_LEN + 1);
+                INGRESG(error_number) = error_info.ge_errorCode;
+                INGRESG(error_text) = estrdup(error_info.ge_message);
+                memcpy(INGRESG(error_sqlstate),error_info.ge_SQLSTATE, II_SQLSTATE_LEN + 1);
                 RETURN_TRUE;
                 break;
             case IIAPI_ST_NO_DATA:
@@ -4631,7 +4752,7 @@ PHP_FUNCTION(ingres_errno)
 }
 /* }}} */
 
-/* {{{ proto long ingres_errno([resource link])
+/* {{{ proto long ingres_error([resource link])
    Gets the last ingres error message generated */
 #ifdef HAVE_INGRES2
 PHP_FUNCTION(ingres2_error)
@@ -4668,12 +4789,12 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode)
     switch (mode)
     {
         case 0:
-            RETVAL_LONG(IIG(error_number));
+            RETVAL_LONG(INGRESG(error_number));
             break;
         case 1:
-            if ( IIG(error_text) != NULL )
+            if ( INGRESG(error_text) != NULL )
             {
-                RETVAL_STRING(IIG(error_text),1);
+                RETVAL_STRING(INGRESG(error_text),1);
             }
             else
             {
@@ -4681,7 +4802,7 @@ static void php_ii_error(INTERNAL_FUNCTION_PARAMETERS, int mode)
             }
             break;
         case 2:
-            RETVAL_STRING(IIG(error_sqlstate),1);
+            RETVAL_STRING(INGRESG(error_sqlstate),1);
             break;
         default:
             break;
@@ -4986,7 +5107,7 @@ static short int php_ii_set_environment_options (zval *options, II_LINK *ii_link
             {
                     parameter_id = IIAPI_EP_MAX_SEGMENT_LEN;
                     convert_to_long_ex(data);
-                    IIG(blob_segment_length) = Z_LVAL_PP(data);
+                    INGRESG(blob_segment_length) = Z_LVAL_PP(data);
             }
             else 
             {
@@ -5589,7 +5710,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             else
                             {
                                 convert_to_string_ex(val);
-                                if (IIG(utf8)) {
+                                if (INGRESG(utf8)) {
                                     tmp_utf16_string = emalloc((Z_STRLEN_PP(val) * 4));
                                     string_start = (UTF8 *)Z_STRVAL_PP(val);
                                     tmp_utf16_string_ptr = tmp_utf16_string;
@@ -5658,7 +5779,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             else
                             {
                                 convert_to_string_ex(val);
-                                if (IIG(utf8)) {
+                                if (INGRESG(utf8)) {
                                     tmp_utf16_string = emalloc((Z_STRLEN_PP(val) * 4));
                                     string_start = (UTF8 *)Z_STRVAL_PP(val);
                                     tmp_utf16_string_ptr = tmp_utf16_string;
@@ -5705,7 +5826,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             else
                             {
                                 convert_to_string_ex(val);
-                                if (IIG(utf8)) {
+                                if (INGRESG(utf8)) {
                                     /* Convert the UTF-8 data we have to UTF-16 so Ingres will store it */
                                     tmp_utf16_string = emalloc((Z_STRLEN_PP(val) * 4) + 2);
                                     string_start = (UTF8 *)Z_STRVAL_PP(val);
@@ -5846,7 +5967,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 else
                                 {
                                     convert_to_string_ex(val);
-                                    if (IIG(utf8)) {
+                                    if (INGRESG(utf8)) {
                                         /* Convert the UTF-8 data we have to UTF-16 so Ingres will store it */
                                         tmp_utf16_string = emalloc((Z_STRLEN_PP(val) * 4) + 2);
                                         string_start = (UTF8 *)Z_STRVAL_PP(val);
@@ -6059,7 +6180,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                         {
 #if defined (IIAPI_VERSION_3)
                             case 'N': /* NVARCHAR */
-                                if (IIG(utf8)) {
+                                if (INGRESG(utf8)) {
                                     /* Convert the UTF-8 data we have to UTF-16 so Ingres will store it */
                                     tmp_utf16_string = emalloc((Z_STRLEN_PP(val) * 4) + 2);
                                     string_start = (UTF8 *)Z_STRVAL_PP(val);
@@ -6084,7 +6205,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 
                                 break;
                             case 'n': /* NCHAR - for UTF-8 source data only */
-                                if (IIG(utf8)) {
+                                if (INGRESG(utf8)) {
                                     tmp_utf16_string = emalloc((Z_STRLEN_PP(val) * 4));
                                     string_start = (UTF8 *)Z_STRVAL_PP(val);
                                     tmp_utf16_string_ptr = tmp_utf16_string;
@@ -6146,7 +6267,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 putParmParm.pp_moreSegments = 1; 
 
                                 /* setup a buffer to stream the data in */
-                                tmp_lob = emalloc(IIG(blob_segment_length) + 2 );
+                                tmp_lob = emalloc(INGRESG(blob_segment_length) + 2 );
                                 
                                 tmp_lob_ptr = Z_STRVAL_PP(val);
                                 /* Get the length of the new LOB */
@@ -6154,7 +6275,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 
                                 while (putParmParm.pp_moreSegments) 
                                 {
-                                    if ( lob_len <= IIG(blob_segment_length) )
+                                    if ( lob_len <= INGRESG(blob_segment_length) )
                                     {
                                         putParmParm.pp_moreSegments = 0;
                                         segment_length = lob_len; 
@@ -6162,8 +6283,8 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                     else
                                     {
                                         putParmParm.pp_moreSegments = 1; 
-                                        lob_len -= IIG(blob_segment_length);
-                                        segment_length = IIG(blob_segment_length); 
+                                        lob_len -= INGRESG(blob_segment_length);
+                                        segment_length = INGRESG(blob_segment_length); 
                                     }
                                     *((II_UINT2*)tmp_lob) = (II_UINT2)segment_length;
                                     memcpy( tmp_lob + 2, tmp_lob_ptr, segment_length);
@@ -6216,7 +6337,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                         {
 #if defined (IIAPI_VERSION_3)
                             case IIAPI_NVCH_TYPE: /* NVARCHAR */
-                                if (IIG(utf8)) {
+                                if (INGRESG(utf8)) {
                                     /* Convert the UTF-8 data we have to UTF-16 so Ingres will store it */
                                     tmp_utf16_string = emalloc((Z_STRLEN_PP(val) * 4) + 2);
                                     string_start = (UTF8 *)Z_STRVAL_PP(val);
@@ -6241,7 +6362,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 
                                 break;
                             case IIAPI_NCHA_TYPE: /* NCHAR - for UTF-8 source data only */
-                                if (IIG(utf8)) {
+                                if (INGRESG(utf8)) {
                                     tmp_utf16_string = emalloc((Z_STRLEN_PP(val) * 4));
                                     string_start = (UTF8 *)Z_STRVAL_PP(val);
                                     tmp_utf16_string_ptr = tmp_utf16_string;
@@ -6303,7 +6424,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 putParmParm.pp_moreSegments = 1; 
 
                                 /* setup a buffer to stream the data in */
-                                tmp_lob = emalloc(IIG(blob_segment_length) + 2 );
+                                tmp_lob = emalloc(INGRESG(blob_segment_length) + 2 );
                                 
                                 tmp_lob_ptr = Z_STRVAL_PP(val);
                                 /* Get the length of the new LOB */
@@ -6311,7 +6432,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 
                                 while (putParmParm.pp_moreSegments) 
                                 {
-                                    if ( lob_len <= IIG(blob_segment_length) )
+                                    if ( lob_len <= INGRESG(blob_segment_length) )
                                     {
                                         putParmParm.pp_moreSegments = 0;
                                         segment_length = lob_len; 
@@ -6319,8 +6440,8 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                     else
                                     {
                                         putParmParm.pp_moreSegments = 1; 
-                                        lob_len -= IIG(blob_segment_length);
-                                        segment_length = IIG(blob_segment_length); 
+                                        lob_len -= INGRESG(blob_segment_length);
+                                        segment_length = INGRESG(blob_segment_length); 
                                     }
                                     *((II_UINT2*)tmp_lob) = (II_UINT2)segment_length;
                                     memcpy( tmp_lob + 2, tmp_lob_ptr, segment_length);
@@ -6524,11 +6645,11 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
 
         if (result_type & II_NUM)
         {
-            add_index_null(return_value, col_no + IIG(array_index_start));
+            add_index_null(return_value, col_no + INGRESG(array_index_start));
         }
         if (result_type & II_ASSOC)
         {
-            add_assoc_null(return_value, php_ii_field_name(ii_result, col_no + IIG(array_index_start) TSRMLS_CC));
+            add_assoc_null(return_value, php_ii_field_name(ii_result, col_no + INGRESG(array_index_start) TSRMLS_CC));
         }
 
     } else {    /* non NULL value */
@@ -6562,12 +6683,12 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
 
                 if (result_type & II_NUM)
                 {
-                    add_index_double(return_value, col_no + IIG(array_index_start), value_double);
+                    add_index_double(return_value, col_no + INGRESG(array_index_start), value_double);
                 }
 
                 if (result_type & II_ASSOC)
                 {
-                    add_assoc_double(return_value, php_ii_field_name(ii_result, col_no + IIG(array_index_start) TSRMLS_CC), value_double);
+                    add_assoc_double(return_value, php_ii_field_name(ii_result, col_no + INGRESG(array_index_start) TSRMLS_CC), value_double);
 
                 }
                 break;
@@ -6615,11 +6736,11 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
                     should_copy = 1;
                     if (result_type & II_NUM)
                     {
-                        add_index_stringl(return_value, col_no + IIG(array_index_start), value_long_long_str, value_long_long_str_len, should_copy);
+                        add_index_stringl(return_value, col_no + INGRESG(array_index_start), value_long_long_str, value_long_long_str_len, should_copy);
                     }
                     if (result_type & II_ASSOC)
                     {
-                        add_assoc_stringl(return_value, php_ii_field_name(ii_result, col_no + IIG(array_index_start) TSRMLS_CC), value_long_long_str, value_long_long_str_len, should_copy);
+                        add_assoc_stringl(return_value, php_ii_field_name(ii_result, col_no + INGRESG(array_index_start) TSRMLS_CC), value_long_long_str, value_long_long_str_len, should_copy);
                     }
                     /* Init the first char to '\0' for later reuse */
                     value_long_long_str[0] = '\0';
@@ -6628,11 +6749,11 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
                 {
                     if (result_type & II_NUM)
                     {
-                        add_index_long(return_value, col_no + IIG(array_index_start), value_long);
+                        add_index_long(return_value, col_no + INGRESG(array_index_start), value_long);
                     }
                     if (result_type & II_ASSOC)
                     {
-                        add_assoc_long(return_value, php_ii_field_name(ii_result, col_no + IIG(array_index_start) TSRMLS_CC), value_long);
+                        add_assoc_long(return_value, php_ii_field_name(ii_result, col_no + INGRESG(array_index_start) TSRMLS_CC), value_long);
                     }
                 }
                 break;
@@ -6654,7 +6775,7 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
                     should_copy = 1;
                 }
 
-                if (IIG(utf8)) {
+                if (INGRESG(utf8)) {
                     /* User has requested the output in UTF-8 */
                     /* create a big enough buffer - each code point in UTF-16 can be upto 4 bytes in UTF-8 */
                     tmp_utf8_string = emalloc((len * 4) + 1);
@@ -6671,11 +6792,11 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
 
                 if (result_type & II_NUM)
                 {
-                    add_index_stringl(return_value, col_no + IIG(array_index_start), value_char_p, len, should_copy);
+                    add_index_stringl(return_value, col_no + INGRESG(array_index_start), value_char_p, len, should_copy);
                 }
                 if (result_type & II_ASSOC)
                 {
-                    add_assoc_stringl(return_value, php_ii_field_name(ii_result, col_no + IIG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
+                    add_assoc_stringl(return_value, php_ii_field_name(ii_result, col_no + INGRESG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
                 }
                 if (tmp_utf8_string) {
                     efree(tmp_utf8_string);
@@ -6747,12 +6868,12 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
 
                 if (result_type & II_NUM)
                 {
-                    add_index_stringl(return_value, col_no + IIG(array_index_start), value_char_p, len, should_copy);
+                    add_index_stringl(return_value, col_no + INGRESG(array_index_start), value_char_p, len, should_copy);
                 }
 
                 if (result_type & II_ASSOC)
                 {
-                    add_assoc_stringl(return_value, php_ii_field_name(ii_result, col_no + IIG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
+                    add_assoc_stringl(return_value, php_ii_field_name(ii_result, col_no + INGRESG(array_index_start) TSRMLS_CC), value_char_p, len, should_copy);
                 }
                 break;
 
