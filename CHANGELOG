@@ -1,4 +1,6 @@
 CVS - 2.1.1-dev
+- Fix bug 16616 - auto commit emulation failed with a SELECT followed by an INSERT
+- Fix bug 16075 - improper clean up of old resource values causing SEGV
 - Add arginfo to provide reflection access to the internals
 - When II_SYSTEM is not defined provide a link to the documentation showing how to set it up
 - Fix bug 16539 - Stale connections fail to be disconnected using IIapi_disconnect()

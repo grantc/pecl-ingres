@@ -542,7 +542,7 @@ static int _commit_transaction(II_LINK *ii_link  TSRMLS_DC)
 
         if (ii_success(&(commitParm.cm_genParm), &ii_link->errorHandle TSRMLS_CC) == II_FAIL)
         {
-        if (INGRESG(ingres_trace))
+            if (INGRESG(ingres_trace))
             {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_commit_transaction: no success");
             }
@@ -737,14 +737,18 @@ static void _free_ii_link_result_list (II_LINK *ii_link TSRMLS_DC)
             }
             _close_statement (ii_result TSRMLS_CC);
         }
-        zend_list_delete(ii_link->result_list_ptr->result_id);
+        if (ii_link->result_list_ptr->result_id)
+        {
+            zend_list_delete(ii_link->result_list_ptr->result_id);
+            // set the result_id 0 to indicate it has been released
+            ii_link->result_list_ptr->result_id = 0;
+        }
 
         result_entry =  ii_link->result_list_ptr;
         ii_link->result_list_ptr = (ii_result_entry *)ii_link->result_list_ptr->next_result_ptr;
 
         /* free memory associated with the top entry in the list */
         free(result_entry);
-        free(ii_result);
     }
 
     /* if there are no result resources created it is possible the last query generated an error
@@ -846,7 +850,7 @@ static void _ai_clean_ii_plink(II_LINK *ii_link TSRMLS_DC)
             php_error_docref(NULL TSRMLS_CC, E_ERROR, "An error occur when issuing an internal commit");
         }
     }
-    /* auto-commit must before before disconnection */
+    /* auto-commit must be disabled before before disconnection */
     if (ii_link->autocommit)
     {
         if (_autocommit_transaction(ii_link TSRMLS_CC) == II_FAIL)
@@ -1846,6 +1850,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     int query_type;
     int converted_query_len;
     ii_result_entry *result_ptr = NULL;
+    ii_result_entry *next_ptr = NULL;
     short int result_resource = FALSE;
     int type = 0;
     int col = 0;
@@ -1909,6 +1914,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
         while (result_ptr) 
         {
             ii_result = (II_RESULT *)zend_list_find(result_ptr->result_id, &type);
+            next_ptr = (ii_result_entry *)result_ptr->next_result_ptr;
             if ((ii_result) && (type == le_ii_result))
             {
                 if (ii_result->buffered == FALSE)
@@ -1924,12 +1930,10 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
                          RETURN_FALSE;
                     }
                     php_ii_result_remove (ii_result, result_ptr->result_id TSRMLS_CC);
-
-                    zend_list_delete(result_ptr->result_id);
                 }
             }
             /* Next */
-            result_ptr = (ii_result_entry *)result_ptr->next_result_ptr;
+            result_ptr = next_ptr;
         }
     }
 
@@ -2014,6 +2018,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
             {
                 ii_result->queryType = IIAPI_QT_QUERY;
             }
+            break;
         case INGRES_SQL_INSERT:
         case INGRES_SQL_UPDATE:
         case INGRES_SQL_DELETE:
@@ -2083,7 +2088,8 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     {
         if (ii_link->auto_multi) /* We are in emulation mode */
         {
-            if (query_type != INGRES_SQL_SELECT)
+            /* if there are active resultsets then we don't want to commit */
+            if ((query_type != INGRES_SQL_SELECT) && (!ii_link->result_list_ptr))
             {
                 /* re-enable auto-commit */
                 if ( ii_link->result_list_ptr )
@@ -2550,7 +2556,7 @@ PHP_FUNCTION(ingres_prepare)
     queryParm.qy_genParm.gp_callback = NULL;
     queryParm.qy_genParm.gp_closure = NULL;
     queryParm.qy_connHandle = ii_result->connHandle;
-    queryParm.qy_tranHandle = ii_result->tranHandle;
+    queryParm.qy_tranHandle = ii_link->tranHandle;
     queryParm.qy_stmtHandle = NULL;
     queryParm.qy_queryType  = IIAPI_QT_QUERY; 
     queryParm.qy_parameters = FALSE;
@@ -3628,8 +3634,7 @@ PHP_FUNCTION(ingres_result_seek)
             /* For the time being if some one has requested a specific row we do not check to see
                if we can satisfy that request from the buffer. For the time being we release 
                the metaData buffer.
-               TODO : Check to see if we can satisfy the request from ii_result->metaData.
-               */
+               TODO : Check to see if we can satisfy the request from ii_result->metaData.  */
             if ( ii_result->metaData != NULL )
             {
                 _free_resultdata(ii_result);
@@ -6138,7 +6143,7 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
         putParmParm.pp_parmCount=1; /* New parameter */
         
         if (((ii_result->queryType == IIAPI_QT_EXEC_PROCEDURE) || 
-            ((ii_result->queryType == IIAPI_QT_OPEN) && (ii_result->stmtHandle))) && (param == 0)) 
+            ((ii_result->queryType == IIAPI_QT_OPEN) && (ii_result->prepared))) && (param == 0)) 
         {
             /* place the procedure name / cursor_id as the first parameter */
             putParmParm.pp_parmData[0].dv_null = FALSE;
