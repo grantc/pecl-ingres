@@ -3946,6 +3946,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
             {
                 j = 0;
                 k = 0;
+                have_lob = FALSE;
 
                 /* as long as there are no long byte or long varchar fields, Ingres is able to fetch 
                    many fields at a time, so try to find these types and stop if they're found. variable 
@@ -4316,6 +4317,10 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                     lob_len = 0;
                     do
                     {
+                        for (cell = 0; cell< INGRESG(blob_segment_length); cell++)
+                        {
+                            lob_segment[cell] = '\0';
+                        }
                         ii_result->getColParm.gc_genParm.gp_callback = NULL;
                         ii_result->getColParm.gc_genParm.gp_closure = NULL;
                         ii_result->getColParm.gc_rowCount = 1;
@@ -4352,6 +4357,10 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                         /* length of the segment fetched is in the first 2 bytes of
                            lob_segment */
                         memcpy( (char *)&lob_segment_len, lob_segment, 2 );
+                        if ((ii_result->descriptor[i + j]).ds_dataType == IIAPI_LNVCH_TYPE )
+                        {
+                            lob_segment_len = lob_segment_len * 2;
+                        }
 
                         if ( lob_len == 0 )
                         {
@@ -4378,28 +4387,68 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                     } 
                     while ( ii_result->getColParm.gc_moreSegments );
 
-                    if (columnData[0].dv_null)
-                    {    /* NULL value ? */
+                    /* If this is an LONG NVARCHAR and conversion to UTF-8 has been requested */
+                    if (((ii_result->descriptor[i + j]).ds_dataType == IIAPI_LNVCH_TYPE) && (INGRESG(utf8))) {
+                        /* User has requested the output in UTF-8 */
+                        /* create a big enough buffer - each code point in UTF-16 can be upto 4 bytes in UTF-8 */
+                        tmp_utf8_string = emalloc((lob_len * 4) + 1);
+                        string_start = (UTF16 *)lob_data;
+                        tmp_utf8_string_ptr = tmp_utf8_string;
+                        result = ConvertUTF16toUTF8((const UTF16 **) &string_start, string_start + lob_len/2, &tmp_utf8_string_ptr, tmp_utf8_string_ptr + (lob_len * 4), strictConversion);
+                        len = tmp_utf8_string_ptr - tmp_utf8_string;
+                        tmp_utf8_string[len] = '\0';
+                        value_char_p = (char *)tmp_utf8_string;
 
-                        if (result_type & II_NUM)
-                        {
-                            add_index_null(return_value, i + k + INGRESG(array_index_start));
+                        if (columnData[0].dv_null)
+                        {    /* NULL value ? */
+
+                            if (result_type & II_NUM)
+                            {
+                                add_index_null(return_value, i + k + INGRESG(array_index_start));
+                            }
+                            if (result_type & II_ASSOC)
+                            {
+                                add_assoc_null(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC));
+                            }
                         }
-                        if (result_type & II_ASSOC)
+                        else
                         {
-                            add_assoc_null(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC));
+                            if (result_type & II_NUM)
+                            {
+                                add_index_stringl(return_value, i + k + INGRESG(array_index_start), tmp_utf8_string, len, 1);
+                            }
+
+                            if (result_type & II_ASSOC)
+                            {
+                                add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC), tmp_utf8_string, len, 1);
+                            }
                         }
                     }
                     else
                     {
-                        if (result_type & II_NUM)
-                        {
-                            add_index_stringl(return_value, i + k + INGRESG(array_index_start), lob_data, lob_len, 1);
-                        }
+                        if (columnData[0].dv_null)
+                        {    /* NULL value ? */
 
-                        if (result_type & II_ASSOC)
+                            if (result_type & II_NUM)
+                            {
+                                add_index_null(return_value, i + k + INGRESG(array_index_start));
+                            }
+                            if (result_type & II_ASSOC)
+                            {
+                                add_assoc_null(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC));
+                            }
+                        }
+                        else
                         {
-                            add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC), lob_data, lob_len, 1);
+                            if (result_type & II_NUM)
+                            {
+                                add_index_stringl(return_value, i + k + INGRESG(array_index_start), lob_data, lob_len, 1);
+                            }
+
+                            if (result_type & II_ASSOC)
+                            {
+                                add_assoc_stringl(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC), lob_data, lob_len, 1);
+                            }
                         }
                     }
 
@@ -4409,7 +4458,10 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                     {
                         efree(lob_data);
                     }
-                    
+                    if (tmp_utf8_string)
+                    {
+                        efree(tmp_utf8_string);
+                    }
                 } 
             
                     
@@ -6271,12 +6323,25 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 putParmParm.pp_parmCount  = 1;   /* soon to be "put" LOB */
                                 putParmParm.pp_moreSegments = 1; 
 
+                                if ((unicode_lob) && (INGRESG(utf8))) {
+                                    /* Convert the UTF-8 data we have to UTF-16 so Ingres will store it */
+                                    tmp_utf16_string = emalloc((Z_STRLEN_PP(val) * 4) + 2);
+                                    string_start = (UTF8 *)Z_STRVAL_PP(val);
+                                    tmp_utf16_string_ptr = tmp_utf16_string;
+                                    result = ConvertUTF8toUTF16((const UTF8 **) &string_start,  string_start + Z_STRLEN_PP(val) + 1, &tmp_utf16_string_ptr, tmp_utf16_string_ptr + (Z_STRLEN_PP(val) * 4) , strictConversion);
+                                    utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string)) * 2;
+                                    tmp_lob_ptr = (char *)tmp_utf16_string;
+                                    /* Get the length of the new LOB */
+                                    lob_len = utf16_string_len;
+                                }
+                                else
+                                {
+                                    tmp_lob_ptr = Z_STRVAL_PP(val);
+                                    /* Get the length of the new LOB */
+                                    lob_len = Z_STRLEN_PP(val);
+                                }
                                 /* setup a buffer to stream the data in */
                                 tmp_lob = emalloc(INGRESG(blob_segment_length) + 2 );
-                                
-                                tmp_lob_ptr = Z_STRVAL_PP(val);
-                                /* Get the length of the new LOB */
-                                lob_len = Z_STRLEN_PP(val);
                                 
                                 while (putParmParm.pp_moreSegments) 
                                 {
@@ -6291,12 +6356,20 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                         lob_len -= INGRESG(blob_segment_length);
                                         segment_length = INGRESG(blob_segment_length); 
                                     }
-                                    *((II_UINT2*)tmp_lob) = (II_UINT2)segment_length;
-                                    memcpy( tmp_lob + 2, tmp_lob_ptr, segment_length);
 
+                                    memcpy(tmp_lob + 2, tmp_lob_ptr, segment_length);
+                                    if (unicode_lob) 
+                                    {
+                                        /* Pass the length in terms of UTF-16 code-points */
+                                        *((II_UINT2*)tmp_lob) = (II_UINT2)segment_length/2;
+                                    }
+                                    else
+                                    {
+                                        *((II_UINT2*)tmp_lob) = (II_UINT2)segment_length;
+                                    }
 
-                                    putParmParm.pp_parmData[0].dv_null = FALSE;
                                     putParmParm.pp_parmData[0].dv_length = segment_length + 2;
+                                    putParmParm.pp_parmData[0].dv_null = FALSE;
                                     putParmParm.pp_parmData[0].dv_value = tmp_lob;
 
                                     IIapi_putParms( &putParmParm );
@@ -6315,6 +6388,11 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                                 efree (tmp_string);
                                             }
                                         }
+                                        if (tmp_utf16_string)
+                                        {
+                                            efree (tmp_utf16_string);
+                                            tmp_utf16_string = NULL;
+                                        }
 
                                         return II_FAIL;
                                     }
@@ -6327,6 +6405,11 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 {
                                     efree (tmp_lob);
                                     tmp_lob = NULL;
+                                }
+                                if (tmp_utf16_string)
+                                {
+                                    efree(tmp_utf16_string);
+                                    tmp_utf16_string = NULL;
                                 }
                                 break;
                             default: /* everything else */
@@ -6428,12 +6511,25 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 putParmParm.pp_parmCount  = 1;   /* soon to be "put" LOB */
                                 putParmParm.pp_moreSegments = 1; 
 
+                                if ((unicode_lob) && (INGRESG(utf8))) {
+                                    /* Convert the UTF-8 data we have to UTF-16 so Ingres will store it */
+                                    tmp_utf16_string = emalloc((Z_STRLEN_PP(val) * 4) + 2);
+                                    string_start = (UTF8 *)Z_STRVAL_PP(val);
+                                    tmp_utf16_string_ptr = tmp_utf16_string;
+                                    result = ConvertUTF8toUTF16((const UTF8 **) &string_start,  string_start + Z_STRLEN_PP(val) + 1, &tmp_utf16_string_ptr, tmp_utf16_string_ptr + (Z_STRLEN_PP(val) * 4) , strictConversion);
+                                    utf16_string_len = ((tmp_utf16_string_ptr - 1) - (tmp_utf16_string)) * 2;
+                                    tmp_lob_ptr = (char *)tmp_utf16_string;
+                                    /* Get the length of the new LOB */
+                                    lob_len = utf16_string_len;
+                                }
+                                else
+                                {
+                                    tmp_lob_ptr = Z_STRVAL_PP(val);
+                                    /* Get the length of the new LOB */
+                                    lob_len = Z_STRLEN_PP(val);
+                                }
                                 /* setup a buffer to stream the data in */
                                 tmp_lob = emalloc(INGRESG(blob_segment_length) + 2 );
-                                
-                                tmp_lob_ptr = Z_STRVAL_PP(val);
-                                /* Get the length of the new LOB */
-                                lob_len = Z_STRLEN_PP(val);
                                 
                                 while (putParmParm.pp_moreSegments) 
                                 {
@@ -6448,12 +6544,20 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                         lob_len -= INGRESG(blob_segment_length);
                                         segment_length = INGRESG(blob_segment_length); 
                                     }
-                                    *((II_UINT2*)tmp_lob) = (II_UINT2)segment_length;
-                                    memcpy( tmp_lob + 2, tmp_lob_ptr, segment_length);
 
+                                    memcpy(tmp_lob + 2, tmp_lob_ptr, segment_length);
+                                    if (unicode_lob) 
+                                    {
+                                        /* Pass the length in terms of UTF-16 code-points */
+                                        *((II_UINT2*)tmp_lob) = (II_UINT2)segment_length/2;
+                                    }
+                                    else
+                                    {
+                                        *((II_UINT2*)tmp_lob) = (II_UINT2)segment_length;
+                                    }
 
-                                    putParmParm.pp_parmData[0].dv_null = FALSE;
                                     putParmParm.pp_parmData[0].dv_length = segment_length + 2;
+                                    putParmParm.pp_parmData[0].dv_null = FALSE;
                                     putParmParm.pp_parmData[0].dv_value = tmp_lob;
 
                                     IIapi_putParms( &putParmParm );
@@ -6472,6 +6576,11 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                                 efree (tmp_string);
                                             }
                                         }
+                                        if (tmp_utf16_string)
+                                        {
+                                            efree (tmp_utf16_string);
+                                            tmp_utf16_string = NULL;
+                                        }
 
                                         return II_FAIL;
                                     }
@@ -6484,6 +6593,11 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 {
                                     efree (tmp_lob);
                                     tmp_lob = NULL;
+                                }
+                                if (tmp_utf16_string)
+                                {
+                                    efree (tmp_utf16_string);
+                                    tmp_utf16_string = NULL;
                                 }
                                 break;
                             default: /* everything else */

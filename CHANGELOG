@@ -1,4 +1,5 @@
 CVS - 2.1.1-dev
+- Add support for fetching/putting LONG NVARCHAR data
 - Fix bug 16616 - auto commit emulation failed with a SELECT followed by an INSERT
 - Fix bug 16075 - improper clean up of old resource values causing SEGV
 - Add arginfo to provide reflection access to the internals
