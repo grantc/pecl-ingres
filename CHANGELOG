@@ -1,4 +1,4 @@
-CVS - 2.1.1-dev
+2.2.0
 - Fix bug 16668 - Update ii_result->tranhandle after calling IIapì_autocommit()
 - Add support for fetching/putting LONG NVARCHAR data
 - Fix bug 16616 - auto commit emulation failed with a SELECT followed by an INSERT

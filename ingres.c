@@ -41,7 +41,9 @@
 #if HAVE_INGRES
 
 ZEND_DECLARE_MODULE_GLOBALS(ingres)
+#if (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION > 1) || (PHP_MAJOR_VERSION > 5)
 static PHP_GINIT_FUNCTION(ingres);
+#endif
 
 /* True globals, no need for thread safety */
 static int le_ii_result;
@@ -281,8 +283,15 @@ zend_module_entry ingres_module_entry = {
     PHP_RSHUTDOWN(ingres),
     PHP_MINFO(ingres),
     PHP_INGRES_VERSION,
+#if (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION > 1) || (PHP_MAJOR_VERSION > 5)
     PHP_MODULE_GLOBALS(ingres),
-    PHP_GINIT(ingres)
+    PHP_GINIT(ingres),
+    NULL,
+    NULL,
+    STANDARD_MODULE_PROPERTIES_EX
+#else
+    STANDARD_MODULE_PROPERTIES
+#endif
 };
 
 #ifdef HAVE_INGRES2
@@ -895,7 +904,11 @@ static void _clean_ii_plink(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 /* }}} */
 
 /* {{{ PHP_GINIT_FUNCTION */
+#if (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION > 1) || (PHP_MAJOR_VERSION > 5)
 static PHP_GINIT_FUNCTION(ingres)
+#else
+static void php_ingres_globals_init(zend_ingres_globals *ingres_globals)
+#endif
 {
     IIAPI_INITPARM initParm;
 
@@ -957,6 +970,11 @@ static PHP_GINIT_FUNCTION(ingres)
 PHP_MINIT_FUNCTION(ingres)
 {
 
+#if (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION > 1) || (PHP_MAJOR_VERSION > 5)
+    /* Handled by PHP_GINIT_FUNCTION(ingres) */
+#else
+    ZEND_INIT_MODULE_GLOBALS(ingres, php_ingres_globals_init, NULL)
+#endif
     REGISTER_INI_ENTRIES();
 
     le_ii_result = zend_register_list_destructors_ex(php_close_ii_result,     NULL, "ingres result", module_number);
