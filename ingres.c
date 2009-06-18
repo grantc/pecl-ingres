@@ -2115,6 +2115,8 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
                     ii_link->auto_multi = 1;
                     php_error_docref(NULL TSRMLS_CC, E_ERROR, "An error occur when changing the auto-commit state");
                 }
+                /* Update the transaction handle */
+                ii_result->tranHandle = ii_link->tranHandle;
                 ii_link->auto_multi = 0;
             }
         }
@@ -2140,6 +2142,8 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
                         php_error_docref(NULL TSRMLS_CC, E_ERROR, "An error occur when changing the auto-commit state");
                         ii_link->auto_multi = 0;
                     }
+                    /* Update the transaction handle */
+                    ii_result->tranHandle = ii_link->tranHandle;
                     /* we are in emulation mode */
                     ii_link->auto_multi = 1;
                 }

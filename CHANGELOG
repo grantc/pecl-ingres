@@ -1,4 +1,5 @@
 CVS - 2.1.1-dev
+- Fix bug 16668 - Update ii_result->tranhandle after calling IIapì_autocommit()
 - Add support for fetching/putting LONG NVARCHAR data
 - Fix bug 16616 - auto commit emulation failed with a SELECT followed by an INSERT
 - Fix bug 16075 - improper clean up of old resource values causing SEGV
