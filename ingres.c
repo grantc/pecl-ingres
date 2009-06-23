@@ -1872,6 +1872,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     short int result_resource = FALSE;
     int type = 0;
     int col = 0;
+    short int canPrepare = 0; /* Indicates if we can issue a PREPARE against the statement */
 
     ii_result_entry *result_entry;
     
@@ -2036,10 +2037,14 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
             {
                 ii_result->queryType = IIAPI_QT_QUERY;
             }
+            canPrepare = 1;
             break;
         case INGRES_SQL_INSERT:
         case INGRES_SQL_UPDATE:
         case INGRES_SQL_DELETE:
+            canPrepare = 1;
+            ii_result->queryType = IIAPI_QT_QUERY;
+            break;
         case INGRES_SQL_CREATE:
         case INGRES_SQL_ALTER:
             ii_result->queryType = IIAPI_QT_QUERY;
@@ -2207,7 +2212,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
 #if defined(IIAPI_VERSION_5)
         else
         {
-            if ((ii_link->apiLevel > IIAPI_LEVEL_3) && INGRESG(describe))
+            if (((ii_link->apiLevel > IIAPI_LEVEL_3) && INGRESG(describe)) && (canPrepare))
             {
                 /* We can use DESCRIBE INPUT to work out the types that Ingres is expecting */
                 if (_ii_prepare(ii_result, query TSRMLS_CC) == II_FAIL)
@@ -2294,6 +2299,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
         case IIAPI_QT_EXEC_PROCEDURE:
             queryParm.qy_parameters = TRUE;
             queryParm.qy_queryText  = NULL;
+            break;
         default:
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to execute OpenAPI query type, %d", ii_result->queryType);
             RETURN_FALSE;
