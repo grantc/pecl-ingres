@@ -251,11 +251,11 @@ build and install, note that $II_SYSTEM needs to be defined beforehand:
 
   1. Extract the archive, adapt the version number accordingly:
 
-       tar -zxvf ingres-2.2.0.tgz
+       tar -zxvf ingres-2.2.1.tgz
 
   2. Enter the newly created directory:
 
-       cd ingres-2.2.0
+       cd ingres-2.2.1
 
   3. Generate the configuration file for the extension:
 
