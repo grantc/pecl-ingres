@@ -1,4 +1,5 @@
-PHP and Ingres on VMS
+PHP and Ingres on OpenVMS with CSWS PHP 2.0
+Contents
 
     * 1 Introduction
     * 2 Getting Setup
@@ -11,13 +12,13 @@ PHP and Ingres on VMS
           o 4.1 Fetch the Ingres PHP source
           o 4.2 Building the Driver
                 + 4.2.1 Build Output
-          o 4.3 Installing the module
-          o 4.4 Testing the module
+    * 5 Installing the module
+    * 6 Testing the module
 
 
 1 Introduction
 
-Some time ago HP ported PHP 4.3.10 to OpenVMS. This document sets out the steps needed to build the Ingres PHP driver extension on OpenVMS.
+In 2009 HP released an update for the CSWS PHP providing support for PHP 5.6.0. This document updates the steps needed to build the Ingres PHP driver on OpenVMS.
 
 2 Getting Setup
 
@@ -35,42 +36,31 @@ Some time ago HP ported PHP 4.3.10 to OpenVMS. This document sets out the steps 
 2.1.2 Additional tools used
 
     * http://www.crinoid.com/utils/ - GNU Patch and Diff
-    * http://www.polarhome.com/vim/ - Vim and CVS - required to download the Ingres PECL source
-          o Vim is optional but I use it all the boxes on which I have access 
-    * C compiler 
+    * SVNkit - Used for downloading the source code for the PHP Ingres extension
+    * C compiler/Linker 
+
 
 2.1.3 Setting up the build environment
 
    1. Apache and the PHP products must be installed. See the links at the top for info on where to download them. Use the documentation provided, to install the products.
    2. Download the source archive for PHP and Apache. Whilst the source does not need to be built the header files are required to build the PHP extension.
-         2.1. Follow the instructions at http://h71000.www7.hp.com/openvms/products/ips/apache/csws_source.html, for details how to download and extract the source.
-         2.2. For the purposes of the work carried out at Ingres the files were extracted to CLUS_DGA500:[GRANT.SRC]. You will need to define your own concealed root logical pointing at the target for extraction or extract to the root directory of any ODS-5 enabled disk. 
+         1. Follow the instructions at http://h71000.www7.hp.com/openvms/products/ips/apache/csws_source.html, for details how to download and extract the source.
+         2. For the purposes of the work carried out at Ingres the files were extracted to CLUS_DGA500:[GRANT.SRC]. You will need to define your own concealed root logical pointing at the target for extraction or extract to the root directory of any ODS-5 enabled disk. 
    3. Install the CVS and GNU Patch utilities
-         3.1. CVS is used to get the source code, alternatively send an email to grantc@php.net to get a ZIP/BCK/.... of the current source. See the links above to get this utility
-         3.2. GNU Patch is used to patch the source code provided by HP as well as changes needed for the Ingres PHP extension. See the links above to get this utility 
+         1. CVS is used to get the source code, alternatively send an email to grantc@php.net to get a ZIP/BCK/.... of the current source. See the links above to get this utility
+         2. GNU Patch is used to patch the source code provided by HP as well as changes needed for the Ingres PHP extension. See the links above to get this utility 
 
 
 3 Patch the PHP sources
 
-Whilst we do not need to build PHP, we need its header files to compile the Ingres extension. The following unified diff can be used to update the relevant header files.
+Whilst we do not need to build PHP, we need its header files to compile the Ingres extension. The following unified diff can be used to update the relevant header file.
 
---- php_root:[win32]time.h;1    Thu Sep 27 11:15:20 2007
-+++ php_root:[win32]time.h;     Wed Dec  5 07:45:13 2007
-@@ -13,7 +13,9 @@
- #define TIME_H
- 
- /* Include stuff ************************************************************ */
-+#ifdef WIN32
- #include <winsock.h>
-+#endif
- #include <time.h>
- #include <php.h>
- 
-@@ -23,11 +25,12 @@
-        int tz_dsttime;
+--- php_root:[win32]time.h;1    Tue Feb 18 08:34:52 2003
++++ php_root:[win32]time.h;2    Tue Jul 14 12:38:53 2009
+@@ -23,10 +23,12 @@
  };
+
  
--
 +#ifndef __VMS
  struct itimerval {
         struct timeval it_interval;     /* next value */
@@ -81,76 +71,61 @@ Whilst we do not need to build PHP, we need its header files to compile the Ingr
  #define ITIMER_REAL    0               /*generates sigalrm */
  #define ITIMER_VIRTUAL 1               /*generates sigvtalrm */
 
---- CLUS_DGA500:[GRANT.SRC.BUILD_OLD.APL.ALPHA-V1_2.PORTLIB]REALPATH.H;1        Thu Sep 27 11:12:15 2007
-+++ CLUS_DGA500:[GRANT.SRC.BUILD_OLD.APL.ALPHA-V1_2.PORTLIB]REALPATH.H;2        Wed Dec  5 07:43:58 2007
-@@ -29,6 +29,8 @@
- /*
- ** Define the realpath function prototypes
- */
-+#ifndef __VMS
- char *realpath (const char *, ...);
-+#endif
- 
- #endif /* -_REALPATH_H */
-
-
 4 Building the Ingres PHP extension
 
 The following outlines the steps needed to build the Ingres PHP extension without needing to build PHP from the source provided by HP.
 
 4.1 Fetch the Ingres PHP source
 
-The Ingres PECL repository uses CVS for the source code repository. In order to retrieve the source code from the PECL server, a CVS client must be used.
+The source code for the Ingres PECL extension uses SVN for its source code repository. In order to retrieve the source code an SVN client must be used.
 
-Using a CVS client (see links above) log in to PHP's CVS server:
+Using the SVNkit jsvn client (see above) check out the source code:
 
-cvs -d :pserver:cvsread@cvs.php.net:/repository login
-
-When prompted the password is phpfi Check out the source code for the Ingres PHP driver
-
-cvs -d :pserver:cvsread@cvs.php.net:/repository co pecl/ingres
+jsvn checkout http://svn.php.net/repository/pecl/ingres/trunk ingres
 
 You should see something like:
 
-cvs checkout: Updating pecl/ingres
-U pecl/ingres/BUILD.COM
-U pecl/ingres/.cvsignore
-U pecl/ingres/CHANGELOG
-U pecl/ingres/CREDITS
-U pecl/ingres/INGRES.OPT
-U pecl/ingres/README
-U pecl/ingres/README.html
-U pecl/ingres/TODO
-U pecl/ingres/config.m4
-U pecl/ingres/config.w32
-U pecl/ingres/convertUTF.c
-U pecl/ingres/convertUTF.h
-U pecl/ingres/ingres.c
-U pecl/ingres/ingres.h
-U pecl/ingres/ingres.dsp
-U pecl/ingres/ingres.ini
-U pecl/ingres/package.xml
-U pecl/ingres/php_ingres.h
-U pecl/ingres/php_ingres2.h
-cvs checkout: Updating pecl/ingres/tests
-U pecl/ingres/tests/connection.inc
-U pecl/ingres/tests/skipif.inc
-U pecl/ingres/tests/test_001.phpt
-U pecl/ingres/tests/test_002.phpt
+$ jsvn checkout http://svn.php.net/repository/pecl/ingres/trunk ingres
+A    ingres/config.w32
+A    ingres/convertUTF.c
+A    ingres/php_ingres.h
+A    ingres/config.m4
+A    ingres/convertUTF.h
+A    ingres/CHANGELOG
+A    ingres/INGRES.OPT
+A    ingres/package.xml
+A    ingres/CREDITS
+A    ingres/README
+A    ingres/README.html
+A    ingres/README.VMS
+A    ingres/tests
+A    ingres/tests/test_016.phpt
+A    ingres/tests/test_034.phpt
 .
 .
 .
-U pecl/ingres/tests/test_038.phpt
+A    ingres/tests/test_050.phpt
+A    ingres/tests/test_024.phpt
+A    ingres/tests/test_006.phpt
+A    ingres/tests/test_042.phpt
+A    ingres/TODO
+A    ingres/ingres.ini
+A    ingres/php_ingres2.h
+A    ingres/ingres.c
+A    ingres/ingres.dsp
+A    ingres/BUILD.COM
+A    ingres/ingres.h
+ U   ingres
 
 
 4.2 Building the Driver
 
 Compiling the driver requires the following logicals :
 
-DEFINE PHP_INCLUDES -
-           PHP_ROOT:[000000...],  DEVICE:[DIR.OF.BUILD.APL.ALPHA-V1_2.PORTLIB]
 DEFINE /EXEC/TRANS=CONC -
            PHP_ROOT DEVICE:[DIR.OF.BUILD.PHP.ALPHA-CSWS_PHP-V0103-ECO-1.]
+DEFINE PHP_INCLUDES -
+           PHP_ROOT:[000000...],  DEVICE:[DIR.OF.BUILD.APL.ALPHA-V1_2.PORTLIB]
 
 Note that device and directories should be changed to the location that you extracted the HP Apache sources in to.
 
@@ -158,27 +133,34 @@ To build the Ingres extension, execute the BUILD.COM DCL script from the Ingres 
 
 4.2.1 Build Output
 
-In the example below the Ingres PECL source is contained within DISK:[GRANT.SRC.PECL.INGRES].
+In the example below the Ingres PECL source is contained within DISK:[GRANT.SRC.SVN.PECL.INGRES].
 
-$ SET DEF DISK:[GRANT.SRC.PECL.INGRES]
+$ SET DEF DISK:[GRANT.SRC.SVN.PECL.INGRES]
 $ @build.com
 Compiling convertUTF.c
 Compiling ingres.c
-%LIBRAR-S-INSERTED, module CONVERTUTF inserted in CLUS_DGA500:[GRANT.SRC.PECL.INGRES]LIBINGRES.OLB;1
-%LIBRAR-S-INSERTED, module II inserted in CLUS_DGA500:[GRANT.SRC.PECL.INGRES]LIBINGRES.OLB;1
+%LIBRAR-S-INSERTED, module CONVERTUTF inserted in DISK:[grant.SRC.SVN.PECL.ingres]LIBINGRES.OLB;1
+%LIBRAR-S-INSERTED, module INGRES inserted in DISK:[grant.SRC.SVN.PECL.ingres]LIBINGRES.OLB;1
 Linking shared image PHP_INGRES.EXE
 
 
-4.3 Installing the module
+5 Installing the module
 
-To install the module, copy PHP_INGRES.EXE to APACHE$COMMON:[PHP.EXTENSIONS]
+To install the module, copy PHP_INGRES.EXE to APACHE$COMMON:[PHP.EXTENSIONS]:
+
+COPY PHP_INGRES.EXE APACHE$COMMON:[PHP.EXTENSIONS]
 
 Add the following line to APACHE$COMMON:[PHP]PHP.INI:
 
 extension=php_ingres.exe
 
+If the Apache CSWS server is still running you will need to restart it:
 
-4.4 Testing the module
+@SYS$STARTUP:APACHE$SHUTDOWN.COM
+@SYS$STARTUP:APACHE$STARTUP.COM
+
+
+6 Testing the module
 
 Verify the module is loaded either via the URL http://vmsmachine/php/php_info.php or by executing the following:
 
