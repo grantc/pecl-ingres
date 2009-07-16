@@ -1,4 +1,7 @@
-CVS - 2.2.1-dev
+SVN
+- Update build scripts for OpenVMS CSWS PHP 2.0
+
+2.2.1
 - Fix bug 16688 - EXECUTE PROCEDURE statements fail with DESCRIBE INPUT
 
 2.2.0

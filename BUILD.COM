@@ -19,12 +19,16 @@ $ DEFINE /NOLOG SYS PHP_ROOT:[SUPPORT],APL_ROOT:[PortLIB]
 $ DEFINE /NOLOG REGEX PHP_ROOT:[regex]
 $ DEFINE /NOLOG TSRM PHP_ROOT:[tsrm]
 $ DEFINE /NOLOG WIN32 PHP_ROOT:[win32]
+$ DEFINE /NOLOG STREAMS PHP_ROOT:[main.streams]
 $!
 $! Compile convertUTF.c
 $COMPILE:
-$ IF F$SEARCH("CONVERTUTF.OBJ") .NES. "" THEN $ object_time = f$time("convertutf.obj")
-$ source_time = f$time("convertutf.c")
-$ IF source_time .lts. object_time then GOTO II_C 
+$ IF F$SEARCH("CONVERTUTF.OBJ") .NES. "" 
+$   THEN 
+$     object_time = f$FILE_ATTRIBUTES("convertutf.obj","RDT")
+$     source_time = f$FILE_ATTRIBUTES("convertutf.c","RDT")
+$     IF source_time .lts. object_time then GOTO II_C 
+$ ENDIF
 $ WRITE SYS$OUTPUT "Compiling convertUTF.c"
 $ CC convertUTF.c /NoDebug/NoWarn/Optimize/Machine_Code -
         /Show=EXPANSION/Prefix_Library_Entries=ALL -
@@ -33,9 +37,12 @@ $ CC convertUTF.c /NoDebug/NoWarn/Optimize/Machine_Code -
 $!
 $! Compile ingres.c
 $II_C:
-$ IF F$SEARCH("INGRES.OBJ") .NES. "" THEN $ object_time = f$time("ingres.obj")
-$ source_time = f$time("ingres.c")
-$ IF source_time .lts. object_time then GOTO CREATE_LIBRARY 
+$ IF F$SEARCH("INGRES.OBJ") .NES. "" 
+$   THEN 
+$     object_time = f$FILE_ATTRIBUTES("ingres.obj","RDT")
+$     source_time = f$FILE_ATTRIBUTES("ingres.c","RDT")
+$     IF source_time .lts. object_time then GOTO CREATE_LIBRARY 
+$ ENDIF
 $ WRITE SYS$OUTPUT "Compiling ingres.c"
 $ IF F$SEARCH("INGRES.OBJ") .NES. "" THEN DEL INGRES.OBJ;*
 $ CC ingres.c /NoDebug/NoWarn/Optimize/Machine_Code -
@@ -44,14 +51,14 @@ $ CC ingres.c /NoDebug/NoWarn/Optimize/Machine_Code -
         /DEFINE=(COMPILE_DL_INGRES=1,HAVE_INGRES=1,_VMS_V6_SOURCE,__VMS_VER_OVERRIDE)
 $!
 $! Build the library
-$CREATE_LIBRARY
+$CREATE_LIBRARY:
 $ IF F$SEARCH("LIBINGRES.OLB") .NES. "" THEN DEL LIBINGRES.OLB;*
-$ LIBRARY/CREATE/LOG LIBINGRES.OLB
-$ LIBRARY/INSERT/LOG/GLOBALS LIBINGRES.OLB convertUTF.obj, ingres.obj
+$ LIBRARY/CREATE/LOG []LIBINGRES.OLB
+$ LIBRARY/INSERT/LOG/GLOBALS []LIBINGRES.OLB convertUTF.obj, ingres.obj
 $!
 $! Link
 $ WRITE SYS$OUTPUT "Linking shared image PHP_INGRES.EXE"
-$ LINK /SHARE=PHP_INGRES /DSF=[.OBJ]PHP_INGRES  /MAP=[.LIS]PHP_INGRES /CROSS/FULL INGRES.OPT/OPT
+$ LINK /SHARE=PHP_INGRES /DSF=PHP_INGRES  /MAP=PHP_INGRES /CROSS/FULL INGRES.OPT/OPT
 $ GOTO EOS
 $!
 $! Some simple error reporting

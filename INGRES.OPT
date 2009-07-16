@@ -1,13 +1,14 @@
 !
 ! Image Ident
 !
-IDENTIFICATION="INGRES 2.0.0"           ! VMS port version
-BUILD_IDENT="PHP V4.3.10"               ! PHP release build!
+IDENTIFICATION="INGRES 2.2.1"          ! VMS port version
+BUILD_IDENT="PHP V5.2.6"               ! PHP release build!
 !
 !
 ! Ingres static libraries and PHP release build  shareables
 !
 !
+[]LIBINGRES.OLB/LIBRARY, -
 II_SYSTEM:[INGRES.LIBRARY]ABFRT.OLB/LIBRARY, -         
 II_SYSTEM:[INGRES.LIBRARY]ADF.OLB/LIBRARY, -           
 II_SYSTEM:[INGRES.LIBRARY]AFE.OLB/LIBRARY, -           
@@ -28,8 +29,7 @@ II_SYSTEM:[INGRES.LIBRARY]UG.OLB/LIBRARY, -
 II_SYSTEM:[INGRES.LIBRARY]IIAPI.OLB/LIBRARY, -
 II_SYSTEM:[INGRES.LIBRARY]UF.OLB/LIBRARY, -            
 II_SYSTEM:[INGRES.LIBRARY]UI.OLB/LIBRARY, -
-APACHE$COMMON:[PHP.BIN]PHPSHR.EXE/share, - ! PHP Shareable
-[]LIBINGRES.OLB/LIBRARY
+APACHE$COMMON:[PHP.BIN]PHPSHR.EXE/share ! PHP Shareable
 !
 ! symbol vector detailing the globals exported by the shareable image. 
 !
