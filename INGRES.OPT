@@ -1,7 +1,7 @@
 !
 ! Image Ident
 !
-IDENTIFICATION="INGRES 2.2.1"          ! VMS port version
+IDENTIFICATION="INGRES 2.2.2-dev"      ! VMS port version
 BUILD_IDENT="PHP V5.2.6"               ! PHP release build!
 !
 !
