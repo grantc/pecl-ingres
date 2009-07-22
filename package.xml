@@ -17,16 +17,17 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <date>2009-06-30</date>
  <time>15:30:00</time>
  <version>
-  <release>2.2.1</release>
-  <api>2.2.1</api>
+  <release>2.2.2</release>
+  <api>2.2.2</api>
  </version>
  <stability>
   <release>stable</release>
   <api>stable</api>
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
- <notes>This is a minor release that fixes the following problem:
-- Fix bug 16688 - EXECUTE PROCEDURE fails due to a missing "break"
+ <notes>This is a minor release that addresses the following:
+- Allow for a 0 offset in all ingres field functions 
+- Update build scripts for OpenVMS CSWS PHP 2.0
  </notes>
  <contents>
   <dir name="/">
@@ -87,6 +88,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file baseinstalldir="ingres" name="test_051.phpt" role="test" />
     <file baseinstalldir="ingres" name="test_052.phpt" role="test" />
     <file baseinstalldir="ingres" name="test_053.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_054.phpt" role="test" />
     <file baseinstalldir="ingres" name="bug_15586_newlines.phpt" role="test" />
     <file baseinstalldir="ingres" name="bug_15586.phpt" role="test" />
    </dir> <!-- //tests -->

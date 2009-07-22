@@ -3055,50 +3055,21 @@ PHP_FUNCTION(ingres_num_fields)
 */
 static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, long index, int info_type)
 {
-    char *name, *fun_name;
+    char *name;
+    int columnNo = 0;
 
-    if (index < INGRESG(array_index_start) || index > ii_result->fieldCount)
+    /* Make adjustments to the supplied index/offset value depending on the value of array_index_start */
+    if (index < INGRESG(array_index_start)  || (index > (ii_result->fieldCount + (INGRESG(array_index_start) - 1))))
     {
-        switch (info_type)
-        {
-
-            case II_FIELD_INFO_NAME:
-                fun_name = "ii_field_name";
-                break;
-
-            case II_FIELD_INFO_TYPE:
-                fun_name = "ii_field_type";
-                break;
-
-            case II_FIELD_INFO_NULLABLE:
-                fun_name = "ii_field_nullable";
-                break;
-    
-            case II_FIELD_INFO_LENGTH:
-                fun_name = "ii_field_length";
-                break;
-    
-            case II_FIELD_INFO_PRECISION:
-                fun_name = "ii_field_precision";
-                break;
-
-            case II_FIELD_INFO_SCALE:
-                fun_name = "ii_field_scale";
-                break;
-
-            default:
-                fun_name = "foobar";
-                break;
-        }
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s() called with wrong index (%ld)", fun_name, index);
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, "%ld is an invalid offset. Offset should be between %ld and %ld", index, INGRESG(array_index_start), ii_result->fieldCount + (INGRESG(array_index_start) - 1));
         RETURN_FALSE;
     }
+    columnNo = index - INGRESG(array_index_start) ;
 
     switch (info_type)
     {
-
         case II_FIELD_INFO_NAME:
-            name = php_ii_field_name(ii_result, INGRESG(array_index_start) == 0 ? --index : index TSRMLS_CC);
+            name = php_ii_field_name(ii_result, index TSRMLS_CC);
             if (name == NULL)
             {
                 RETURN_FALSE;
@@ -3107,7 +3078,7 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result
             break;
 
         case II_FIELD_INFO_TYPE:
-            switch ((ii_result->descriptor[index - 1]).ds_dataType)
+            switch ((ii_result->descriptor[columnNo]).ds_dataType)
             {
                 case IIAPI_BYTE_TYPE:
                     RETURN_STRING("IIAPI_BYTE_TYPE", 1);
@@ -3194,14 +3165,14 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result
 #endif
         
                 default:
-                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown Ingres data type, %d",(ii_result->descriptor[index - 1]).ds_dataType);
+                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown Ingres data type, %d",(ii_result->descriptor[columnNo]).ds_dataType);
                     RETURN_FALSE;
                     break;
             }
             break;
 
         case II_FIELD_INFO_NULLABLE:
-            if ((ii_result->descriptor[index - 1]).ds_nullable)
+            if ((ii_result->descriptor[columnNo]).ds_nullable)
             {
                 RETURN_TRUE;
             } else {
@@ -3210,15 +3181,15 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result
             break;
 
         case II_FIELD_INFO_LENGTH:
-            RETURN_LONG((ii_result->descriptor[index - 1]).ds_length);
+            RETURN_LONG((ii_result->descriptor[columnNo]).ds_length);
             break;
     
         case II_FIELD_INFO_PRECISION:
-            RETURN_LONG((ii_result->descriptor[index - 1]).ds_precision);
+            RETURN_LONG((ii_result->descriptor[columnNo]).ds_precision);
             break;
 
         case II_FIELD_INFO_SCALE:
-            RETURN_LONG((ii_result->descriptor[index - 1]).ds_scale);
+            RETURN_LONG((ii_result->descriptor[columnNo]).ds_scale);
             break;
     
         default:
@@ -3235,12 +3206,6 @@ static char *php_ii_field_name(II_RESULT *ii_result, int index TSRMLS_DC)
     char space;
     
     space = ' ';
-
-    if ((index < INGRESG(array_index_start)) || index > ii_result->fieldCount)
-    {
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, "php_ii_field_name() called with wrong index (%d)", index);
-        return NULL;
-    }
 
     if ( (ii_result->descriptor[index - INGRESG(array_index_start)]).ds_columnName != NULL )
     {
