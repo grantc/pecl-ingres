@@ -5708,10 +5708,6 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                         setDescrParm.sd_descriptor[param].ds_columnType = columnType;
                         break;
                     case 'b': /* byte */
-                    case 'c': /* char */
-                    case 'd': /* date */
-                    case 't': /* text */
-                    case 'D': /* decimal - treat a string since we want the exact */
                         convert_to_string_ex(val);
                         setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
                         setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
@@ -5911,6 +5907,10 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                         }
                         break;
 #endif
+                    case 'c': /* char */
+                    case 'd': /* date */
+                    case 't': /* text */
+                    case 'D': /* decimal - treat a string since we want the exact */
                     case 'v': /* varchar */ 
                         convert_to_string_ex(val);
                         setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_VCH_TYPE;
@@ -5958,16 +5958,18 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
 #endif
                         case IIAPI_TXT_TYPE: /* text */
                         case IIAPI_DEC_TYPE: /* decimal - we need an exact value for decimal storage */
+                        case IIAPI_VCH_TYPE: /* varchar */ 
                             convert_to_string_ex(val);
                             if ((ii_result->inputDescr[param - param_offset]).ds_dataType != IIAPI_LBYTE_TYPE) 
                             {
-                                setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
+                                setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_VCH_TYPE;
+                                setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val) + 2;
                             }
                             else
                             {
                                 setDescrParm.sd_descriptor[param].ds_dataType = (ii_result->inputDescr[param - param_offset]).ds_dataType;
+                                setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
                             }
-                            setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
                             setDescrParm.sd_descriptor[param].ds_precision = (ii_result->inputDescr[param - param_offset]).ds_precision;
                             setDescrParm.sd_descriptor[param].ds_scale = (ii_result->inputDescr[param - param_offset]).ds_scale;
                             setDescrParm.sd_descriptor[param].ds_columnType = columnType;
@@ -6047,15 +6049,6 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             }
                             break;
 #endif
-                        case IIAPI_VCH_TYPE: /* varchar */ 
-                            convert_to_string_ex(val);
-                            setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_VCH_TYPE;
-                            setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
-                            setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val) + 2;
-                            setDescrParm.sd_descriptor[param].ds_precision = 0;
-                            setDescrParm.sd_descriptor[param].ds_scale = 0;
-                            setDescrParm.sd_descriptor[param].ds_columnType = columnType;
-                            break;
                         default:
                             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unsupported type, %d", (ii_result->inputDescr[param - param_offset]).ds_dataType);
                             break;
@@ -6112,9 +6105,9 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             break;
                         case IS_STRING:
                             convert_to_string_ex(val);
-                            setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
+                            setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_VCH_TYPE;
                             setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
-                            setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val);
+                            setDescrParm.sd_descriptor[param].ds_length = Z_STRLEN_PP(val) + 2;
                             setDescrParm.sd_descriptor[param].ds_precision = 0;
                             setDescrParm.sd_descriptor[param].ds_scale = 0;
                             setDescrParm.sd_descriptor[param].ds_columnType = columnType;
@@ -6271,6 +6264,10 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 }
                                 break;
 #endif
+                            case 'c': /* char */
+                            case 'd': /* date */
+                            case 't': /* text */
+                            case 'D': /* decimal - treat a string since we want the exact */
                             case 'v': /* VARCHAR */
                                 /* copy the data to a new buffer then set the size  */
                                 /* of the string at the begining of the buffer */
@@ -6459,6 +6456,24 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                                 }
                                 break;
 #endif
+                            case IIAPI_BYTE_TYPE: /* byte */
+                            case IIAPI_VBYTE_TYPE: /* byte varying */
+                            case IIAPI_CHA_TYPE: /* char */
+                            case IIAPI_CHR_TYPE: /* text fixed */
+                            case IIAPI_DTE_TYPE: /* date */
+#if defined(IIAPI_VERSION_5) 
+                            case IIAPI_ADATE_TYPE:  /* SQL Date (aka ANSI DATE) */
+                            case IIAPI_TIME_TYPE: /* Ingres Time */
+                            case IIAPI_TMWO_TYPE: /* Time without Timezone */
+                            case IIAPI_TMTZ_TYPE: /* Time with Timezone */
+                            case IIAPI_TS_TYPE: /* Ingres Timestamp */
+                            case IIAPI_TSWO_TYPE: /* Timestamp without Timezone */
+                            case IIAPI_TSTZ_TYPE: /* Timestamp with Timezone */
+                            case IIAPI_INTYM_TYPE: /* Interval Year to Month */
+                            case IIAPI_INTDS_TYPE: /* Interval Day to Second */
+#endif
+                            case IIAPI_TXT_TYPE: /* text */
+                            case IIAPI_DEC_TYPE: /* decimal - we need an exact value for decimal storage */
                             case IIAPI_VCH_TYPE: /* VARCHAR */
                                 /* copy the data to a new buffer then set the size  */
                                 /* of the string at the begining of the buffer */
@@ -6601,8 +6616,14 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                     }
                     else
                     {
-                        putParmParm.pp_parmData[0].dv_length = Z_STRLEN_PP(val);
-                        putParmParm.pp_parmData[0].dv_value = Z_STRVAL_PP(val);
+                        /* copy the data to a new buffer then set the size  */
+                        /* of the string at the begining of the buffer */
+                        tmp_string = emalloc(Z_STRLEN_PP(val) + 2);
+                        memcpy(tmp_string + 2, Z_STRVAL_PP(val), Z_STRLEN_PP(val));
+                        /* set the 1st 2 bytes as the length of the string */
+                        *((II_INT2*)(tmp_string)) = Z_STRLEN_PP(val) ; 
+                        putParmParm.pp_parmData[0].dv_value = tmp_string;
+                        putParmParm.pp_parmData[0].dv_length = Z_STRLEN_PP(val) + 2; 
                     }
                     putParmParm.pp_parmData[0].dv_null = FALSE;
                     break;
