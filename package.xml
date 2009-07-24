@@ -89,6 +89,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file baseinstalldir="ingres" name="test_052.phpt" role="test" />
     <file baseinstalldir="ingres" name="test_053.phpt" role="test" />
     <file baseinstalldir="ingres" name="test_054.phpt" role="test" />
+    <file baseinstalldir="ingres" name="test_055.phpt" role="test" />
     <file baseinstalldir="ingres" name="bug_15586_newlines.phpt" role="test" />
     <file baseinstalldir="ingres" name="bug_15586.phpt" role="test" />
     <file baseinstalldir="ingres" name="bug_16752_1.phpt" role="test" />

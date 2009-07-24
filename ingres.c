@@ -132,6 +132,9 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_fetch_array, 0, 0, 2)
    ZEND_ARG_INFO(0, result)
    ZEND_ARG_INFO(0, result_type)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_fetch_assoc, 0, 0, 1)
+   ZEND_ARG_INFO(0, result)
+ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_ingres_fetch_row, 0, 0, 1)
    ZEND_ARG_INFO(0, result)
 ZEND_END_ARG_INFO()
@@ -196,6 +199,7 @@ function_entry ingres_functions[] = {
     PHP_FE(ingres2_field_precision,		arginfo_ingres_field_precision)
     PHP_FE(ingres2_field_scale,		    arginfo_ingres_field_scale)
     PHP_FE(ingres2_fetch_array,		    arginfo_ingres_fetch_array)
+    PHP_FE(ingres2_fetch_assoc,		    arginfo_ingres_fetch_assoc)
     PHP_FE(ingres2_fetch_row,		    arginfo_ingres_fetch_row)
     PHP_FE(ingres2_fetch_object,		arginfo_ingres_fetch_object)
     PHP_FE(ingres2_rollback,		    arginfo_ingres_rollback)
@@ -236,6 +240,7 @@ function_entry ingres_functions[] = {
     PHP_FE(ingres_field_precision,		arginfo_ingres_field_precision)
     PHP_FE(ingres_field_scale,		    arginfo_ingres_field_scale)
     PHP_FE(ingres_fetch_array,		    arginfo_ingres_fetch_array)
+    PHP_FE(ingres_fetch_assoc,		    arginfo_ingres_fetch_assoc)
     PHP_FE(ingres_fetch_row,		    arginfo_ingres_fetch_row)
     PHP_FE(ingres_fetch_object,		    arginfo_ingres_fetch_object)
     PHP_FE(ingres_rollback,		        arginfo_ingres_rollback)
@@ -4490,6 +4495,30 @@ PHP_FUNCTION(ingres_fetch_array)
     ZEND_FETCH_RESOURCE(ii_result, II_RESULT *, &result, -1 , "Ingres Result", le_ii_result);
 
     php_ii_fetch(INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, (ZEND_NUM_ARGS() == 1 ? II_BOTH : result_type));
+
+}
+/* }}} */
+
+/* {{{ proto array ingres_fetch_assoc(resource result)
+   Fetch a row of result into an associative array */
+#ifdef HAVE_INGRES2
+PHP_FUNCTION(ingres2_fetch_assoc)
+#else
+PHP_FUNCTION(ingres_fetch_assoc)
+#endif
+{
+    long result_type=II_BOTH; 
+    zval *result;
+    II_RESULT *ii_result;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC ,"r|l" , &result, &result_type) == FAILURE) 
+    {
+        RETURN_FALSE;
+    }
+
+    ZEND_FETCH_RESOURCE(ii_result, II_RESULT *, &result, -1 , "Ingres Result", le_ii_result);
+
+    php_ii_fetch(INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, II_ASSOC);
 
 }
 /* }}} */
