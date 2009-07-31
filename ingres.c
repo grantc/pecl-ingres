@@ -2336,49 +2336,52 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     }
 
     /* get description of results */
-    getDescrParm.gd_genParm.gp_callback = NULL;
-    getDescrParm.gd_genParm.gp_closure  = NULL;
-    getDescrParm.gd_stmtHandle = ii_result->stmtHandle;
-
-    IIapi_getDescriptor(&getDescrParm);
-    ii_sync(&(getDescrParm.gd_genParm));
-
-    if (ii_success(&(getDescrParm.gd_genParm), &ii_link->errorHandle TSRMLS_CC) == II_FAIL)
+    if ( query_type == INGRES_SQL_SELECT )
     {
-        if (converted_query) 
+        getDescrParm.gd_genParm.gp_callback = NULL;
+        getDescrParm.gd_genParm.gp_closure  = NULL;
+        getDescrParm.gd_stmtHandle = ii_result->stmtHandle;
+
+        IIapi_getDescriptor(&getDescrParm);
+        ii_sync(&(getDescrParm.gd_genParm));
+
+        if (ii_success(&(getDescrParm.gd_genParm), &ii_link->errorHandle TSRMLS_CC) == II_FAIL)
         {
-            efree(converted_query);
-            converted_query = NULL;
+            if (converted_query) 
+            {
+                efree(converted_query);
+                converted_query = NULL;
+            }
+            if (ii_result->cursor_id)
+            {
+                efree(ii_result->cursor_id);
+                ii_result->cursor_id = NULL;
+            }
+            if (ii_result->inputDescr)
+            {
+                efree(ii_result->inputDescr);
+                ii_result->inputDescr = NULL;
+            }
+            if (ii_result)
+            {
+                free(ii_result);
+                ii_result = NULL;
+            }
+            RETURN_FALSE;
         }
-        if (ii_result->cursor_id)
+
+        ii_link->stmtHandle = NULL;
+
+        /* store the results */
+        ii_result->fieldCount = getDescrParm.gd_descriptorCount;
+        ii_result->descriptor = getDescrParm.gd_descriptor;
+        ii_result->link_id = Z_LVAL_P(link);
+
+        for( col = 0; col < ii_result->fieldCount; col++)
         {
-            efree(ii_result->cursor_id);
-            ii_result->cursor_id = NULL;
-        }
-        if (ii_result->inputDescr)
-        {
-            efree(ii_result->inputDescr);
-            ii_result->inputDescr = NULL;
-        }
-        if (ii_result)
-        {
-            free(ii_result);
-            ii_result = NULL;
-        }
-        RETURN_FALSE;
+             ii_result->rowWidth += ii_result->descriptor[col].ds_length;
+        }  
     }
-
-    ii_link->stmtHandle = NULL;
-
-    /* store the results */
-    ii_result->fieldCount = getDescrParm.gd_descriptorCount;
-    ii_result->descriptor = getDescrParm.gd_descriptor;
-    ii_result->link_id = Z_LVAL_P(link);
-
-    for( col = 0; col < ii_result->fieldCount; col++)
-    {
-         ii_result->rowWidth += ii_result->descriptor[col].ds_length;
-    }  
 
     if ( ii_result->paramCount > 0  && ii_result->procname == NULL )
     { 
@@ -3725,6 +3728,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
             {
                 efree(ii_result->inputDescr);
                 ii_result->inputDescr = NULL;
+            }
+            if (ii_result->metaData)
+            {
+                efree(ii_result->metaData);
+                ii_result->metaData = NULL;
             }
             if (ii_result)
             {
