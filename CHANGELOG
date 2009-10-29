@@ -9,7 +9,7 @@ SVN
 - Fix bug 16688 - EXECUTE PROCEDURE statements fail with DESCRIBE INPUT
 
 2.2.0
-- Fix bug 16668 - Update ii_result->tranhandle after calling IIapì_autocommit()
+- Fix bug 16668 - Update ii_result->tranhandle after calling IIapi_autocommit()
 - Add support for fetching/putting LONG NVARCHAR data
 - Fix bug 16616 - auto commit emulation failed with a SELECT followed by an INSERT
 - Fix bug 16075 - improper clean up of old resource values causing SEGV
