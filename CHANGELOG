@@ -3,7 +3,7 @@ SVN
 - IIapi_getDescriptor() should only be called for SELECT statements
 - Add ingres_fetch_assoc()
 - Fix bug 16752 - Send all string values as IIAPI_VCH_TYPE
-- Allow for a 0 offset in all ingres field functions 
+- Allow for a 0 offset in all ingres field functions
 - Update build scripts for OpenVMS CSWS PHP 2.0
 
 2.2.1
