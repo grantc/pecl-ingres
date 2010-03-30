@@ -97,7 +97,7 @@ case $host_os in
 esac
 
 if test "$align_memory" = "yes"; then
-  AC_DEFINE(MEMORY_ALIGN, 1, [Enforce memory alignement])
+  AC_DEFINE(ALIGN_MEMORY, 1, [Enforce memory alignement])
 fi
 
 dnl vim: ff=unix ts=2 sw=2 expandtab

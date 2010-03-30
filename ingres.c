@@ -2380,35 +2380,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
         ii_result->fieldCount = getDescrParm.gd_descriptorCount;
         ii_result->descriptor = getDescrParm.gd_descriptor;
         ii_result->link_id = Z_LVAL_P(link);
-
-        /* Certain platforms/architectures require memory aligned
-         * data structures. This requires that we add pad out the 
-         * size of the row to allow for each column to be accessed
-         * along memory boundaries to prevent any SIGBUS */
-#ifdef ALIGN_MEMORY
-        pad_bytes=0;
-        for( col = 0; col < ii_result->fieldCount; col++)
-        {
-            if (ii_result->rowWidth > 0)
-            {
-                pad_bytes = ii_result->rowWidth % ZEND_MM_ALIGNMENT ? 
-                        ZEND_MM_ALIGNMENT - (ii_result->rowWidth % ZEND_MM_ALIGNMENT) : 0;
-            }
-            ii_result->rowWidth += ii_result->descriptor[col].ds_length + pad_bytes;
-        }
-        /* Since we allocate space for multiple rows make sure that following rows can
-         * start on a memory boundary as well */
-        if (ii_result->rowWidth % ZEND_MM_ALIGNMENT)
-        {
-            ii_result->rowWidth += ZEND_MM_ALIGNMENT - (ii_result->rowWidth % ZEND_MM_ALIGNMENT);
-        }
-
-#else
-        for( col = 0; col < ii_result->fieldCount; col++)
-        {
-            ii_result->rowWidth += ii_result->descriptor[col].ds_length;
-        }  
-#endif
+        ii_result->rowWidth = ii_result_row_width(ii_result);
     }
 
     if ( ii_result->paramCount > 0  && ii_result->procname == NULL )
@@ -2923,11 +2895,7 @@ PHP_FUNCTION(ingres_execute)
     /* store the results */
     ii_result->fieldCount = getDescrParm.gd_descriptorCount;
     ii_result->descriptor = getDescrParm.gd_descriptor;
-
-    for( col = 0; col < ii_result->fieldCount; col++)
-    {
-         ii_result->rowWidth += ii_result->descriptor[col].ds_length;
-    }  
+    ii_result->rowWidth = ii_result_row_width(ii_result);
 
     if ( ii_result->procname == NULL )
     {
@@ -7581,6 +7549,43 @@ static short _ii_close (II_PTR *stmtHandle, II_PTR *errorHandle TSRMLS_DC)
     return II_OK;
 }
 /* }}} */
+
+static long ii_result_row_width(II_RESULT *ii_result)
+{
+    long pad_bytes = 0;
+    int col = 0;
+    long row_width = 0;
+
+#ifdef ALIGN_MEMORY
+    /* Certain platforms/architectures require memory aligned
+     * data structures. This requires that we add pad out the 
+     * size of the row to allow for each column to be accessed
+     * along memory boundaries to prevent any SIGBUS */
+    pad_bytes=0;
+    for( col = 0; col < ii_result->fieldCount; col++)
+    {
+        if (row_width > 0)
+        {
+            pad_bytes = row_width % ZEND_MM_ALIGNMENT ? 
+                    ZEND_MM_ALIGNMENT - (row_width % ZEND_MM_ALIGNMENT) : 0;
+        }
+        row_width += ii_result->descriptor[col].ds_length + pad_bytes;
+    }
+    /* Since we allocate space for multiple rows make sure that following rows can
+     * start on a memory boundary as well */
+    if (row_width % ZEND_MM_ALIGNMENT)
+    {
+        row_width += ZEND_MM_ALIGNMENT - (ii_result->rowWidth % ZEND_MM_ALIGNMENT);
+    }
+#else
+    for( col = 0; col < ii_result->fieldCount; col++)
+    {
+        row_width += ii_result->descriptor[col].ds_length;
+    }  
+#endif
+    return row_width;
+}
+
 #endif /* HAVE_INGRES */
 
 /*
