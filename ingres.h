@@ -238,13 +238,16 @@ static short _ii_close (II_PTR *stmtHandle, II_PTR *errorHandle TSRMLS_DC);
 void NMgtAt(char *name, char **value);
 
 /* Macro for memory alignment */
+
 #if defined(SIZEOF_LONG)
 #  if SIZEOF_LONG == 8
-#    define ALIGN_MACRO(ptr, N) ((II_PTR) ((long)((char *) ptr + (N - 1)) & ~((long)(N) - 1)))
+#    define SCALARPTR long
 #  else
-#    define ALIGN_MACRO(ptr, N) ((II_PTR) ((int)((char *) ptr + (N - 1)) & ~((int)(N) - 1)))
+#    define SCALARPTR int
 #  endif
 #endif
+
+#define ALIGN_MACRO(ptr, N) ((II_PTR) ((SCALARPTR)((char *) ptr + (N - 1)) & ~((SCALARPTR)(N) - 1)))
 
 #endif  /* HAVE_II */
 #endif    /* INGRES_H */

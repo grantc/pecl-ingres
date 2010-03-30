@@ -1655,11 +1655,11 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
                 RETURN_FALSE;
             }
             ii_link = (II_LINK *) index_ptr->ptr;
-            ptr = zend_list_find((int) ii_link, &type);    /* check if the link is still there */
+            ptr = zend_list_find((SCALARPTR) ii_link, &type);    /* check if the link is still there */
             if (ptr && (type == le_ii_link || type == le_ii_plink))
             {
-                zend_list_addref((int) ii_link);
-                Z_LVAL_P(return_value) = (int) ii_link;
+                zend_list_addref((SCALARPTR) ii_link);
+                Z_LVAL_P(return_value) = (SCALARPTR) ii_link;
 
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Freeing hashed_details");
                 Z_TYPE_P(return_value) = IS_RESOURCE;
