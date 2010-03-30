@@ -81,6 +81,8 @@ fi
 # possibly incomplete. As a general rule the Intel X86/X86-64
 # based CPUs do not require aligned memory addressing.
 
+align_memory="no"
+
 # Determine the processor architecture
 arch=`uname -p`
 case $host_os in
