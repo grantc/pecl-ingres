@@ -84,11 +84,6 @@ fi
 # Determine the processor architecture
 arch=`uname -p`
 case $host_os in
-  aix*[)]
-    # PowerPC does not require aligned memory access
-    # but AIX does.
-    align_memory="yes"
-    ;; 
   solaris*[)]
     if test "X$arch" = "Xsparc"; then
       align_memory="yes"
