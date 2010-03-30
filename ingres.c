@@ -3901,11 +3901,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
             for( cell=0; cell < ( ii_result->fieldCount * ii_result->getColParm.gc_rowCount ); cell++)
             {
                  ii_result->metaData[cell].dv_value = next_cell;
-                 if ((next_cell + (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length) % ZEND_MM_ALIGNMENT != 0)
+                 if (((long)next_cell + (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length) % ZEND_MM_ALIGNMENT != 0)
                  {
                      /* Pad the space between the end of the cell and the start of the next one */
-                     pad_bytes = ZEND_MM_ALIGNMENT -
-                         (next_cell + (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length) % ZEND_MM_ALIGNMENT;
+                     pad_bytes = ZEND_MM_ALIGNMENT - 
+                        ((long)next_cell + (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length) % ZEND_MM_ALIGNMENT;
                      next_cell += (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length + pad_bytes;
 
                  }
