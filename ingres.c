@@ -3690,6 +3690,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
     II_BOOL have_lob = FALSE;
     int cell, col_no;
     char *next_cell = NULL;
+    long pad_bytes = 0;
 
 #if defined(IIAPI_VERSION_3)
     UTF8 *tmp_utf8_string_ptr = NULL;
@@ -3895,11 +3896,31 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
             /* Setup the buffer for receiving the results */
             ii_result->dataBuffer = (II_PTR) emalloc(ii_result->rowWidth * ii_result->getColParm.gc_rowCount );
             next_cell = (char *)ii_result->dataBuffer;
+#ifdef ALIGN_MEMORY
+            /* Make sure that ii_result->metaData[cell].dv_value is pointing to a memory boundary */
+            for( cell=0; cell < ( ii_result->fieldCount * ii_result->getColParm.gc_rowCount ); cell++)
+            {
+                 ii_result->metaData[cell].dv_value = next_cell;
+                 if ((next_cell + (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length) % ZEND_MM_ALIGNMENT != 0)
+                 {
+                     /* Pad the space between the end of the cell and the start of the next one */
+                     pad_bytes = ZEND_MM_ALIGNMENT -
+                         (next_cell + (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length) % ZEND_MM_ALIGNMENT;
+                     next_cell += (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length + pad_bytes;
+
+                 }
+                 else
+                 {
+                     next_cell += (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length;
+                 }
+            }  
+#else
             for( cell=0; cell < ( ii_result->fieldCount * ii_result->getColParm.gc_rowCount ); cell++)
             {
                  ii_result->metaData[cell].dv_value = next_cell;
                  next_cell += (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length;
             }  
+#endif
 
             IIapi_getColumns(&ii_result->getColParm);
             ii_sync(&(ii_result->getColParm.gc_genParm));
