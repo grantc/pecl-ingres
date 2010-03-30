@@ -21,7 +21,7 @@
    +----------------------------------------------------------------------+
 */
 
-/* $Id$ */
+/* $Id: ingres.c 286574 2009-07-31 06:40:08Z grantc $ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -1116,7 +1116,7 @@ PHP_MINFO_FUNCTION(ingres)
     php_info_print_table_start();
     php_info_print_table_header(2, "Ingres Support", "enabled");
     php_info_print_table_row(2, "Ingres Extension Version", PHP_INGRES_VERSION);
-    php_info_print_table_row(2, "Revision", "$Revision$");
+    php_info_print_table_row(2, "Revision", "$Revision: 286574 $");
     sprintf(buf, "%d", IIAPI_VERSION );
     php_info_print_table_row(2, "Ingres OpenAPI Version", buf);
     sprintf(buf, "%ld", INGRESG(num_persistent));
@@ -4054,11 +4054,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                     {
 
                                         case 4:
-                                            value_double = (double) *((II_FLOAT4 *) columnData[k].dv_value);
+                                            value_double = (double) *((II_FLOAT4 *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR)));
                                             break;
 
                                         case 8:
-                                            value_double = (double) *((II_FLOAT8 *) columnData[k].dv_value);
+                                            value_double = (double) *((II_FLOAT8 *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR)));
                                             break;
 
                                         default:
@@ -4083,31 +4083,31 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                     {
 
                                         case 1:
-                                            value_long = (long) *((II_INT1 *) columnData[k].dv_value);
+                                            value_long = (long) *((II_INT1 *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR)));
                                             break;
 
                                         case 2:
-                                            value_long = (long) *((II_INT2 *) columnData[k].dv_value);
+                                            value_long = (long) *((II_INT2 *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR)));
                                             break;
                 
                                         case 4:
-                                            value_long = (long) *((II_INT4 *) columnData[k].dv_value);
+                                            value_long = (long) *((II_INT4 *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR)));
                                             break;
 #if defined(IIAPI_VERSION_4)
                                         case 8:
                                             /* PHP does not support BIGINT/INTEGER8 so we have to return */
                                             /* values greater/smaller than the max/min size of a LONG value as a string */
                                             /* Anyone wanting to manipulate this value can use PECL big_int */
-                                            if ((*((ingres_int64 *) columnData[k].dv_value) > LONG_MAX ) ||
-                                                (*((ingres_int64 *) columnData[k].dv_value) < LONG_MIN ))
+                                            if ((*((ingres_int64 *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR))) > LONG_MAX ) ||
+                                                (*((ingres_int64 *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR))) < LONG_MIN ))
                                             {
-                                                value_long_long = *((ingres_int64 *) columnData[k].dv_value);
+                                                value_long_long = *((ingres_int64 *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR)));
                                                 sprintf(value_long_long_str, "%lld", value_long_long);
                                                 value_long_long_str_len = strlen(value_long_long_str);
                                             }
                                             else
                                             {
-                                                value_long = (long) *((II_INT4 *) columnData[k].dv_value);
+                                                value_long = (long) *((II_INT4 *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR)));
                                             }
                                             break;
 #endif
@@ -4145,17 +4145,17 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
 #if defined(IIAPI_VERSION_3)
                                 case IIAPI_NVCH_TYPE:    /* variable length unicode character string */
-                                    columnData[k].dv_length = *((II_INT2 *) columnData[k].dv_value) * 2;
+                                    columnData[k].dv_length = *((II_INT2 *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR))) * 2;
                                     columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value + 2;
                                     correct_length = 1;
                                 case IIAPI_NCHA_TYPE:    /* fixed length unicode character string */    
                                     /* use php_addslashes if asked to */
                                     if (PG(magic_quotes_runtime))
                                     {
-                                        value_char_p = php_addslashes((char *) columnData[k].dv_value, columnData[k].dv_length, &len, 0 TSRMLS_CC);
+                                        value_char_p = php_addslashes((char *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR)), columnData[k].dv_length, &len, 0 TSRMLS_CC);
                                         should_copy = 0;
                                     } else {
-                                        value_char_p = (char *) columnData[k].dv_value;
+                                        value_char_p = (char *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR));
                                         len = columnData[k].dv_length;
                                         should_copy = 1;
                                     }
@@ -4194,7 +4194,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                 case IIAPI_VCH_TYPE:    /* variable length character string */
                                     /* real length is stored in first 2 bytes of data, so adjust
                                        length variable and data pointer */
-                                    columnData[k].dv_length = *((II_INT2 *) columnData[k].dv_value);
+                                    columnData[k].dv_length = *((II_INT2 *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR)));
                                     columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value + 2;
                                     correct_length = 1;
                                     /* NO break */
@@ -4232,7 +4232,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                         )
                                     {
                                         php_ii_convert_data ( IIAPI_VCH_TYPE, 32, 0, ii_result, columnData, ii_result->getColParm, i, k TSRMLS_CC );
-                                        columnData[k].dv_length = *((II_INT2 *) columnData[k].dv_value);
+                                        columnData[k].dv_length = *((II_INT2 *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR)));
                                         columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value + 2;
                                         correct_length = 1;
                                     }
@@ -4240,12 +4240,12 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                     /* use php_addslashes if asked to */
                                     if (PG(magic_quotes_runtime))
                                     {
-                                        value_char_p = php_addslashes((char *) columnData[k].dv_value, columnData[k].dv_length, &len, 0 TSRMLS_CC);
+                                        value_char_p = php_addslashes((char *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR)), columnData[k].dv_length, &len, 0 TSRMLS_CC);
                                         should_copy = 0;
                                     }
                                     else 
                                     {
-                                        value_char_p = (char *) columnData[k].dv_value;
+                                        value_char_p = (char *) ALIGN_MACRO(columnData[k].dv_value,sizeof(II_PTR));
                                         len = columnData[k].dv_length;
                                         should_copy = 1;
                                     }
@@ -6839,11 +6839,11 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
                 {
 
                     case 4:
-                        value_double = (double) *((II_FLOAT4 *) columnData->dv_value);
+                        value_double = (double) *((II_FLOAT4 *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR)));
                         break;
 
                     case 8:
-                        value_double = (double) *((II_FLOAT8 *) columnData->dv_value);
+                        value_double = (double) *((II_FLOAT8 *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR)));
                         break;
 
                     default:
@@ -6868,31 +6868,31 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
                 {
 
                     case 1:
-                        value_long = (long) *((II_INT1 *) columnData->dv_value);
+                        value_long = (long) *((II_INT1 *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR)));
                         break;
 
                     case 2:
-                        value_long = (long) *((II_INT2 *) columnData->dv_value);
+                        value_long = (long) *((II_INT2 *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR)));
                         break;
 
                     case 4:
-                        value_long = (long) *((II_INT4 *) columnData->dv_value);
+                        value_long = (long) *((II_INT4 *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR)));
                         break;
 #if defined(IIAPI_VERSION_4)
                     case 8:
                         /* PHP does not support BIGINT/INTEGER8 so we have to return */
                         /* values greater/smaller than the max/min size of a LONG value as a string */
                         /* Anyone wanting to manipulate this value can use PECL big_int */
-                        if ((*((ingres_int64 *) columnData->dv_value) > LONG_MAX ) ||
-                            (*((ingres_int64 *) columnData->dv_value) < LONG_MIN ))
+                        if ((*((ingres_int64 *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR))) > LONG_MAX ) ||
+                            (*((ingres_int64 *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR))) < LONG_MIN ))
                         {
-                            value_long_long = *((ingres_int64 *) columnData->dv_value);
+                            value_long_long = *((ingres_int64 *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR)));
                             sprintf(value_long_long_str, "%lld\0", value_long_long);
                             value_long_long_str_len = strlen(value_long_long_str);
                         }
                         else
                         {
-                            value_long = (long) *((II_INT4 *) columnData->dv_value);
+                            value_long = (long) *((II_INT4 *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR)));
                         }
                         break;
 #endif
@@ -6930,17 +6930,17 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
 
 #if defined(IIAPI_VERSION_3)
             case IIAPI_NVCH_TYPE:    /* variable length unicode character string */
-                columnData->dv_length = *((II_INT2 *) columnData->dv_value) * 2;
+                columnData->dv_length = *((II_INT2 *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR))) * 2;
                 columnData->dv_value = (II_CHAR *)columnData->dv_value + 2;
                 correct_length = 1;
             case IIAPI_NCHA_TYPE:    /* fixed length unicode character string */    
                 /* use php_addslashes if asked to */
                 if (PG(magic_quotes_runtime))
                 {
-                    value_char_p = php_addslashes((char *) columnData->dv_value,  columnData->dv_length, &len, 0 TSRMLS_CC);
+                    value_char_p = php_addslashes((char *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR)),  columnData->dv_length, &len, 0 TSRMLS_CC);
                     should_copy = 0;
                 } else {
-                    value_char_p = (char *) columnData->dv_value;
+                    value_char_p = (char *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR));
                     len = columnData->dv_length;
                     should_copy = 1;
                 }
@@ -6980,7 +6980,7 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
                 /* real length is stored in first 2 bytes of data, so adjust
                    length variable and data pointer */
 
-                columnData->dv_length = *((II_INT2 *) columnData->dv_value);
+                columnData->dv_length = *((II_INT2 *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR)));
                 columnData->dv_value = (II_CHAR *)columnData->dv_value + 2;
                 correct_length = 1;
                 /* NO break */
@@ -7018,7 +7018,7 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
                     )
                 {
                     php_ii_convert_data ( IIAPI_VCH_TYPE, 32, 0, ii_result, &ii_result->metaData[(ii_result->rowNumber * ii_result->fieldCount)], ii_result->getColParm, k, col_no TSRMLS_CC );
-                    columnData->dv_length = *((II_INT2 *) columnData->dv_value);
+                    columnData->dv_length = *((II_INT2 *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR)));
                     columnData->dv_value = (II_CHAR *)columnData->dv_value + 2;
                     correct_length = 1;
                 }
@@ -7026,12 +7026,12 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
                 /* use php_addslashes if asked to */
                 if (PG(magic_quotes_runtime))
                 {
-                    value_char_p = php_addslashes((char *) columnData->dv_value,  columnData->dv_length, &len, 0 TSRMLS_CC);
+                    value_char_p = php_addslashes((char *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR)),  columnData->dv_length, &len, 0 TSRMLS_CC);
                     should_copy = 0;
                 }
                 else 
                 {
-                    value_char_p = (char *) columnData->dv_value;
+                    value_char_p = (char *) ALIGN_MACRO(columnData->dv_value,sizeof(II_PTR));
                     len = columnData->dv_length;
                     should_copy = 1;
                 }

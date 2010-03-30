@@ -21,7 +21,7 @@
    +----------------------------------------------------------------------+
  */
 
-/* $Id$ */
+/* $Id: ingres.h 278574 2009-04-11 07:49:24Z grantc $ */
 
 #ifndef INGRES_H
 #define INGRES_H
@@ -29,6 +29,7 @@
 #if HAVE_INGRES
 #include "php_ingres.h"
 #include "iiapi.h"
+#include "php_config.h"
 
 typedef struct _ii_result_entry {
     char                *next_result_ptr;
@@ -235,6 +236,15 @@ static short _ii_describe (II_RESULT *ii_result, char *query TSRMLS_DC);
 static short _ii_close (II_PTR *stmtHandle, II_PTR *errorHandle TSRMLS_DC);
 
 void NMgtAt(char *name, char **value);
+
+/* Macro for memory alignment */
+#if defined(SIZEOF_LONG)
+#  if SIZEOF_LONG == 8
+#    define ALIGN_MACRO(ptr, N) ((II_PTR) ((long)((char *) ptr + (N - 1)) & ~((long)(N) - 1)))
+#  else
+#    define ALIGN_MACRO(ptr, N) ((II_PTR) ((int)((char *) ptr + (N - 1)) & ~((int)(N) - 1)))
+#  endif
+#endif
 
 #endif  /* HAVE_II */
 #endif    /* INGRES_H */
