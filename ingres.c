@@ -1881,7 +1881,9 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     int type = 0;
     int col = 0;
     short int canPrepare = 0; /* Indicates if we can issue a PREPARE against the statement */
+#if defined(ALIGN_MEMORY)
     long pad_bytes = 0;
+#endif
 
     ii_result_entry *result_entry;
     
@@ -3690,7 +3692,11 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
     II_BOOL have_lob = FALSE;
     int cell, col_no;
     char *next_cell = NULL;
+#if defined(ALIGN_MEMORY)
     long pad_bytes = 0;
+    long pad_modulo = 0;
+    long column_no = 0;
+#endif
 
 #if defined(IIAPI_VERSION_3)
     UTF8 *tmp_utf8_string_ptr = NULL;
@@ -3896,22 +3902,37 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
             /* Setup the buffer for receiving the results */
             ii_result->dataBuffer = (II_PTR) emalloc(ii_result->rowWidth * ii_result->getColParm.gc_rowCount );
             next_cell = (char *)ii_result->dataBuffer;
-#ifdef ALIGN_MEMORY
+#if defined(ALIGN_MEMORY)
+            /* Certain platforms/architectures require memory aligned
+             * data structures. This requires that we add pad out the 
+             * size of the row to allow for each column to be accessed
+             * along memory boundaries to prevent any SIGBUS.
+             *
+             * NOTE: The padding is added irrespective of the data-type.
+             * It's possible that padding is only required for numeric
+             * types (integer, float, money). However adding type checks
+             * would have added an extra level of complexity and it was 
+             * felt that the approach taken below was simpler/safer.
+             *
+             * TODO: Profile Wintel/Lintel with ALIGN_MEMORY enabled.
+             */
             /* Make sure that ii_result->metaData[cell].dv_value is pointing to a memory boundary */
             for( cell=0; cell < ( ii_result->fieldCount * ii_result->getColParm.gc_rowCount ); cell++)
             {
                  ii_result->metaData[cell].dv_value = next_cell;
-                 if (((long)next_cell + (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length) % ZEND_MM_ALIGNMENT != 0)
+                 column_no = cell % ii_result->fieldCount;
+                 /* Determine space between the end of this column and the next memory boundary */
+                 pad_modulo = ((long)next_cell + (ii_result->descriptor[column_no]).ds_length) % ZEND_MM_ALIGNMENT;
+                 if (pad_modulo != 0)
                  {
                      /* Pad the space between the end of the cell and the start of the next one */
-                     pad_bytes = ZEND_MM_ALIGNMENT - 
-                        ((long)next_cell + (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length) % ZEND_MM_ALIGNMENT;
-                     next_cell += (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length + pad_bytes;
+                     pad_bytes = ZEND_MM_ALIGNMENT - pad_modulo; 
+                     next_cell += (ii_result->descriptor[column_no]).ds_length + pad_bytes;
 
                  }
                  else
                  {
-                     next_cell += (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length;
+                     next_cell += (ii_result->descriptor[column]).ds_length;
                  }
             }  
 #else
@@ -7573,15 +7594,27 @@ static short _ii_close (II_PTR *stmtHandle, II_PTR *errorHandle TSRMLS_DC)
 
 static long ii_result_row_width(II_RESULT *ii_result)
 {
+#if defined(ALIGN_MEMORY)
     long pad_bytes = 0;
+#endif
     int col = 0;
     long row_width = 0;
 
-#ifdef ALIGN_MEMORY
+#if defined(ALIGN_MEMORY)
     /* Certain platforms/architectures require memory aligned
      * data structures. This requires that we add pad out the 
      * size of the row to allow for each column to be accessed
-     * along memory boundaries to prevent any SIGBUS */
+     * along memory boundaries to prevent any SIGBUS.
+     *
+     * NOTE: The padding is added irrespective of the data-type.
+     * It's possible that padding is only required for numeric
+     * types (integer, float, money). However adding type checks
+     * would have added an extra level of complexity and it was 
+     * felt that the approach taken below was simpler/safer.
+     *
+     * TODO: Profile Wintel/Lintel with ALIGN_MEMORY enabled.
+     */
+
     pad_bytes=0;
     for( col = 0; col < ii_result->fieldCount; col++)
     {
