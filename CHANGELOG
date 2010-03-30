@@ -1,5 +1,5 @@
 SVN
-- Fix bug 17094 - SIGBUS when fetching data on 64-bit Solaris
+- Fix bug 17092 - SIGBUS when fetching data on 64-bit Solaris
 - IIapi_getDescriptor() should only be called for SELECT statements
 - Add ingres_fetch_assoc()
 - Fix bug 16752 - Send all string values as IIAPI_VCH_TYPE
