@@ -74,5 +74,30 @@ if test "$PHP_INGRES2" != "no"; then
 
 fi
 
+# Certain platforms require memory to be accessed/addressed
+# along memory boundaries. The list of host operating systems
+# ($host_os) is based on what are known systems that require
+# aligned memory access. It should be noted that this list is
+# possibly incomplete. As a general rule the Intel X86/X86-64
+# based CPUs do not require aligned memory addressing.
 
-dnl vim: ff=unix
+# Determine the processor architecture
+arch=`uname -p`
+case $host_os in
+  aix*[)]
+    # PowerPC does not require aligned memory access
+    # but AIX does.
+    align_memory="yes"
+    ;; 
+  solaris*[)]
+    if test "X$arch" = "Xsparc"; then
+      align_memory="yes"
+    fi
+    ;; 
+esac
+
+if test "$align_memory" = "yes"; then
+  AC_DEFINE(MEMORY_ALIGN, 1, [Enforce memory alignement])
+fi
+
+dnl vim: ff=unix ts=2 sw=2 expandtab
