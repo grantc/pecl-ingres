@@ -187,7 +187,7 @@ ZEND_END_ARG_INFO()
 /* {{{ Ingres module function list
  * Every user visible function must have an entry in ingres_functions[].
 */
-function_entry ingres_functions[] = {
+zend_function_entry ingres_functions[] = {
 #if defined(HAVE_INGRES2)
     PHP_FE(ingres2_connect,		        arginfo_ingres_connect)
     PHP_FE(ingres2_pconnect,		    arginfo_ingres_pconnect)
