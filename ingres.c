@@ -3932,7 +3932,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                  }
                  else
                  {
-                     next_cell += (ii_result->descriptor[column]).ds_length;
+                     next_cell += (ii_result->descriptor[column_no]).ds_length;
                  }
             }  
 #else
