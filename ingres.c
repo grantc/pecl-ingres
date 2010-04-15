@@ -390,6 +390,9 @@ static int _close_statement(II_RESULT *ii_result TSRMLS_DC)
 {
     IIAPI_CANCELPARM   cancelParm;
     IIAPI_CLOSEPARM    closeParm;
+    char *resource = NULL;
+    char *type_name = NULL;
+    int type;
 
     if (ii_result->stmtHandle)
     {
@@ -433,6 +436,8 @@ static int _close_statement(II_RESULT *ii_result TSRMLS_DC)
             }
         }
     }
+    /* If the statement handle for the result is the same stored in the associated link */
+    /* we should mark it NULL so the driver does not try to clean up later on */
 
     ii_result->stmtHandle = NULL;
     ii_result->fieldCount = 0;
@@ -713,12 +718,8 @@ static void _close_ii_link(II_LINK *ii_link TSRMLS_DC)
             }
     }
 
-    if (ii_link->charset)
-    {
-        efree(ii_link->charset);
-    }
-
-    free(ii_link);
+    /* Free the memory associated with ii_link */
+    _ii_free_ii_link(ii_link);
 
     INGRESG(num_links)--;
     if (INGRESG(ingres_trace))
@@ -768,39 +769,6 @@ static void _free_ii_link_result_list (II_LINK *ii_link TSRMLS_DC)
         free(result_entry);
     }
 
-    /* if there are no result resources created it is possible the last query generated an error
-       for which there will still be an active transaction that needs to be closed */
-
-    if ( ii_link->stmtHandle != NULL )
-    { 
-        /* Cancel query processing. */
-        cancelParm.cn_genParm.gp_callback = NULL;
-        cancelParm.cn_genParm.gp_closure = NULL;
-        cancelParm.cn_stmtHandle = ii_link->stmtHandle;
-
-        IIapi_cancel(&cancelParm );
-
-        ii_sync(&(cancelParm.cn_genParm));
-
-        /* Free query resources. */
-        closeParm.cl_genParm.gp_callback = NULL;
-        closeParm.cl_genParm.gp_closure = NULL;
-        closeParm.cl_stmtHandle = ii_link->stmtHandle;
-
-        IIapi_close( &closeParm );
-
-        ii_sync(&(closeParm.cl_genParm));
-
-        switch((closeParm.cl_genParm).gp_status)
-        {
-            case IIAPI_ST_SUCCESS:
-            case IIAPI_ST_NO_DATA:
-                ii_link->stmtHandle = NULL;
-                break;
-            default:
-                php_error_docref(NULL TSRMLS_CC, E_WARNING, "_free_ii_result_link_list : Unable to close statement");
-        }
-    }
 }
 /*  }}} */
 
@@ -1488,8 +1456,9 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
             IIapi_connect(&connParm);
 
             if (!ii_sync(&(connParm.co_genParm)) || ii_success(&(connParm.co_genParm), &ii_link->errorHandle TSRMLS_CC) == II_FAIL)
-            {
-                free(ii_link);
+            {    
+                /* Free the memory associated with ii_link */
+                _ii_free_ii_link(ii_link);
                 efree(hashed_details);
                 php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to connect to database (%s)", db);
                 RETURN_FALSE;
@@ -1538,7 +1507,8 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
             if (zend_hash_update(&EG(persistent_list), hashed_details, hashed_details_length + 1, (void *) &new_le, sizeof(list_entry), NULL) == FAILURE)
             {
                 php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to hash (%s)", hashed_details);
-                free(ii_link);
+                /* Free the memory associated with ii_link */
+                _ii_free_ii_link(ii_link);
                 efree(hashed_details);
                 RETURN_FALSE;
             }
@@ -1775,7 +1745,8 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
         if (zend_hash_update(&EG(regular_list), hashed_details, hashed_details_length + 1, (void *) &new_index_ptr, sizeof(list_entry), NULL) == FAILURE)
         {
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to hash (%s)", hashed_details);
-            free(ii_link);
+            /* Free the memory associated with ii_link */
+            _ii_free_ii_link(ii_link);
             efree(hashed_details);
             RETURN_FALSE;
         }
@@ -1949,17 +1920,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
             {
                 if (ii_result->buffered == FALSE)
                 {
-                    /* Close the statement */
-                    if (INGRESG(ingres_trace))
-                    {
-                        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Closing previous unbuffered query");
-                    }
-                    if (_close_statement(ii_result TSRMLS_CC) == II_FAIL)
-                    {
-                         php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement");
-                         RETURN_FALSE;
-                    }
-                    php_ii_result_remove (ii_result, result_ptr->result_id TSRMLS_CC);
+                    php_ii_free_result(ii_result, result_ptr->result_id TSRMLS_CC);
                 }
             }
             /* Next */
@@ -3400,17 +3361,36 @@ PHP_FUNCTION(ingres_free_result)
 
     ZEND_FETCH_RESOURCE(ii_result, II_RESULT *, &result, -1, "Ingres result", le_ii_result);
 
+    php_ii_free_result(ii_result, Z_LVAL_P(result) TSRMLS_CC);
+
+    RETURN_TRUE;
+}
+/* }}} */
+
+/* {{{ static short php_ii_free_result( II_RESULT *ii_result, long result_id TSRMLS_DC)
+ */
+static short php_ii_free_result( II_RESULT *ii_result, long result_id TSRMLS_DC)
+{
+    II_PTR stmtHandle = NULL;
+
+    stmtHandle = ii_result->stmtHandle;
+
+    /* Remove this result resource from the associated ii_link resource */
+    php_ii_result_remove (ii_result, result_id TSRMLS_CC);
+
     if (ii_result->stmtHandle && _close_statement(ii_result TSRMLS_CC) == II_FAIL)
     {
          php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close statement");
-         RETURN_FALSE;
+         return II_FAIL;
     }
 
-    php_ii_result_remove (ii_result, Z_LVAL_P(result) TSRMLS_CC);
+    ii_result->stmtHandle = stmtHandle ;
 
-    zend_list_delete(Z_LVAL_P(result));
 
-    RETURN_TRUE;
+    zend_list_delete(result_id);
+
+    return II_OK;
+
 }
 /* }}} */
 
@@ -3436,16 +3416,28 @@ static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_
         /* Is it an "ingres (persistent) connection" ? */
         if ((strcmp("ingres connection\0",type_name) == 0 ) || (strcmp("ingres persistent connection\0",type_name) == 0 ))
         {
+            if (((II_LINK *)resource)->stmtHandle == ii_result->stmtHandle)
+            {
+                ((II_LINK *)resource)->stmtHandle = NULL;
+                ii_result->stmtHandle = NULL;
+            }
             this_ptr = (char *)((II_LINK *)resource)->result_list_ptr;
             result_entry = ((II_LINK *)resource)->result_list_ptr;
             next_ptr = result_entry->next_result_ptr;
             /* scan the link's resource list */
-            while (result_entry->result_id != result_id)
+            while (result_entry && result_entry->result_id != result_id)
             {
                 result_entry = (ii_result_entry *)result_entry->next_result_ptr;
                 last_ptr = this_ptr;
                 this_ptr = next_ptr;
-                next_ptr = (char *)((ii_result_entry *)this_ptr)->next_result_ptr;
+                if (this_ptr)
+                {
+                    next_ptr = (char *)((ii_result_entry *)this_ptr)->next_result_ptr;
+                }
+                else
+                {
+                    php_error_docref(NULL TSRMLS_CC, E_ERROR, "php_ii_result_remove : An attempt was made to access a NULL pointer");
+                }
             }
 
             if (this_ptr == (char *)((II_LINK *)resource)->result_list_ptr) /* head of list */
@@ -7648,6 +7640,23 @@ static long ii_result_row_width(II_RESULT *ii_result)
     return row_width;
 }
 
+/* {{{
+   Free all memory allocated to the ii_link resource
+*/
+static void _ii_free_ii_link(II_LINK *ii_link)
+{
+    if (ii_link != NULL)
+    {
+        if (ii_link->charset)
+        {
+            efree(ii_link->charset);
+        }
+
+        free(ii_link);
+        ii_link = NULL;
+    }
+}
+/* }}} */
 #endif /* HAVE_INGRES */
 
 /*

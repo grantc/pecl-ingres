@@ -234,6 +234,8 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered);
 static short _ii_describe (II_RESULT *ii_result, char *query TSRMLS_DC);
 static short _ii_close (II_PTR *stmtHandle, II_PTR *errorHandle TSRMLS_DC);
 static long ii_result_row_width(II_RESULT *ii_result);
+static void _ii_free_ii_link(II_LINK *ii_link);
+static short php_ii_free_result( II_RESULT *ii_result, long result_id  TSRMLS_DC);
 
 void NMgtAt(char *name, char **value);
 
