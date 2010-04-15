@@ -3386,7 +3386,6 @@ static short php_ii_free_result( II_RESULT *ii_result, long result_id TSRMLS_DC)
 
     ii_result->stmtHandle = stmtHandle ;
 
-
     zend_list_delete(result_id);
 
     return II_OK;
