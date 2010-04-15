@@ -2035,6 +2035,8 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
 
     /* determine what sort of query is being executed */
     query_type = php_ii_query_type(query TSRMLS_CC);
+    /* check to see if there are any parameters to the query */
+    ii_result->paramCount = php_ii_paramcount(query TSRMLS_CC);
 
     switch (query_type)
     {
@@ -2053,7 +2055,10 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
         case INGRES_SQL_INSERT:
         case INGRES_SQL_UPDATE:
         case INGRES_SQL_DELETE:
-            canPrepare = 1;
+            if (ii_result->paramCount)
+            {
+                canPrepare = 1;
+            }
             ii_result->queryType = IIAPI_QT_QUERY;
             break;
         case INGRES_SQL_CREATE:
@@ -2188,9 +2193,6 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     {
         php_error_docref(NULL TSRMLS_CC, E_NOTICE, "%s:%d, ac-state:%d, ac-emulation:%d",INGRES_INI_AUTO, INGRESG(auto_multi), ii_link->autocommit, ii_link->auto_multi);
     }
-
-    /* check to see if there are any parameters to the query */
-    ii_result->paramCount = php_ii_paramcount(query TSRMLS_CC);
 
     if (ii_result->paramCount)
     {
@@ -2342,7 +2344,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     }
 
     /* get description of results */
-    if ( query_type == INGRES_SQL_SELECT )
+    if ( query_type == INGRES_SQL_SELECT || canPrepare )
     {
         getDescrParm.gd_genParm.gp_callback = NULL;
         getDescrParm.gd_genParm.gp_closure  = NULL;
@@ -2382,6 +2384,11 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
         ii_result->fieldCount = getDescrParm.gd_descriptorCount;
         ii_result->descriptor = getDescrParm.gd_descriptor;
         ii_result->link_id = Z_LVAL_P(link);
+    }
+
+    /* Fetch the row width of the data being returned */
+    if ( query_type == INGRES_SQL_SELECT )
+    {
         ii_result->rowWidth = ii_result_row_width(ii_result);
     }
 
