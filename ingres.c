@@ -2383,8 +2383,9 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
         /* store the results */
         ii_result->fieldCount = getDescrParm.gd_descriptorCount;
         ii_result->descriptor = getDescrParm.gd_descriptor;
-        ii_result->link_id = Z_LVAL_P(link);
     }
+
+    ii_result->link_id = Z_LVAL_P(link);
 
     /* Fetch the row width of the data being returned */
     if ( query_type == INGRES_SQL_SELECT )
