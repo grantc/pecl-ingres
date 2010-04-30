@@ -792,6 +792,9 @@ static void php_close_ii_result(zend_rsrc_list_entry *rsrc TSRMLS_DC)
     II_RESULT *ii_result = (II_RESULT *) rsrc->ptr;
 
     _close_statement(ii_result TSRMLS_CC);
+
+    _ii_free_ii_result(ii_result);
+
 }
 /*  }}} */
 
@@ -1991,7 +1994,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     }
 
     /* Allocate and initialize the memory for the new result resource */
-    ii_result = (II_RESULT *) malloc(sizeof(II_RESULT));
+    ii_result = (II_RESULT *) emalloc(sizeof(II_RESULT));
     _ii_init_result(INTERNAL_FUNCTION_PARAM_PASSTHRU, ii_result, ii_link);
 
     /* determine what sort of query is being executed */
@@ -3384,8 +3387,6 @@ static short php_ii_free_result( II_RESULT *ii_result, long result_id TSRMLS_DC)
          return II_FAIL;
     }
 
-    ii_result->stmtHandle = stmtHandle ;
-
     zend_list_delete(result_id);
 
     return II_OK;
@@ -3418,7 +3419,6 @@ static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_
             if (((II_LINK *)resource)->stmtHandle == ii_result->stmtHandle)
             {
                 ((II_LINK *)resource)->stmtHandle = NULL;
-                ii_result->stmtHandle = NULL;
             }
             this_ptr = (char *)((II_LINK *)resource)->result_list_ptr;
             result_entry = ((II_LINK *)resource)->result_list_ptr;
@@ -3738,7 +3738,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
             }
             if (ii_result)
             {
-                free(ii_result);
+                efree(ii_result);
                 ii_result = NULL;
             }
             RETURN_FALSE;
@@ -7639,7 +7639,7 @@ static long ii_result_row_width(II_RESULT *ii_result)
     return row_width;
 }
 
-/* {{{
+/* {{{ _ii_free_ii_link(II_LINK *ii_link)
    Free all memory allocated to the ii_link resource
 */
 static void _ii_free_ii_link(II_LINK *ii_link)
@@ -7656,6 +7656,32 @@ static void _ii_free_ii_link(II_LINK *ii_link)
     }
 }
 /* }}} */
+
+/* {{{ static void _ii_free_ii_result(II_RESULT *ii_result)
+   Free all memory allocated to the ii_result resource
+*/
+static void _ii_free_ii_result(II_RESULT *ii_result)
+{
+    _free_resultdata (ii_result);
+
+    if (ii_result->inputDescr)
+    {
+        efree(ii_result->inputDescr);
+        ii_result->inputDescr = NULL;
+    }
+    if (ii_result->metaData)
+    {
+        efree(ii_result->metaData);
+        ii_result->metaData = NULL;
+    }
+    if (ii_result)
+    {
+        efree(ii_result);
+        ii_result = NULL;
+    }
+}
+/* }}} */
+
 #endif /* HAVE_INGRES */
 
 /*
