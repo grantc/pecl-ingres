@@ -794,7 +794,6 @@ static void php_close_ii_result(zend_rsrc_list_entry *rsrc TSRMLS_DC)
     _close_statement(ii_result TSRMLS_CC);
 
     _ii_free_ii_result(ii_result);
-
 }
 /*  }}} */
 
@@ -895,7 +894,9 @@ static void php_ingres_globals_init(zend_ingres_globals *ingres_globals)
     /* timeout in ms, -1, (default) = no timeout */
     initParm.in_timeout = -1;
 
-#if defined(IIAPI_VERSION_6) 
+#if defined(IIAPI_VERSION_7) 
+    initParm.in_version = IIAPI_VERSION_7;
+#elif defined(IIAPI_VERSION_6) 
     initParm.in_version = IIAPI_VERSION_6;
 #elif defined(IIAPI_VERSION_5) 
     initParm.in_version = IIAPI_VERSION_5;
@@ -2336,7 +2337,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
             }
             if (ii_result)
             {
-                free(ii_result);
+                efree(ii_result);
                 ii_result = NULL;
             }
             RETURN_FALSE;
@@ -3141,6 +3142,10 @@ static void php_ii_field_info(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result
                 case IIAPI_LNVCH_TYPE:
                     RETURN_STRING("IIAPI_LNVCH_TYPE", 1);
 #endif
+#if defined(IIAPI_VERSION_7)
+                case IIAPI_BOOL_TYPE:
+                    RETURN_STRING("IIAPI_BOOL_TYPE", 1);
+#endif
         
                 default:
                     php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown Ingres data type, %d",(ii_result->descriptor[columnNo]).ds_dataType);
@@ -3704,6 +3709,10 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
     ConversionResult result;
 #endif
 
+#if defined(IIAPI_VERSION_7)
+    II_BOOL value_bool = FALSE;
+#endif
+
     /* array initialization */
     array_init(return_value);
     /* init first char of array used to return BIG INT values as strings */
@@ -4114,7 +4123,23 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
                                     }
                                     break;
+#if defined(IIAPI_VERSION_7)
+                                case IIAPI_BOOL_TYPE:    /* boolean value*/
+                                    value_bool = (II_BOOL) *((II_BOOL *) columnData[k].dv_value);
 
+                                    if (result_type & II_NUM)
+                                    {
+                                        add_index_bool(return_value, i + k + INGRESG(array_index_start), value_bool);
+                                    }
+
+                                    if (result_type & II_ASSOC)
+                                    {
+                                        add_assoc_bool(return_value, php_ii_field_name(ii_result, i + k + INGRESG(array_index_start) TSRMLS_CC), value_bool);
+
+                                    }
+                                    break;
+
+#endif                                    
                                 case IIAPI_INT_TYPE:    /* integer */
                                     switch (columnData[k].dv_length)
                                     {
@@ -5650,6 +5675,10 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
     char *types;
     short unicode_lob = 0;
 
+#if defined (IIAPI_VERSION_7)
+    short tmp_short = 0;
+#endif
+
 #if defined (IIAPI_VERSION_3)
     UTF8 *string_start = NULL;
     UTF16 *tmp_utf16_string = NULL; 
@@ -5863,6 +5892,21 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                         }
                         break;                        
 #endif /* IIAPI_VERSION_3 */
+                    case 'a': /* boolean */
+#if defined(IIAPI_VERSION_7)
+                        if (ii_result->apiLevel >= IIAPI_LEVEL_6)
+                        {
+                            convert_to_boolean_ex(val);
+                            setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_BOOL_TYPE;
+                            setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+                            setDescrParm.sd_descriptor[param].ds_length = IIAPI_BOOL_LEN;
+                            setDescrParm.sd_descriptor[param].ds_precision = 0;
+                            setDescrParm.sd_descriptor[param].ds_scale = 0;
+                            setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+                            break;
+                        }
+#endif
+                        /* Fall through to integer for servers that cannot handle IIAPI_BOOL_TYPE */
                     case 'i': /* integer */
                         setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_INT_TYPE;
                         setDescrParm.sd_descriptor[param].ds_precision = 0;
@@ -6079,6 +6123,17 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             setDescrParm.sd_descriptor[param].ds_length = sizeof(Z_LVAL_PP(val));
                             setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
                             break;
+#if defined(IIAPI_VERSION_7)
+                        case IIAPI_BOOL_TYPE: /* boolean */
+                            convert_to_boolean_ex(val);
+                            setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_BOOL_TYPE;
+                            setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+                            setDescrParm.sd_descriptor[param].ds_length = IIAPI_BOOL_LEN;
+                            setDescrParm.sd_descriptor[param].ds_precision = 0;
+                            setDescrParm.sd_descriptor[param].ds_scale = 0;
+                            setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+                            break;
+#endif
 #if defined (IIAPI_VERSION_3)
                         case IIAPI_NCHA_TYPE: /* NCHAR */
                         case IIAPI_NVCH_TYPE: /* NVARCHAR */
@@ -6142,6 +6197,17 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                     /* Process each parameter into our descriptor buffer */
                     switch (Z_TYPE_PP(val))
                     {
+                        case IS_BOOL: 
+#if defined(IIAPI_VERSION_7)
+                            convert_to_boolean_ex(val);
+                            setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_BOOL_TYPE;
+                            setDescrParm.sd_descriptor[param].ds_nullable = FALSE;
+                            setDescrParm.sd_descriptor[param].ds_length = IIAPI_BOOL_LEN;
+                            setDescrParm.sd_descriptor[param].ds_precision = 0;
+                            setDescrParm.sd_descriptor[param].ds_scale = 0;
+                            setDescrParm.sd_descriptor[param].ds_columnType = columnType;
+                            break;
+#endif
                         case IS_LONG:
                             /* TODO: does not handle int8 yet */
                             convert_to_long_ex(val);
@@ -6151,14 +6217,6 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             setDescrParm.sd_descriptor[param].ds_precision = 0;
                             setDescrParm.sd_descriptor[param].ds_scale = 0;
                             setDescrParm.sd_descriptor[param].ds_columnType = columnType;
-                            if ( ii_result->procname == NULL )
-                            {
-                                setDescrParm.sd_descriptor[param].ds_columnName = NULL;
-                            }
-                            else
-                            {
-                                setDescrParm.sd_descriptor[param].ds_columnName = key;
-                            }
                             break;
                         case IS_DOUBLE:
                             convert_to_double_ex(val);
@@ -6168,14 +6226,6 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             setDescrParm.sd_descriptor[param].ds_precision = 0;
                             setDescrParm.sd_descriptor[param].ds_scale = 0;
                             setDescrParm.sd_descriptor[param].ds_columnType = columnType;
-                            if ( ii_result->procname == NULL )
-                            {
-                                setDescrParm.sd_descriptor[param].ds_columnName = NULL;
-                            }
-                            else
-                            {
-                                setDescrParm.sd_descriptor[param].ds_columnName = key;
-                            }
                             break;
                         case IS_STRING:
                             convert_to_string_ex(val);
@@ -6185,14 +6235,6 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             setDescrParm.sd_descriptor[param].ds_precision = 0;
                             setDescrParm.sd_descriptor[param].ds_scale = 0;
                             setDescrParm.sd_descriptor[param].ds_columnType = columnType;
-                            if ( ii_result->procname == NULL )
-                            {
-                                setDescrParm.sd_descriptor[param].ds_columnName = NULL;
-                            }
-                            else
-                            {
-                                setDescrParm.sd_descriptor[param].ds_columnName = key;
-                            }
                             break;
                         case IS_NULL:
                             setDescrParm.sd_descriptor[param].ds_dataType = IIAPI_CHA_TYPE;
@@ -6201,20 +6243,20 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
                             setDescrParm.sd_descriptor[param].ds_precision = 0;
                             setDescrParm.sd_descriptor[param].ds_scale = 0;
                             setDescrParm.sd_descriptor[param].ds_columnType = columnType;
-                            if ( ii_result->procname == NULL )
-                            {
-                                setDescrParm.sd_descriptor[param].ds_columnName = NULL;
-                            }
-                            else
-                            {
-                                setDescrParm.sd_descriptor[param].ds_columnName = key;
-                            }
                             break;
                         default:
                             php_error_docref(NULL TSRMLS_CC, E_WARNING, "A parameter has been passed of unknown type" );
                             if ( ii_result->procname == NULL )
                             efree(descriptorInfo);
                             return II_FAIL;
+                        }
+                        if ( ii_result->procname == NULL )
+                        {
+                            setDescrParm.sd_descriptor[param].ds_columnName = NULL;
+                        }
+                        else
+                        {
+                            setDescrParm.sd_descriptor[param].ds_columnName = key;
                         }
                     }
                 }
@@ -6275,6 +6317,26 @@ static short php_ii_bind_params (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_res
 
             switch (Z_TYPE_PP(val))
             {
+                case IS_BOOL:
+#if defined(IIAPI_VERSION_7)
+                    if (ii_result->apiLevel >= IIAPI_LEVEL_6)
+                    {
+                        convert_to_boolean_ex(val);
+                        putParmParm.pp_parmData[0].dv_null = FALSE;
+                        putParmParm.pp_parmData[0].dv_length = sizeof(Z_BVAL_PP(val));
+                        tmp_short = Z_BVAL_PP(val);
+                        putParmParm.pp_parmData[0].dv_value = &tmp_short;
+                    }
+                    else
+                    {
+                        convert_to_long_ex(val);
+                        putParmParm.pp_parmData[0].dv_null = FALSE;
+                        putParmParm.pp_parmData[0].dv_length = sizeof(Z_LVAL_PP(val));
+                        tmp_long = Z_LVAL_PP(val);
+                        putParmParm.pp_parmData[0].dv_value = &tmp_long;
+                    }
+                    break;
+#endif
                 case IS_LONG:
                     convert_to_long_ex(val);
                     putParmParm.pp_parmData[0].dv_null = FALSE;
@@ -6844,6 +6906,10 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
     ConversionResult result;
 #endif
 
+#if defined(IIAPI_VERSION_7)
+    II_BOOL value_bool = FALSE;
+#endif
+
     int k = 0 , l = 0;
     value_long_long_str[0] = '\0';
 
@@ -6900,6 +6966,23 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
                 }
                 break;
 
+#if defined(IIAPI_VERSION_7)
+                case IIAPI_BOOL_TYPE:    /* boolean value*/
+                    value_bool = (II_BOOL) *((II_BOOL *) columnData->dv_value);
+
+                    if (result_type & II_NUM)
+                    {
+                        add_index_bool(return_value, col_no + INGRESG(array_index_start), value_bool);
+                    }
+
+                    if (result_type & II_ASSOC)
+                    {
+                        add_assoc_bool(return_value, php_ii_field_name(ii_result, col_no + INGRESG(array_index_start) TSRMLS_CC), value_bool);
+
+                    }
+                    break;
+
+#endif                                    
             case IIAPI_INT_TYPE:    /* integer */
                 switch (columnData->dv_length)
                 {
@@ -7639,7 +7722,7 @@ static long ii_result_row_width(II_RESULT *ii_result)
     return row_width;
 }
 
-/* {{{ _ii_free_ii_link(II_LINK *ii_link)
+/* {{{ static void _ii_free_ii_link(II_LINK *ii_link)
    Free all memory allocated to the ii_link resource
 */
 static void _ii_free_ii_link(II_LINK *ii_link)
