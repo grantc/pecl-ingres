@@ -3786,14 +3786,48 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
             ii_result->metaData = (IIAPI_DATAVALUE *) emalloc (sizeof(IIAPI_DATAVALUE) * ii_result->getColParm.gc_rowCount * ii_result->getColParm.gc_columnCount);
             ii_result->getColParm.gc_columnData = ii_result->metaData;
 
-            /* Setup the buffer for receiving the results */
             ii_result->dataBuffer = (II_PTR) emalloc(ii_result->rowWidth * ii_result->getColParm.gc_rowCount );
             next_cell = (char *)ii_result->dataBuffer;
+#if defined(ALIGN_MEMORY)
+            /* Certain platforms/architectures require memory aligned
+             * data structures. This requires that we add pad out the 
+             * size of the row to allow for each column to be accessed
+             * along memory boundaries to prevent any SIGBUS.
+             *
+             * NOTE: The padding is added irrespective of the data-type.
+             * It's possible that padding is only required for numeric
+             * types (integer, float, money). However adding type checks
+             * would have added an extra level of complexity and it was 
+             * felt that the approach taken below was simpler/safer.
+             *
+             * TODO: Profile Wintel/Lintel with ALIGN_MEMORY enabled.
+             */
+            /* Make sure that ii_result->metaData[cell].dv_value is pointing to a memory boundary */
             for( cell=0; cell < ( ii_result->fieldCount * ii_result->getColParm.gc_rowCount ); cell++)
             {
-                ii_result->metaData[cell].dv_value = next_cell;
-                next_cell += (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length;
+                 ii_result->metaData[cell].dv_value = next_cell;
+                 column_no = cell % ii_result->fieldCount;
+                 /* Determine space between the end of this column and the next memory boundary */
+                 pad_modulo = ((long)next_cell + (ii_result->descriptor[column_no]).ds_length) % ZEND_MM_ALIGNMENT;
+                 if (pad_modulo != 0)
+                 {
+                     /* Pad the space between the end of the cell and the start of the next one */
+                     pad_bytes = ZEND_MM_ALIGNMENT - pad_modulo; 
+                     next_cell += (ii_result->descriptor[column_no]).ds_length + pad_bytes;
+
+                 }
+                 else
+                 {
+                     next_cell += (ii_result->descriptor[column_no]).ds_length;
+                 }
             }  
+#else
+            for( cell=0; cell < ( ii_result->fieldCount * ii_result->getColParm.gc_rowCount ); cell++)
+            {
+                 ii_result->metaData[cell].dv_value = next_cell;
+                 next_cell += (ii_result->descriptor[cell % ii_result->fieldCount]).ds_length;
+            }  
+#endif
 
             IIapi_getColumns(&ii_result->getColParm);
             ii_sync(&(ii_result->getColParm.gc_genParm));
