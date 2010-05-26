@@ -1,4 +1,5 @@
 SVN
+- Fix bug 17510 - Fix php_ii_set_connect_options so they work as documented
 - Add support for the Ingres BOOLEAN type
 - Fix bug 17302 - _close_statement is unable to free active statements
 - Fix bug 17207 - Under certain conditions the driver can SEGV when doing cleaning up

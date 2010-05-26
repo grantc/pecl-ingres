@@ -5198,7 +5198,7 @@ static short int php_ii_set_environment_options (zval *options, II_LINK *ii_link
     char *key;
     unsigned long index;
     unsigned int key_len;
-    char *temp_string;
+    char *temp_string = NULL;
     long temp_long;
     II_BOOL ignore;
     HashTable *arr_hash;
@@ -5269,10 +5269,12 @@ static short int php_ii_set_environment_options (zval *options, II_LINK *ii_link
             else if ( strcmp("money_lort", key) == 0 ) /* leading or trailing money sign, default is leading*/
             {
                     parameter_id = IIAPI_EP_MONEY_LORT;
+                ignore = TRUE;
             }
             else if ( strcmp("money_sign", key) == 0 ) /* defaults to the ingres variable II_MONEY_FORMAT or "$" */
             {
                     parameter_id = IIAPI_EP_MONEY_SIGN;
+                ignore = TRUE;
             }
             else if ( strcmp("money_precision", key) == 0 ) /* defaults to 2 if not set */
             {
@@ -5312,8 +5314,10 @@ static short int php_ii_set_environment_options (zval *options, II_LINK *ii_link
             {
                 case IS_STRING:
                     convert_to_string_ex(data);
-                    temp_string = Z_STRVAL_PP(data);
-                    setEnvPrmParm.se_paramValue = (II_PTR)temp_string;
+                    temp_string = emalloc(Z_STRLEN_PP(data) + 1);
+                    memcpy(temp_string, Z_STRVAL_PP(data), Z_STRLEN_PP(data));
+                    temp_string[Z_STRLEN_PP(data)] = '\0';
+                    setEnvPrmParm.se_paramValue = temp_string;
                     break;
                 case IS_LONG:
                 case IS_BOOL:
@@ -5333,6 +5337,11 @@ static short int php_ii_set_environment_options (zval *options, II_LINK *ii_link
                 if ( Z_TYPE_PP(data) == IS_STRING )
                 {
                     php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
+                    if (temp_string != NULL)
+                    {
+                        efree(temp_string);
+                        temp_string = NULL;
+                    }
                     return II_FAIL;
                 }
                 else
@@ -5340,6 +5349,11 @@ static short int php_ii_set_environment_options (zval *options, II_LINK *ii_link
                     php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %ld. Error code %d.", key, Z_LVAL_PP(data), setEnvPrmParm.se_status );
                     return II_FAIL;
                 }
+            }
+            if (temp_string != NULL)
+            {
+                efree(temp_string);
+                temp_string = NULL;
             }
         }
     }
@@ -5363,7 +5377,7 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
     char *key;
     unsigned long index;
     unsigned int key_len;
-    char *temp_string;
+    char *temp_string = NULL;
     long temp_long;
     II_BOOL ignore;
     HashTable *arr_hash;
@@ -5420,49 +5434,50 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
 #endif
             else if ( strcmp("timezone", key) == 0 )
             {
-                ignore = TRUE;
+                parameter_id = IIAPI_CP_TIMEZONE;
             }
             else if (strcmp( "date_format", key) == 0 )
             {
-                ignore = TRUE;
+                parameter_id = IIAPI_CP_DATE_FORMAT;
             }
             else if ( strcmp("decimal_separator", key) == 0 ) 
             {
-                ignore = TRUE;
+                parameter_id = IIAPI_CP_DECIMAL_CHAR;
             }
             else if ( strcmp("date_century_boundary", key) == 0 )
             {
-                ignore = TRUE;
+                parameter_id = IIAPI_CP_CENTURY_BOUNDARY;
             }
             else if ( strcmp("money_lort", key) == 0 ) /* leading or trailing money sign, default is leading*/
             {
-                ignore = TRUE;
+                parameter_id = IIAPI_CP_MONEY_LORT;
             }
             else if ( strcmp("money_sign", key) == 0 ) /* defaults to the ingres variable II_MONEY_FORMAT or "$" */
             {
-                ignore = TRUE;
+                parameter_id = IIAPI_CP_MONEY_SIGN;
             }
             else if ( strcmp("money_precision", key) == 0 ) /* defaults to 2 if not set */
             {
-                ignore = TRUE;
+                parameter_id = IIAPI_CP_MONEY_PRECISION;
             }
             else if ( strcmp("float4_precision", key) == 0 )
             {
-                ignore = TRUE;
+                parameter_id = IIAPI_CP_FLOAT4_PRECISION;
             }
             else if ( strcmp("float8_precision", key) == 0 ) 
             {
-                ignore = TRUE;
+                parameter_id = IIAPI_CP_FLOAT8_PRECISION;
             }
             else if ( strcmp("blob_segment_length", key) == 0 ) 
             {
+                /* Can only be set via IIapi_setEnvParam() */
                 ignore = TRUE;
             }
 
             else 
             {
-                    php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown connection option '%s'",key );
-                    return II_FAIL;
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown connection option '%s'",key );
+                return II_FAIL;
             }
         }
         else
@@ -5476,7 +5491,7 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
 
             setConPrmParm.sc_genParm.gp_callback = NULL;
 #if defined(IIAPI_VERSION_2)
-            setConPrmParm.sc_connHandle = ii_link->envHandle;
+            setConPrmParm.sc_connHandle = ii_link->connHandle;
 #else
             setConPrmParm.sc_connHandle = NULL;
 #endif
@@ -5486,7 +5501,9 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
             {
                 case IS_STRING:
                     convert_to_string_ex(data);
-                    temp_string = Z_STRVAL_PP(data);
+                    temp_string = emalloc(Z_STRLEN_PP(data) + 1);
+                    memcpy(temp_string, Z_STRVAL_PP(data), Z_STRLEN_PP(data));
+                    temp_string[Z_STRLEN_PP(data)] = '\0';
                     setConPrmParm.sc_paramValue = temp_string;
                     break;
                 case IS_LONG:
@@ -5506,6 +5523,11 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
             {
                 if ( Z_TYPE_PP(data) == IS_STRING )
                 {
+                    if (temp_string != NULL)
+                    {
+                        efree(temp_string);
+                        temp_string = NULL;
+                    }
                     php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %s", key, Z_STRVAL_PP(data));
                     return II_FAIL;
                 }
@@ -5514,6 +5536,11 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
                     php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to set option, %s, with value, %ld", key, Z_LVAL_PP(data));
                     return II_FAIL;
                 }
+            }
+            if (temp_string != NULL)
+            {
+                efree(temp_string);
+                temp_string = NULL;
             }
 
             ii_link->connHandle = setConPrmParm.sc_connHandle;

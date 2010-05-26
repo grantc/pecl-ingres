@@ -47,4 +47,4 @@ else
 ingres_close($conn);
 ?>
 --EXPECT--
-Connection succeeded.01-jan-2070 01-jan-2020
+Connection succeeded.01-jan-1970 01-jan-2020
