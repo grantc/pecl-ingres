@@ -2309,7 +2309,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     }
 
     /* get description of results */
-    if ( query_type == INGRES_SQL_SELECT || canPrepare )
+    if ( query_type == INGRES_SQL_SELECT || canPrepare || ii_result->procname != NULL )
     {
         getDescrParm.gd_genParm.gp_callback = NULL;
         getDescrParm.gd_genParm.gp_closure  = NULL;
@@ -2353,7 +2353,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     ii_result->link_id = Z_LVAL_P(link);
 
     /* Fetch the row width of the data being returned */
-    if ( query_type == INGRES_SQL_SELECT )
+    if ( ii_result->fieldCount )
     {
         ii_result->rowWidth = ii_result_row_width(ii_result);
     }
@@ -3929,7 +3929,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
         /* If we do not have a lob and the query is not an update cursor we can fetch */
         /* blocks of rows */
-        if (!have_lob && ii_result->cursor_mode == II_CURSOR_READONLY)
+        if (!have_lob && (ii_result->cursor_mode == II_CURSOR_READONLY || ii_result->procname != NULL))
         {
             ii_result->getColParm.gc_genParm.gp_callback = NULL;
             ii_result->getColParm.gc_genParm.gp_closure = NULL;
