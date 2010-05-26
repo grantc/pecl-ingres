@@ -3929,7 +3929,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
         /* If we do not have a lob and the query is not an update cursor we can fetch */
         /* blocks of rows */
-        if (!have_lob && (ii_result->cursor_mode = II_CURSOR_READONLY))
+        if (!have_lob && ii_result->cursor_mode == II_CURSOR_READONLY)
         {
             ii_result->getColParm.gc_genParm.gp_callback = NULL;
             ii_result->getColParm.gc_genParm.gp_closure = NULL;
@@ -5084,11 +5084,11 @@ static char *php_ii_check_procedure(char *statement, II_LINK *ii_link TSRMLS_DC)
     sprintf(exec_proc,"execute procedure ");
     sprintf(call_proc,"call ");
 
-    if (strncmp(statement,exec_proc,18) == 0 ) 
+    if (strncasecmp(statement,exec_proc,18) == 0 ) 
     {
         style = 1;
     } 
-    else if (strncmp(statement,call_proc,5) == 0 )
+    else if (strncasecmp(statement,call_proc,5) == 0 )
     {
         style = 2;
     }
