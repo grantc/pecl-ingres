@@ -3929,7 +3929,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
 
         /* If we do not have a lob and the query is not an update cursor we can fetch */
         /* blocks of rows */
-        if (!have_lob && (ii_result->cursor_mode == II_CURSOR_READONLY || ii_result->procname != NULL))
+        if (!have_lob && (ii_result->cursor_mode == II_CURSOR_READONLY || (ii_result->procname && ii_result->fieldCount)))
         {
             ii_result->getColParm.gc_genParm.gp_callback = NULL;
             ii_result->getColParm.gc_genParm.gp_closure = NULL;
