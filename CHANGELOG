@@ -1,4 +1,5 @@
 SVN
+- Update the unit tests to be more independent
 - Fix bug 16960 - SEGV when fetching the results from a row producing procedure
 - Fix bug 16990 - SEGV when executing a database procedure
 - Fix bug 17510 - Fix php_ii_set_connect_options so they work as documented
