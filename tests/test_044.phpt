@@ -2,6 +2,10 @@
 Ingres: Test insert using DESCRIBE INPUT
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+--INI--
+ingres.array_index_start=1
+ingres.scrollable=FALSE
+ingres.utf8=TRUE
 --ENV--
 II_SYSTEM=/opt/Ingres/II
 --FILE--
@@ -9,9 +13,6 @@ II_SYSTEM=/opt/Ingres/II
 
 require_once('connection.inc');
 
-ini_set("ingres.scrollable", FALSE);
-ini_set("ingres.utf8", TRUE);
-ini_set("ingres.array_index_start",0);
 
 $link = ingres_connect("demodb");
 
@@ -23,8 +24,6 @@ else
 {
     echo "Connected.";
 }
-
-$rc = ingres_query($link,"drop table describe_table");
 
 $create_sql = "create table php01_tb1 (a1 c(300), a2 char(301), a3 text(302), a4 varchar(303),  a5 long varchar,  a6 nchar(304), a7 nvarchar(305), a8 long nvarchar, a9 integer, a10 smallint, a11 bigint, a12 tinyint, a13 decimal(7,2), a14 float, a15 float4, a16 ingresdate, a17 time, a18 timestamp, a19 money,a20 text, a21 text, a22 byte(306),a23 byte varying(307),  a24 long byte,  a25 ansidate, a1nn c(300) not null, a2nn char(301) not null, a3nn text(302) not null, a4nn varchar(303) not null, a5nn long varchar not null,  a6nn nchar(304) not null, a7nn nvarchar(305) not null, a8nn long nvarchar not null,  a9nn integer not null, a10nn smallint not null, a11nn bigint not null, a12nn tinyint not null, a13nn decimal(7,2) not null,a14nn float not null, a15nn float4 not null, a16nn ingresdate not null, a17nn time not null, a18nn timestamp not null, a19nn money not null,a20nn text not null, a21nn text not null, a22nn byte(306) not null, a23nn byte varying(307) not null, a24nn long byte not null,  a25nn ansidate not null)";
 
@@ -97,7 +96,7 @@ for ($field = 1; $field < $no_columns + 1; $field++)
        else
        {
            $row = ingres_fetch_row($result);
-           echo " - " . trim($row[0]);
+           echo " - " . trim($row[1]);
            if ($row)
            {
                echo " Passed\n";

@@ -20,7 +20,7 @@ II_SYSTEM=/opt/Ingres/II
     $text = stream_get_contents($fh);
     fclose($fh);
 
-    $link = ingres_connect("phpdb_unicode", $user, $password);
+    $link = ingres_connect($database, $user, $password);
     if (ingres_errno())
     {
         trigger_error("Connect : " . ingres_errno() . " - " - ingres_error(), E_USER_ERROR);

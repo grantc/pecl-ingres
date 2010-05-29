@@ -9,6 +9,37 @@ II_SYSTEM=/opt/Ingres/II
 
 require_once('connection.inc');
 
+$conn=ingres_connect("iidbdb",$user,$password);
+
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+$rc = ingres_query($conn, "create group phpgroup");
+
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+ingres_commit($conn);
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+ingres_close($conn);
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+
 $options = array( "group" => "phpgroup");
 
 $conn=ingres_connect($database,$user,$password, $options);
@@ -45,6 +76,37 @@ else
 }
 
 ingres_close($conn);
+
+$conn=ingres_connect("iidbdb",$user,$password);
+
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+$rc = ingres_query($conn, "drop group phpgroup");
+
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+ingres_commit($conn);
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+ingres_close($conn);
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
 ?>
 --EXPECT--
-Connection succeeded.The user php is connected using the group, phpgroup.
+Connection succeeded.The user ingres is connected using the group, phpgroup.

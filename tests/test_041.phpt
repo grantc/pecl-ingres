@@ -16,14 +16,14 @@ ini_set("ingres.utf8", 1);
 $conn=ingres_connect($database,$user,$password);
 
 if (!is_resource($conn)) {
-    echo ingres_errno() . " - " . ingres_error . "\n";
+    echo ingres_errno() . " - " . ingres_error() . "\n";
     die("i died");
 } 
 
 $result=ingres_query($conn, "select * from airport where ap_ccode = 'ES' order by ap_place asc") ;
 
 if ( !is_resource($result) ) {
-    echo ingres_errno() . " - " . ingres_error . "\n";
+    echo ingres_errno() . " - " . ingres_error() . "\n";
     die("i died");
 } 
 else
@@ -34,7 +34,7 @@ else
     /* goto row 3 */
     if (!ingres_result_seek($result, 3))
     {
-        echo ingres_errno() . " - " . ingres_error . "\n";
+        echo ingres_errno() . " - " . ingres_error() . "\n";
         die("i died");
     }
     else
@@ -47,7 +47,7 @@ else
     /* goto row 1 */
     if (!ingres_result_seek($result, 1))
     {
-        echo ingres_errno() . " - " . ingres_error . "\n";
+        echo ingres_errno() . " - " . ingres_error() . "\n";
         die("i died");
     }
     else
@@ -60,7 +60,7 @@ else
     /* goto row 2 */
     if (!ingres_data_seek($result, 2))
     {
-        echo ingres_errno() . " - " . ingres_error . "\n";
+        echo ingres_errno() . " - " . ingres_error() . "\n";
         die("i died");
     }
     else

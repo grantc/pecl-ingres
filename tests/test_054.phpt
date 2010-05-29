@@ -34,7 +34,7 @@ II_SYSTEM=/opt/Ingres/II
   echo ingres_field_length($result_set,$num_fields-1). "\n";
 
 --EXPECT--
-table_name, IIAPI_CHA_TYPE, 32
+table_name, IIAPI_CHA_TYPE, 256
 key_is_compressed, IIAPI_CHA_TYPE, 1
-table_name, IIAPI_CHA_TYPE, 32
+table_name, IIAPI_CHA_TYPE, 256
 key_is_compressed, IIAPI_CHA_TYPE, 1

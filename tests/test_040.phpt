@@ -26,7 +26,19 @@ else
 {
 	echo "Connection succeeded.";
 }
-$rc=ingres_query($conn, "select money(100.22) as money1, date('01/20/2009 12:00:00') as date1, money(100.22-50.02) as money2, date('01/20/2009 12:00:00') - '1 day' as date2  from timezone_test") ;
+
+$rc=ingres_query($conn, "create table timezone_test(idx integer not null, date date not null)");
+if ( ingres_errno($conn) ) {
+    trigger_error(ingres_errno()."-".ingres_error(),E_USER_ERROR);
+}
+
+$rc=ingres_query($conn, "insert into timezone_test values (1,'06-sep-2005 12:00:00')");
+if ( ingres_errno($conn) ) {
+    trigger_error(ingres_errno()."-".ingres_error(),E_USER_ERROR);
+}
+
+
+$rc=ingres_query($conn, "select money(100.22) as money1, date as date1, money(100.22-50.02) as money2, date - '1 day' as date2 from timezone_test" ) ;
 
 if ( ingres_errno() ) {
 	$error_code=ingres_errno($conn);
@@ -50,4 +62,4 @@ else
 ingres_close($conn);
 ?>
 --EXPECT--
-Connection succeeded.100.22 : 2009-01-20 20:00:00 - 50.2 : 2009-01-19 20:00:00
+Connection succeeded.100.22 : 2005-09-06 12:00:00 - 50.2 : 2005-09-05 12:00:00

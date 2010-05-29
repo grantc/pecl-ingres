@@ -9,7 +9,37 @@ II_SYSTEM=/opt/Ingres/II
 
 require_once('connection.inc');
 
-$options = array( "effective_user" => "ingres");
+$conn=ingres_connect("iidbdb",$user,$password);
+
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+$rc = ingres_query($conn, "create user phptestuser");
+
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+ingres_commit($conn);
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+ingres_close($conn);
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+$options = array( "effective_user" => "phptestuser");
 
 $conn=ingres_connect($database,$user,$password, $options);
 
@@ -45,6 +75,36 @@ else
 }
 
 ingres_close($conn);
+
+$conn=ingres_connect("iidbdb",$user,$password);
+
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+$rc = ingres_query($conn, "drop user phptestuser");
+
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+ingres_commit($conn);
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
+
+ingres_close($conn);
+if (ingres_errno())
+{
+    trigger_error(ingres_errno() . " - " . ingres_error());
+	die("i died");
+}
 ?>
 --EXPECT--
-Connection succeeded.The user php is impersonating ingres.
+Connection succeeded.The user ingres is impersonating phptestuser.

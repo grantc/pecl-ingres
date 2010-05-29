@@ -1,7 +1,7 @@
 <?php
 
-$database = 'phpdb';
-$user = 'php';
-$password = '1ngr35php';
+$database = 'demodb';
+$user = 'ingres';
+$password = 'ingres';
 
 ?>

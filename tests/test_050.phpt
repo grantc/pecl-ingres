@@ -9,6 +9,7 @@ II_SYSTEM=/opt/Ingres/II
 ini_set("ingres.utf8", TRUE);
 ini_set("ingres.describe", TRUE);
 
+require_once("connection.inc");
 
 function add_airport($link, $airport_details)
 {
@@ -39,7 +40,7 @@ function get_airport($link, $airport_code)
     }
 }
 
-$link = ingres_connect("demodb");
+$link = ingres_connect($database, $user, $password);
 if (!is_resource($link))
 {
     die(ingres_errno() . " - " . ingres_error() . "\n");

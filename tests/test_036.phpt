@@ -1,5 +1,5 @@
 --TEST--
-Ingres: Setting money format to € in the trailing position.
+Ingres: Setting money format to â‚¬ in the trailing position.
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
 --ENV--
@@ -9,7 +9,7 @@ II_SYSTEM=/opt/Ingres/II
 
 require_once('connection.inc');
 
-$options = array( "money_sign" => "€", "money_lort" => INGRES_MONEY_TRAILING );
+$options = array( "money_sign" => "â‚¬", "money_lort" => INGRES_MONEY_TRAILING );
 
 $conn=ingres_connect($database,$user,$password, $options);
 
@@ -47,4 +47,4 @@ else
 ingres_close($conn);
 ?>
 --EXPECT--
-Connection succeeded.€1.99
+Connection succeeded.1.99â‚¬

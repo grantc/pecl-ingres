@@ -229,6 +229,7 @@ zend_function_entry ingres_functions[] = {
     PHP_FALIAS(ingres2_stmt_error,       ingres2_error, arginfo_ingres_error)
     PHP_FALIAS(ingres2_stmt_errsqlstate,  ingres2_errsqlstate, arginfo_ingres_errsqlstate)
     PHP_FALIAS(ingres2_conn_errsqlstate,  ingres2_errsqlstate, arginfo_ingres_errsqlstate)
+    PHP_FALIAS(ingres2_data_seek,       ingres2_result_seek, arginfo_ingres_result_seek)
 #else
     PHP_FE(ingres_connect,		        arginfo_ingres_connect)
     PHP_FE(ingres_pconnect,		        arginfo_ingres_pconnect)
@@ -270,6 +271,7 @@ zend_function_entry ingres_functions[] = {
     PHP_FALIAS(ingres_stmt_error,       ingres_error, arginfo_ingres_error)
     PHP_FALIAS(ingres_stmt_errsqlstate,  ingres_errsqlstate, arginfo_ingres_errsqlstate)
     PHP_FALIAS(ingres_conn_errsqlstate,  ingres_errsqlstate, arginfo_ingres_errsqlstate)
+    PHP_FALIAS(ingres_data_seek,       ingres_result_seek, arginfo_ingres_result_seek)
 
 #endif
 

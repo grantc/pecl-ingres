@@ -15,7 +15,7 @@ if (!is_resource($conn))
 {
     die("connect ". ingres_errno(). " - " . ingres_error($conn));
 }
-$stmt = ingres_prepare($conn, 'select table_name from iitables where table_name = ?');
+$stmt = ingres_prepare($conn, 'select rtrim(varchar(table_name)) as table_name from iitables where table_name = ?');
 if (!is_resource($stmt))
 {
     die("prepare ". ingres_error($conn));
@@ -28,9 +28,10 @@ if (ingres_errno())
 }
 while ($row = ingres_fetch_array($stmt,INGRES_ASSOC))
 {
-    echo $row["table_name"];
+    echo trim($row["table_name"])."\n";
 }
-ingres_close($conn);
+//ingres_free_result($stmt);
+//ingres_close($conn);
 ?>
 --EXPECT--
 iitables
