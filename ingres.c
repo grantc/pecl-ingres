@@ -480,6 +480,14 @@ static int _rollback_transaction(II_LINK *ii_link  TSRMLS_DC)
 
     /* clean up any un-freed statements/results */
     _free_ii_link_result_list(ii_link TSRMLS_CC);
+    if (ii_link->stmtHandle != NULL)
+    {
+        if (_ii_close(&ii_link->stmtHandle, &ii_link->errorHandle TSRMLS_CC) == II_FAIL)
+        {
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "_rollback_transaction: Unable to close ii_link->stmtHandle");
+        }
+
+    }
 
     rollbackParm.rb_genParm.gp_callback = NULL;
     rollbackParm.rb_genParm.gp_closure = NULL;
@@ -1845,6 +1853,7 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
     IIAPI_GETDESCRPARM  getDescrParm;
     IIAPI_CANCELPARM   cancelParm;
     IIAPI_CLOSEPARM    closeParm;
+    IIAPI_GETQINFOPARM  getQInfoParm;
 
     HashTable *arr_hash;
     int elementCount;
@@ -2350,6 +2359,40 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
         /* store the results */
         ii_result->fieldCount = getDescrParm.gd_descriptorCount;
         ii_result->descriptor = getDescrParm.gd_descriptor;
+    }
+    else if (ii_result->queryType == IIAPI_QT_QUERY)
+    {
+        getQInfoParm.gq_genParm.gp_callback = NULL;
+        getQInfoParm.gq_genParm.gp_closure = NULL;
+        getQInfoParm.gq_stmtHandle = ii_result->stmtHandle;
+
+        IIapi_getQueryInfo( &getQInfoParm );
+        ii_sync(&(getQInfoParm.gq_genParm));
+
+        if (ii_success(&(getQInfoParm.gq_genParm), &ii_result->errorHandle TSRMLS_CC) == II_FAIL)
+        {
+            if (converted_query) 
+            {
+                efree(converted_query);
+                converted_query = NULL;
+            }
+            if (ii_result->cursor_id)
+            {
+                efree(ii_result->cursor_id);
+                ii_result->cursor_id = NULL;
+            }
+            if (ii_result->inputDescr)
+            {
+                efree(ii_result->inputDescr);
+                ii_result->inputDescr = NULL;
+            }
+            if (ii_result)
+            {
+                efree(ii_result);
+                ii_result = NULL;
+            }
+            RETURN_FALSE;
+        }
     }
 
     ii_result->link_id = Z_LVAL_P(link);
@@ -7727,7 +7770,7 @@ static short _ii_close (II_PTR *stmtHandle, II_PTR *errorHandle TSRMLS_DC)
 
             if (ii_success(&(closeParm.cl_genParm), errorHandle TSRMLS_CC) == II_FAIL)
             {
-                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to close a previously executed query");
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "_ii_close: Unable to close a previously executed query");
                 return II_FAIL;
             }
         }

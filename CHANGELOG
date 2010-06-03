@@ -1,4 +1,5 @@
 SVN
+- Fix bug 17556 - Handle errors for non-result returning statements
 - Update the unit tests to be more independent
 - Fix bug 16960 - SEGV when fetching the results from a row producing procedure
 - Fix bug 16990 - SEGV when executing a database procedure
