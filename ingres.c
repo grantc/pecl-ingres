@@ -38,7 +38,9 @@
 #include "convertUTF.h"
 #endif
 #ifndef ZEND_MM_ALIGNMENT
-#include "php_config.h"
+#   ifndef PHP_WIN32
+#       include "php_config.h"
+#   endif
 #endif
 
 #if HAVE_INGRES
