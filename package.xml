@@ -14,7 +14,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grant.croker@ingres.com</email>
   <active>yes</active>
  </lead>
- <date>2009-06-30</date>
+ <date>2010-06-09</date>
  <time>15:30:00</time>
  <version>
   <release>2.2.2</release>
@@ -26,6 +26,19 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
  <notes>This is a minor release that addresses the following:
+- Fix bug 17556 - Handle errors for non-result returning statements
+- Update the unit tests to be more independent
+- Fix bug 16960 - SEGV when fetching the results from a row producing procedure
+- Fix bug 16990 - SEGV when executing a database procedure
+- Fix bug 17510 - Fix php_ii_set_connect_options so they work as documented
+- Add support for the Ingres BOOLEAN type
+- Fix bug 17302 - _close_statement is unable to free active statements
+- Fix bug 17207 - Under certain conditions the driver can SEGV when doing cleaning up
+- Fix bug 17198 - Unable to close non-result statements
+- Fix bug 17092 - SIGBUS when fetching data on 64-bit Solaris
+- IIapi_getDescriptor() should only be called for SELECT statements
+- Add ingres_fetch_assoc()
+- Fix bug 16752 - Send all string values as IIAPI_VCH_TYPE
 - Allow for a 0 offset in all ingres field functions 
 - Update build scripts for OpenVMS CSWS PHP 2.0
  </notes>
@@ -95,6 +108,15 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file baseinstalldir="ingres" name="bug_16752_1.phpt" role="test" />
     <file baseinstalldir="ingres" name="bug_16752_2.phpt" role="test" />
     <file baseinstalldir="ingres" name="bug_16752_3.phpt" role="test" />
+    <file baseinstalldir="ingres" name="bug_16990_procedure_segv.phpt" role="test" />
+    <file baseinstalldir="ingres" name="bug_17302.phpt" role="test" />
+    <file baseinstalldir="ingres" name="bug_17556.phpt" role="test" />
+    <file baseinstalldir="ingres" name="insert_boolean_1.phpt" role="test" />
+    <file baseinstalldir="ingres" name="insert_boolean_2.phpt" role="test" />
+    <dir name="files">
+     <file baseinstalldir="ingres" name="date_format_test.php" role="test" />
+     <file baseinstalldir="ingres" name="timezone_test.php" role="test" />
+    </dir>
    </dir> <!-- //tests -->
    <file baseinstalldir="ingres" name="BUILD.COM" role="src" />
    <file baseinstalldir="ingres" name="CHANGELOG" role="doc" />
@@ -127,6 +149,6 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </dependencies>
  <providesextension>ingres</providesextension>
  <extsrcrelease>
-  <configureoption name="with-ingres" prompt="Ingres II_SYSTEM dir?" />
+  <configureoption name="with-ingres" prompt="Ingres II_SYSTEM dir?" default="/opt/Ingres/IngresII" />
  </extsrcrelease>
 </package>

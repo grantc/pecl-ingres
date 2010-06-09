@@ -118,6 +118,7 @@ ingres_errsqlstate       Get the SQLState
 ingres_escape_string     Escape special characters for use in a query
 ingres_execute           Execute a cursor prepared by ingres_prepare
 ingres_fetch_array       Fetch a row of result into an array
+ingres_fetch_assoc       Fetch a row of result into an associative array
 ingres_fetch_object      Fetch a row of result into an object
 ingres_fetch_proc_return Get the return value from a procedure call
 ingres_fetch_row         Fetch a row of result into an enumerated array
@@ -162,11 +163,11 @@ The following options configure the behaviour of the Ingres extension:
 |ingres.blob_segment_length|buffer in bytes to be   |4096   |Yes    |Yes      |
 |                          |used when chunking BLOB |       |       |         |
 |__________________________|data____________________|_______|_______|_________|
-|ingres.default_database___|Default_database_name___|_______|Yes____|Yes______|
-|ingres.default_user_______|Default_user_name_______|_______|Yes____|Yes______|
+|ingres.default_database___|Default_database_name___| _____|Yes____|Yes______|
+|ingres.default_user_______|Default_user_name_______| _____|Yes____|Yes______|
 |ingres.describe           |Enable / Disable        |On     |Yes    |Yes      |
 |__________________________|DESCRIBE_INPUT__________|_______|_______|_________|
-|ingres.default_password___|Default_password________|_______|Yes____|Yes______|
+|ingres.default_password___|Default_password________| _____|Yes____|Yes______|
 |ingres.fetch_buffer_size  |The number of rows to   |100    |Yes    |Yes      |
 |__________________________|pre-fetch_______________|_______|_______|_________|
 |ingres.max_links          |Maximum number of links |-1     |Yes    |No       |
@@ -251,11 +252,11 @@ build and install, note that $II_SYSTEM needs to be defined beforehand:
 
   1. Extract the archive, adapt the version number accordingly:
 
-       tar -zxvf ingres-2.2.1.tgz
+       tar -zxvf ingres-2.2.2.tgz
 
   2. Enter the newly created directory:
 
-       cd ingres-2.2.1
+       cd ingres-2.2.2
 
   3. Generate the configuration file for the extension:
 
