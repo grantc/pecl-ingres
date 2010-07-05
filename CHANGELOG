@@ -1,3 +1,6 @@
+SVN
+- Fix bug 17621 - Improve the handling of C style comments within an SQL query
+
 2.2.2
 - Fix bug 17556 - Handle errors for non-result returning statements
 - Update the unit tests to be more independent

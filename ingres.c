@@ -5059,36 +5059,50 @@ static long php_ii_paramcount(char *statement TSRMLS_DC)
     int   style = 0;
     int   laststyle = 0;
     char  ch;
-    char  end_quote;
+    char  end_char;
+    int   in_comment = 0;
     
-    end_quote = '\0';
+    end_char = '\0';
     src = statement;
     dst = statement;
 
     while ((ch = *src++) != '\0')
     {
-        if (ch == end_quote)
+        if (ch == end_char)
         {
-            end_quote = '\0';
-        } else if (end_quote != '\0')
+            end_char = '\0';
+        } 
+        else if (end_char != '\0')
         {
             *dst++ = ch;
             continue;
-        } else if (ch == '\'' || ch == '\"')
+        } 
+        else if (ch == '\'' || ch == '\"')
         {
-            end_quote = ch;
-        } else if (ch == '{')
-        {
-            end_quote = '}';
+            end_char = ch;
         }
-        if (ch == '?')
+        else if (ch == '{')
+        {
+            end_char = '}';
+        }
+        else if (ch == '/' && (*src == '*') && end_char == '\0')
+        {
+            in_comment = 1;
+        }
+        else if (ch == '*' && (*src == '/') && end_char == '\0')
+        {
+            in_comment = 0;
+        }
+
+        if (ch == '?' && !in_comment)
         {
             /* X/Open standard       */
             *dst++ = '?';
             idx++;
             style = 3;
         } 
-        else {
+        else 
+        {
             *dst++ = ch;
             continue;
         }
@@ -5601,51 +5615,61 @@ static short int php_ii_set_connect_options(zval *options, II_LINK *ii_link, cha
 /* takes a statement with ? param markers and converts them to ~V */
 static void php_ii_convert_param_markers (char *query, char *converted_query TSRMLS_DC)
 {
-    char ch, tmp_ch;
-    char *p, *tmp_p;
-    int j;
+    char *src;
+    char *dst;
+    char  ch;
+    char  end_char;
+    int   in_comment = 0;
+    
+    end_char = '\0';
+    src = query;
+    dst = converted_query;
 
-    sprintf(converted_query,"\0");
-
-    j = 0;
-
-    p = query;
-    tmp_p = converted_query;
-
-    while ( (ch = *p++) != '\0') 
+    while ((ch = *src++) != '\0')
     {
-        if ( ch == '?' )
+        if (ch == end_char)
         {
-            if ( *(p-2) != ' ') /* check for space before '?' */
-                                /* if there is no space we add '~V' */
-                                /* ingres will error with "Invalid operator '~V'" */
-            {
-                *tmp_p = ' ';
-                *tmp_p++;
-            }
-
-            *tmp_p = '~';
-            *tmp_p++;
-            *tmp_p = 'V';
-            
-            if ( *p != ' ') /* check for space after '?' */
-                            /* if there is no space we add '~V' */
-                            /* ingres will error with "Invalid operator '~V'" */
-            {
-                *tmp_p++;
-                *tmp_p = ' ';
-            }
-        }
-        else
+            end_char = '\0';
+        } 
+        else if (end_char != '\0')
         {
-            *tmp_p = ch;
+            *dst++ = ch;
+            continue;
+        } 
+        else if (ch == '\'' || ch == '\"')
+        {
+            end_char = ch;
         }
-        tmp_p++;
+        else if (ch == '{')
+        {
+            end_char = '}';
+        }
+        else if (ch == '/' && (*src == '*') && end_char == '\0')
+        {
+            in_comment = 1;
+        }
+        else if (ch == '*' && (*src == '/') && end_char == '\0')
+        {
+            in_comment = 0;
+        }
 
-        tmp_ch = *p; 
-
+        if (ch == '?' && !in_comment)
+        {
+            /* ~V needs to have a space either side else the error 
+             * "Invalid operator '~V'" is seen. 
+             */
+            sprintf(dst," ~V ");
+            dst = dst + 4;
+        } 
+        else 
+        {
+            *dst++ = ch;
+            continue;
+        }
     }
-    *tmp_p = '\0'; /* terminate the new query */
+
+    *dst = '\0';
+
 }
 /* }}} */
 
