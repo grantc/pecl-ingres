@@ -79,6 +79,8 @@ typedef struct _II_RESULT {
     II_BOOL             buffered;   /* Is this a buffered query or not */
     II_BOOL             prepared;   /* Is this a prepared query or not */
     II_BOOL             executed;   /* Has this query been through ingres_execute() already? */
+    int                 result_id;  /* Resource ID of this result resource used to match with result
+                                       entries in the result entry list */
 } II_RESULT;
 
 /* The following was added to allow the extension to build on Windows using */

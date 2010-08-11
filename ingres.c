@@ -769,13 +769,15 @@ static void _free_ii_link_result_list (II_LINK *ii_link TSRMLS_DC)
         }
         if (ii_link->result_list_ptr->result_id)
         {
+            /* Clean up the result resource */
             zend_list_delete(ii_link->result_list_ptr->result_id);
-            // set the result_id 0 to indicate it has been released
-            ii_link->result_list_ptr->result_id = 0;
         }
 
         result_entry =  ii_link->result_list_ptr;
-        ii_link->result_list_ptr = (ii_result_entry *)ii_link->result_list_ptr->next_result_ptr;
+        if (ii_link->result_list_ptr)
+        {
+            ii_link->result_list_ptr = (ii_result_entry *)ii_link->result_list_ptr->next_result_ptr;
+        }
 
         /* free memory associated with the top entry in the list */
         free(result_entry);
@@ -802,6 +804,27 @@ static void php_close_ii_link(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 static void php_close_ii_result(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
     II_RESULT *ii_result = (II_RESULT *) rsrc->ptr;
+    char *resource = NULL;
+    char *type_name = NULL;
+    int type;
+    ii_result_entry *result_entry;
+
+    /* Check to see we have a valid link_id */
+    if ( ii_result->link_id != -1 )
+    {
+        resource = zend_list_find(ii_result->link_id, &type);
+        type_name = zend_rsrc_list_get_rsrc_type(ii_result->link_id TSRMLS_CC);
+        /* Is it an "ingres (persistent) connection" ? */
+        if ((strcmp("ingres connection",type_name) == 0 ) || (strcmp("ingres persistent connection",type_name) == 0 ))
+        {
+            if (((II_LINK *)resource)->stmtHandle == ii_result->stmtHandle)
+            {
+                ((II_LINK *)resource)->stmtHandle = NULL;
+            }
+        }
+    }
+    /* Remove this result resource from the associated ii_link resource */
+    php_ii_result_remove (ii_result, ii_result->result_id TSRMLS_CC);
 
     _close_statement(ii_result TSRMLS_CC);
 
@@ -1257,6 +1280,8 @@ static void _ii_init_result (INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result,
     ii_result->buffered = FALSE;
     ii_result->prepared = FALSE;
     ii_result->executed = FALSE;
+    ii_result->result_id = 0;
+
 }
 /* }}} */
 
@@ -2413,6 +2438,9 @@ static void php_ii_query(INTERNAL_FUNCTION_PARAMETERS, int buffered)
 
     ZEND_REGISTER_RESOURCE(return_value, ii_result, le_ii_result)
 
+    /* store the result_id so we can use it in php_close_ii_result() */
+    ii_result->result_id = Z_LVAL_P(return_value); /* resource id */
+
     /* Add details of the II_RESULT resource to the II_LINK resource for later clean up */
 
     result_entry = (ii_result_entry *)malloc(sizeof(ii_result_entry));
@@ -2688,6 +2716,9 @@ PHP_FUNCTION(ingres_prepare)
 #endif
 
     ZEND_REGISTER_RESOURCE(return_value, ii_result, le_ii_result)
+
+    /* store the result_id so we can use it in php_close_ii_result() */
+    ii_result->result_id = Z_LVAL_P(return_value); /* resource id */
 
     /* Add details of the II_RESULT resource to the II_LINK resource for later clean up */
 
@@ -3466,7 +3497,7 @@ static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_
         resource = zend_list_find(ii_result->link_id, &type);
         type_name = zend_rsrc_list_get_rsrc_type(ii_result->link_id TSRMLS_CC);
         /* Is it an "ingres (persistent) connection" ? */
-        if ((strcmp("ingres connection\0",type_name) == 0 ) || (strcmp("ingres persistent connection\0",type_name) == 0 ))
+        if ((strcmp("ingres connection",type_name) == 0 ) || (strcmp("ingres persistent connection",type_name) == 0 ))
         {
             if (((II_LINK *)resource)->stmtHandle == ii_result->stmtHandle)
             {
@@ -3474,7 +3505,10 @@ static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_
             }
             this_ptr = (char *)((II_LINK *)resource)->result_list_ptr;
             result_entry = ((II_LINK *)resource)->result_list_ptr;
-            next_ptr = result_entry->next_result_ptr;
+            if (result_entry)
+            {
+                next_ptr = result_entry->next_result_ptr;
+            }
             /* scan the link's resource list */
             while (result_entry && result_entry->result_id != result_id)
             {
@@ -3484,10 +3518,6 @@ static short php_ii_result_remove ( II_RESULT *ii_result, long result_id TSRMLS_
                 if (this_ptr)
                 {
                     next_ptr = (char *)((ii_result_entry *)this_ptr)->next_result_ptr;
-                }
-                else
-                {
-                    php_error_docref(NULL TSRMLS_CC, E_ERROR, "php_ii_result_remove : An attempt was made to access a NULL pointer");
                 }
             }
 

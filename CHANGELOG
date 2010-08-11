@@ -1,4 +1,5 @@
 SVN
+- Fix bug 18004 - An unreferenced result resources can cause ingres_query() to fail 
 - Fix bug 17621 - Improve the handling of C style comments within an SQL query
 
 2.2.2
