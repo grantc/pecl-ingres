@@ -31,7 +31,7 @@
 extern zend_module_entry ingres_module_entry;
 #define phpext_ingres_ptr &ingres_module_entry
 
-#define PHP_INGRES_VERSION "2.2.3-dev"
+#define PHP_INGRES_VERSION "2.2.3"
 
 #ifdef PHP_WIN32
 #define PHP_INGRES_API __declspec(dllexport)
