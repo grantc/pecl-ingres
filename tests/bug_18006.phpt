@@ -1,5 +1,5 @@
 --TEST--
-Ingres: Bug #18004 - test non-associated calls to ingres_query()
+Ingres: Bug #18006 - test non-associated calls to ingres_query()
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
 --ENV--
