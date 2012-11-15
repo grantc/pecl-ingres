@@ -1427,7 +1427,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
     if (persistent)
     {
-        list_entry *le;
+        zend_rsrc_list_entry *le;
 
         if (INGRESG(trace_connect)) {
             php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Enter persistent connection");
@@ -1437,7 +1437,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
         if (zend_hash_find(&EG(persistent_list), hashed_details, hashed_details_length + 1, (void *) &le) == FAILURE)
         { /* no, new persistent connection */
 
-            list_entry new_le;
+            zend_rsrc_list_entry new_le;
 
             if (INGRESG(trace_connect)) {
                 php_error_docref(NULL TSRMLS_CC, E_NOTICE, "creating new persistent connection");
@@ -1545,7 +1545,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
             /* hash it up */
             Z_TYPE(new_le) = le_ii_plink;
             new_le.ptr = ii_link;
-            if (zend_hash_update(&EG(persistent_list), hashed_details, hashed_details_length + 1, (void *) &new_le, sizeof(list_entry), NULL) == FAILURE)
+            if (zend_hash_update(&EG(persistent_list), hashed_details, hashed_details_length + 1, (void *) &new_le, sizeof(zend_rsrc_list_entry), NULL) == FAILURE)
             {
                 php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to hash (%s)", hashed_details);
                 /* Free the memory associated with ii_link */
@@ -1647,7 +1647,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 
     } else { /* non persistent */
 
-        list_entry *index_ptr, new_index_ptr;
+        zend_rsrc_list_entry *index_ptr, new_index_ptr;
 
         if (INGRESG(trace_connect)) {
             php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Enter non-persistent connection");
@@ -1783,7 +1783,7 @@ static void php_ii_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
         /* add it to the hash */
         new_index_ptr.ptr = (void *) Z_LVAL_P(return_value);
         Z_TYPE(new_index_ptr) = le_index_ptr;
-        if (zend_hash_update(&EG(regular_list), hashed_details, hashed_details_length + 1, (void *) &new_index_ptr, sizeof(list_entry), NULL) == FAILURE)
+        if (zend_hash_update(&EG(regular_list), hashed_details, hashed_details_length + 1, (void *) &new_index_ptr, sizeof(zend_rsrc_list_entry), NULL) == FAILURE)
         {
             php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to hash (%s)", hashed_details);
             /* Free the memory associated with ii_link */
@@ -4322,16 +4322,20 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                     columnData[k].dv_value = (II_CHAR *)(columnData[k]).dv_value + 2;
                                     correct_length = 1;
                                 case IIAPI_NCHA_TYPE:    /* fixed length unicode character string */    
+#if ((PHP_MAJOR_VERSION == 4) || (PHP_MAJOR_VERSION >= 5 && PHP_MINOR_VERSION < 4))
                                     /* use php_addslashes if asked to */
                                     if (PG(magic_quotes_runtime))
                                     {
                                         value_char_p = php_addslashes((char *) columnData[k].dv_value, columnData[k].dv_length, &len, 0 TSRMLS_CC);
                                         should_copy = 0;
                                     } else {
+#endif
                                         value_char_p = (char *) columnData[k].dv_value;
                                         len = columnData[k].dv_length;
                                         should_copy = 1;
+#if ((PHP_MAJOR_VERSION == 4) || (PHP_MAJOR_VERSION >= 5 && PHP_MINOR_VERSION < 4))
                                     }
+#endif
 
                                     if (INGRESG(utf8)) {
                                         /* User has requested the output in UTF-8 */
@@ -4410,6 +4414,7 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                         correct_length = 1;
                                     }
 
+#if ((PHP_MAJOR_VERSION == 4) || (PHP_MAJOR_VERSION >= 5 && PHP_MINOR_VERSION < 4))
                                     /* use php_addslashes if asked to */
                                     if (PG(magic_quotes_runtime))
                                     {
@@ -4418,10 +4423,13 @@ static void php_ii_fetch(INTERNAL_FUNCTION_PARAMETERS, II_RESULT *ii_result, int
                                     }
                                     else 
                                     {
+#endif
                                         value_char_p = (char *) columnData[k].dv_value;
                                         len = columnData[k].dv_length;
                                         should_copy = 1;
+#if ((PHP_MAJOR_VERSION == 4) || (PHP_MAJOR_VERSION >= 5 && PHP_MINOR_VERSION < 4))
                                     }
+#endif
 
                                     if (result_type & II_NUM)
                                     {
@@ -7216,16 +7224,20 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
                 columnData->dv_value = (II_CHAR *)columnData->dv_value + 2;
                 correct_length = 1;
             case IIAPI_NCHA_TYPE:    /* fixed length unicode character string */    
+#if ((PHP_MAJOR_VERSION == 4) || (PHP_MAJOR_VERSION >= 5 && PHP_MINOR_VERSION < 4))
                 /* use php_addslashes if asked to */
                 if (PG(magic_quotes_runtime))
                 {
                     value_char_p = php_addslashes((char *) columnData->dv_value,  columnData->dv_length, &len, 0 TSRMLS_CC);
                     should_copy = 0;
                 } else {
+#endif
                     value_char_p = (char *) columnData->dv_value;
                     len = columnData->dv_length;
                     should_copy = 1;
+#if ((PHP_MAJOR_VERSION == 4) || (PHP_MAJOR_VERSION >= 5 && PHP_MINOR_VERSION < 4))
                 }
+#endif
 
                 if (INGRESG(utf8)) {
                     /* User has requested the output in UTF-8 */
@@ -7305,6 +7317,7 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
                     correct_length = 1;
                 }
 
+#if ((PHP_MAJOR_VERSION == 4) || (PHP_MAJOR_VERSION >= 5 && PHP_MINOR_VERSION < 4))
                 /* use php_addslashes if asked to */
                 if (PG(magic_quotes_runtime))
                 {
@@ -7313,10 +7326,13 @@ static short php_ii_setup_return_value (INTERNAL_FUNCTION_PARAMETERS, IIAPI_DATA
                 }
                 else 
                 {
+#endif
                     value_char_p = (char *) columnData->dv_value;
                     len = columnData->dv_length;
                     should_copy = 1;
+#if ((PHP_MAJOR_VERSION == 4) || (PHP_MAJOR_VERSION >= 5 && PHP_MINOR_VERSION < 4))
                 }
+#endif
 
                 if (result_type & II_NUM)
                 {
