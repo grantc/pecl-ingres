@@ -32,10 +32,12 @@ if test "$PHP_INGRES" != "no" && test "$PHP_INGRES2" = "no"; then
     AC_MSG_ERROR(Cannot find libiiapi.1.$SHLIB_SUFFIX_NAME under $II_DIR/lib - is \$II_SYSTEM set?)
   fi
 
-  PHP_ADD_LIBRARY_WITH_PATH(iiapi.1, $II_LIB_DIR, INGRES_SHARED_LIBADD)
-  PHP_ADD_LIBRARY_WITH_PATH(q.1, $II_LIB_DIR, INGRES_SHARED_LIBADD)
+  # The order of the libraries needs to be maintained else the resulting
+  # ingres.so is not linked correctly
   PHP_ADD_LIBRARY_WITH_PATH(frame.1, $II_LIB_DIR, INGRES_SHARED_LIBADD)
   PHP_ADD_LIBRARY_WITH_PATH(compat.1, $II_LIB_DIR, INGRES_SHARED_LIBADD)
+  PHP_ADD_LIBRARY_WITH_PATH(q.1, $II_LIB_DIR, INGRES_SHARED_LIBADD)
+  PHP_ADD_LIBRARY_WITH_PATH(iiapi.1, $II_LIB_DIR, INGRES_SHARED_LIBADD)
   PHP_ADD_INCLUDE($II_INC_DIR)
   PHP_SUBST(INGRES_SHARED_LIBADD)
 fi
@@ -65,13 +67,14 @@ if test "$PHP_INGRES2" != "no"; then
     AC_MSG_ERROR(Cannot find libiiapi.1.so under $II_DIR/lib - is \$II_SYSTEM set?)
   fi
 
-  PHP_ADD_LIBRARY_WITH_PATH(iiapi.1, $II_LIB_DIR, INGRES2_SHARED_LIBADD)
-  PHP_ADD_LIBRARY_WITH_PATH(q.1, $II_LIB_DIR, INGRES2_SHARED_LIBADD)
+  # The order of the libraries needs to be maintained else the resulting
+  # ingres2.so is not linked correctly
   PHP_ADD_LIBRARY_WITH_PATH(frame.1, $II_LIB_DIR, INGRES2_SHARED_LIBADD)
   PHP_ADD_LIBRARY_WITH_PATH(compat.1, $II_LIB_DIR, INGRES2_SHARED_LIBADD)
+  PHP_ADD_LIBRARY_WITH_PATH(q.1, $II_LIB_DIR, INGRES2_SHARED_LIBADD)
+  PHP_ADD_LIBRARY_WITH_PATH(iiapi.1, $II_LIB_DIR, INGRES2_SHARED_LIBADD)
   PHP_ADD_INCLUDE($II_INC_DIR)
   PHP_SUBST(INGRES2_SHARED_LIBADD)
-
 fi
 
 # Certain platforms require memory to be accessed/addressed
