@@ -1,4 +1,7 @@
-SVN
+2.2.4
+- Update the extension for PHP 5.4
+
+2.2.3
 - Fix bug 18006 - An unreferenced result resources can cause ingres_query() to fail 
 - Fix bug 17621 - Improve the handling of C style comments within an SQL query
 
