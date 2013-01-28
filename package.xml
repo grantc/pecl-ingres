@@ -5,8 +5,8 @@ http://pear.php.net/dtd/package-2.0
 http://pear.php.net/dtd/package-2.0.xsd">
  <name>ingres</name>
  <channel>pecl.php.net</channel>
- <summary>Extension for the Ingres Relational Database System.</summary>
- <description>This extension supports the Ingres Relational Database System.
+ <summary>Extension for the Ingres/Vectorwise Database Systems.</summary>
+ <description>This extension supports the Ingres/Vectorwise Database Systems.
  </description>
  <lead>
   <name>Grant Croker</name>
@@ -14,11 +14,11 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>grantc@php.net</email>
   <active>yes</active>
  </lead>
- <date>2011-09-03</date>
- <time>11:00:00</time>
+ <date>2013-01-19</date>
+ <time>22:00:00</time>
  <version>
-  <release>2.2.3</release>
-  <api>2.2.3</api>
+  <release>2.2.4</release>
+  <api>2.2.4</api>
  </version>
  <stability>
   <release>stable</release>
@@ -26,8 +26,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license uri="http://www.php.net/license">PHP</license>
  <notes>This is a minor release that addresses the following:
- - Fix bug 18006 - An unreferenced result resources can cause ingres_query() to fail
- - Fix bug 17621 - Improve the handling of C style comments within an SQL query
+ - Update the extension for PHP 5.4
  </notes>
  <contents>
   <dir name="/">
